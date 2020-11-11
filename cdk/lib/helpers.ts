@@ -35,17 +35,23 @@ export function makeScheduledTask(
   }
 
 
-export function getECSCluster(scope: cdk.Construct, stage: STAGE) {
-  let clusterName, vpc, securityGroups;
+export function getVPC(scope: cdk.Construct, stage: STAGE) {
+  const resourcePrefix = titleCase(stage);
+  const vpcName = `infrastructure/${resourcePrefix}PublicVPC`;
+  const vpc = ec2.Vpc.fromLookup(scope, "VPC", { vpcName });
+  return vpc;
+}
+
+
+export function getECSCluster(scope: cdk.Construct, stage: STAGE, vpc: ec2.IVpc) {
+  let clusterName, securityGroups;
   const resourcePrefix = titleCase(stage);
 
-  const vpcName = `infrastructure/${resourcePrefix}PublicVPC`;
   const securityGroupIds = cdk.Fn.importValue(
     `${resourcePrefix}PublicCluster-security-group-ids`
   ).split(",");
 
   clusterName = cdk.Fn.importValue(`${resourcePrefix}PublicCluster-name`);
-  vpc = ec2.Vpc.fromLookup(scope, "VPC", { vpcName });
   securityGroups = securityGroupIds.map((x, i) =>
     ec2.SecurityGroup.fromSecurityGroupId(scope, `SecurityGroup${i}`, x)
   );
@@ -57,7 +63,7 @@ export function getECSCluster(scope: cdk.Construct, stage: STAGE) {
     securityGroups,
   });
 
-  return { cluster, vpc, securityGroups };
+  return { cluster, securityGroups };
 }
 
 export function titleCase(text: string): string {

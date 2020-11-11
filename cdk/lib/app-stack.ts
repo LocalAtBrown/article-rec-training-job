@@ -32,7 +32,8 @@ export class AppStack extends cdk.Stack {
     // const bucketName = helpers.makeBucketName("change-this-bucket-name", props.stage);
     // const bucket = helpers.makeBucket(this, bucketName, taskRole, props.stage);
 
-    const { cluster } = helpers.getECSCluster(this, props.stage);
+    const vpc = helpers.getVPC(this, props.stage);
+    const { cluster } = helpers.getECSCluster(this, props.stage, vpc);
 
     const image = ecs.ContainerImage.fromAsset("../", {
       extraHash: Date.now().toString(),
