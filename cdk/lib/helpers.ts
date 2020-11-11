@@ -20,8 +20,8 @@ export enum STAGE {
 export function makeDatabase(
     scope: cdk.Construct,
     stage: STAGE,
-    appId: string,
     vpc: ec2.IVpc,
+    dbName: string,
     passwordKey: string)
 {
   let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
@@ -29,7 +29,8 @@ export function makeDatabase(
     removalPolicy = cdk.RemovalPolicy.DESTROY;
   }
 
-  const instance = new rds.DatabaseInstance(scope, `${appId}DbInstance`, {
+  const dbUser = 'postgres';
+  const instance = new rds.DatabaseInstance(scope, `${dbName}Instance`, {
       vpc,
       removalPolicy,
       engine: rds.DatabaseInstanceEngine.postgres({
@@ -37,22 +38,25 @@ export function makeDatabase(
       }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      databaseName: `${appId}DB`,
+      databaseName: `${dbName}`,
       multiAz: true,
       storageEncrypted: true,
       cloudwatchLogsExports: ['postgresql'],
       cloudwatchLogsRetention: logs.RetentionDays.ONE_MONTH,
-      // TODO consider using secrets manager for automatic credential rotation
-      credentials: rds.Credentials.fromPassword('admin', cdk.SecretValue.ssmSecure(passwordKey, '1')),
+      // Creates an admin user of postgres with a generated password
+      credentials: rds.Credentials.fromGeneratedSecret(dbUser),
   });
 
-  // TODOs
-  // send "HOSTNAME:PORT" address as into app as env var?, ie:
-  // const address = instance.instanceEndpoint.socketAddress;
-  //
-  // rely on iam role for connection instead?
-  //
-  // create a db proxy to improve scalability?
+  // Allow connections on default port from any IPV4
+  instance.connections.allowDefaultPortFromAnyIpv4();
+
+  return instance;
+
+  // TODO send useful env vars to app:
+  // - instance.dbInstanceEndpointAddress
+  // - instance.dbInstanceEndpointPort
+  // - dbUser
+  // - instance.secret.SecretValue (can use Secret.plainText(), but it's discouraged)
 }
 
 export function makeScheduledTask(
