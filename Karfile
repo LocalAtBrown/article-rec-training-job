@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+REPOSITORY=article-rec-training-job
+DOCKER_OPTS=$(cat <<END_HEREDOC
+    -v $HOME/.aws/credentials:/root/.aws/credentials:ro \
+    -v $(pwd):/app \
+    -e STAGE=local \
+    -it $REPOSITORY
+END_HEREDOC
+)
+
+#@cdk
+#+Run cdk.
+task-cdk() {
+    (cd cdk && npx cdk $@)
+}
+
+#@build
+#+Build docker image.
+task-build() {
+    docker build . -t $REPOSITORY
+}
+
+#@run
+#+Run docker container.
+task-run() {
+    docker run $DOCKER_OPTS "$@"
+}
