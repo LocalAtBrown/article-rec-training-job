@@ -7,7 +7,8 @@ import * as codebuild from "@aws-cdk/aws-codebuild";
 import { LocalCacheMode } from "@aws-cdk/aws-codebuild";
 import { ScheduledEc2Task, ScheduledEc2TaskProps } from "@aws-cdk/aws-ecs-patterns";
 import { Schedule } from "@aws-cdk/aws-events";
-import {DatabaseInstance, DatabaseInstanceEngine, StorageType} from '@aws-cdk/aws-rds';
+import * as rds from '@aws-cdk/aws-rds';
+import * as logs from "@aws-cdk/aws-logs";
 
 
 export enum STAGE {
@@ -15,22 +16,43 @@ export enum STAGE {
   DEVELOPMENT = "dev",
 }
 
-export function makeDatabase(scope: cdk.Construct, stage: STAGE, appId: string, vpc: ec2.IVpc) {
+
+export function makeDatabase(
+    scope: cdk.Construct,
+    stage: STAGE,
+    appId: string,
+    vpc: ec2.IVpc,
+    passwordKey: string)
+{
   let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
   if (stage != STAGE.PRODUCTION) {
     removalPolicy = cdk.RemovalPolicy.DESTROY;
   }
 
-  const mySQLRDSInstance = new DatabaseInstance(scope, `${appId}DbInstance`, {
+  const instance = new rds.DatabaseInstance(scope, `${appId}DbInstance`, {
       vpc,
       removalPolicy,
-      engine: DatabaseInstanceEngine.POSTGRES,
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: rds.PostgresEngineVersion.VER_12_4,
+      }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      storageEncrypted: true,
-      allocatedStorage: 2,  // defaults to 100 GB
       databaseName: `${appId}DB`,
+      multiAz: true,
+      storageEncrypted: true,
+      cloudwatchLogsExports: ['postgresql'],
+      cloudwatchLogsRetention: logs.RetentionDays.ONE_MONTH,
+      // TODO consider using secrets manager for automatic credential rotation
+      credentials: rds.Credentials.fromPassword('admin', cdk.SecretValue.ssmSecure(passwordKey, '1')),
   });
+
+  // TODOs
+  // send "HOSTNAME:PORT" address as into app as env var?, ie:
+  // const address = instance.instanceEndpoint.socketAddress;
+  //
+  // rely on iam role for connection instead?
+  //
+  // create a db proxy to improve scalability?
 }
 
 export function makeScheduledTask(
