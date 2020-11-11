@@ -21,8 +21,7 @@ export function makeDatabase(
     scope: cdk.Construct,
     stage: STAGE,
     vpc: ec2.IVpc,
-    dbName: string,
-    passwordKey: string)
+    dbName: string)
 {
   let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
   if (stage != STAGE.PRODUCTION) {
