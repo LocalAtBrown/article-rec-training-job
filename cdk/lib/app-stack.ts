@@ -35,6 +35,8 @@ export class AppStack extends cdk.Stack {
     const vpc = helpers.getVPC(this, props.stage);
     const { cluster } = helpers.getECSCluster(this, props.stage, vpc);
 
+    helpers.makeDatabase(this, props.stage, id, vpc);
+
     const image = ecs.ContainerImage.fromAsset("../", {
       extraHash: Date.now().toString(),
     });

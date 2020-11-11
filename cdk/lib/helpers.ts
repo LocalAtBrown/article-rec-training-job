@@ -7,12 +7,30 @@ import * as codebuild from "@aws-cdk/aws-codebuild";
 import { LocalCacheMode } from "@aws-cdk/aws-codebuild";
 import { ScheduledEc2Task, ScheduledEc2TaskProps } from "@aws-cdk/aws-ecs-patterns";
 import { Schedule } from "@aws-cdk/aws-events";
-// import {DatabaseInstance, DatabaseInstanceEngine, StorageType} from '@aws-cdk/aws-rds';
+import {DatabaseInstance, DatabaseInstanceEngine, StorageType} from '@aws-cdk/aws-rds';
 
 
 export enum STAGE {
   PRODUCTION = "prod",
   DEVELOPMENT = "dev",
+}
+
+export function makeDatabase(scope: cdk.Construct, stage: STAGE, appId: string, vpc: ec2.IVpc) {
+  let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
+  if (stage != STAGE.PRODUCTION) {
+    removalPolicy = cdk.RemovalPolicy.DESTROY;
+  }
+
+  const mySQLRDSInstance = new DatabaseInstance(scope, `${appId}DbInstance`, {
+      vpc,
+      removalPolicy,
+      engine: DatabaseInstanceEngine.POSTGRES,
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      storageEncrypted: true,
+      allocatedStorage: 2,  // defaults to 100 GB
+      databaseName: `${appId}DB`,
+  });
 }
 
 export function makeScheduledTask(
