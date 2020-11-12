@@ -4,7 +4,8 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-REGION = 'us-east-1'
+from lib.config import REGION
+
 
 session = boto3.session.Session()
 client = session.client(service_name='secretsmanager', region_name=REGION)

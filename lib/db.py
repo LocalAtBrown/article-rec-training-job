@@ -2,7 +2,7 @@ import logging
 
 import psycopg2
 
-from lib.config import config
+from lib.config import config, REGION
 from lib.secrets_manager import get_secret
 
 
@@ -13,7 +13,6 @@ NAME = DB_CONFIG['dbname']
 PORT = DB_CONFIG['port']
 ENDPOINT = DB_CONFIG['host']
 USER = DB_CONFIG['username']
-REGION = 'us-east-1'
 
 
 def test_query():
