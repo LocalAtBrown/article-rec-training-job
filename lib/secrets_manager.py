@@ -21,7 +21,7 @@ def get_secret(secret_id):
             logging.error("The request was invalid")
         elif e.response['Error']['Code'] == 'InvalidParameterException':
             logging.error("The request had invalid params")
-        rais(e)
+        raise(e)
     else:
         # Secrets Manager decrypts the secret value using the associated KMS CMK
         # Depending on whether the secret was a string or binary,
