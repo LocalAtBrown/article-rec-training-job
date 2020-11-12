@@ -64,7 +64,7 @@ export class AppStack extends cdk.Stack {
         cpu: 128,
         memoryLimitMiB: 128,
         logging: ecs.LogDriver.awsLogs({
-          streamPrefix: this.node.id,
+          streamPrefix: id,
           logRetention: 30,
         })
     });
