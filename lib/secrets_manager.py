@@ -11,12 +11,12 @@ session = boto3.session.Session()
 client = session.client(service_name='secretsmanager', region_name=REGION)
 
 
-def get_secret(secret_name):
+def get_secret(secret_id):
     try:
-        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
+        get_secret_value_response = client.get_secret_value(SecretId=secret_id)
     except ClientError as e:
         if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            logging.error(f"The requested secret {secret_name} was not found")
+            logging.error(f"The requested secret {secret_id} was not found")
         elif e.response['Error']['Code'] == 'InvalidRequestException':
             logging.error("The request was invalid")
         elif e.response['Error']['Code'] == 'InvalidParameterException':

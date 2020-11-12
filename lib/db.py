@@ -5,9 +5,8 @@ import psycopg2
 from lib.config import config, REGION
 from lib.secrets_manager import get_secret
 
-
-DB_SECRET_KEY = config.get('DB_SECRET_KEY')
-DB_CONFIG = get_secret(DB_SECRET_KEY)
+DB_SECRET_ARN = config.get('DB_SECRET_ARN')
+DB_CONFIG = get_secret(DB_SECRET_ARN)
 PASSWORD = DB_CONFIG['password']
 NAME = DB_CONFIG['dbname']
 PORT = DB_CONFIG['port']

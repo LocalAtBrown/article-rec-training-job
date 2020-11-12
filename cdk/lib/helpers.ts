@@ -9,6 +9,7 @@ import { ScheduledEc2Task, ScheduledEc2TaskProps } from "@aws-cdk/aws-ecs-patter
 import { Schedule } from "@aws-cdk/aws-events";
 import * as rds from '@aws-cdk/aws-rds';
 import * as logs from "@aws-cdk/aws-logs";
+import { Secret } from "@aws-cdk/aws-secretsmanager";
 
 
 export enum STAGE {
@@ -21,15 +22,23 @@ export function makeDatabase(
     scope: cdk.Construct,
     stage: STAGE,
     vpc: ec2.IVpc,
-    dbName: string)
+    dbName: string,
+    secretArn: string)
 {
   let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
   if (stage != STAGE.PRODUCTION) {
     removalPolicy = cdk.RemovalPolicy.DESTROY;
   }
 
+  let formattedName = dbName;
+  if (stage != STAGE.PRODUCTION) {
+    formattedName = `${titleCase(stage)}${dbName}`;
+  }
+
+  const secret = Secret.fromSecretCompleteArn(scope, `${formattedName}Secret`, secretArn);
+
   const dbUser = 'postgres';
-  const instance = new rds.DatabaseInstance(scope, `${dbName}Instance`, {
+  const instance = new rds.DatabaseInstance(scope, `${formattedName}Instance`, {
       vpc,
       removalPolicy,
       engine: rds.DatabaseInstanceEngine.postgres({
@@ -37,13 +46,12 @@ export function makeDatabase(
       }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      databaseName: `${dbName}`,
+      databaseName: formattedName,
       multiAz: true,
       storageEncrypted: true,
       cloudwatchLogsExports: ['postgresql'],
       cloudwatchLogsRetention: logs.RetentionDays.ONE_MONTH,
-      // Creates an admin user of postgres with a generated password
-      credentials: rds.Credentials.fromGeneratedSecret(dbUser),
+      credentials: rds.Credentials.fromSecret(secret),
   });
 
   // Allow connections on default port from any IPV4

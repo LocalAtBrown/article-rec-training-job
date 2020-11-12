@@ -36,7 +36,8 @@ export class AppStack extends cdk.Stack {
     const { cluster } = helpers.getECSCluster(this, props.stage, vpc);
 
     const dbName = 'ArticleRecDB';
-    helpers.makeDatabase(this, props.stage, vpc, dbName);
+    const dbSecretArn = 'arn:aws:secretsmanager:us-east-1:348955818350:secret:/dev/article-rec-training-job/db-secret-q47W51';
+    helpers.makeDatabase(this, props.stage, vpc, dbName, dbSecretArn);
 
     const image = ecs.ContainerImage.fromAsset("../", {
       extraHash: Date.now().toString(),
