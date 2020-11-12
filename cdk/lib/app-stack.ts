@@ -52,6 +52,23 @@ export class AppStack extends cdk.Stack {
       extraHash: Date.now().toString(),
     });
 
+    const taskDefinition = new ecs.Ec2TaskDefinition(this, `${id}TaskDefinition`, { taskRole });
+    // find more container definition options here:
+    // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.ContainerDefinitionOptions.html
+    taskDefinition.addContainer(`${id}TaskContainer`, {
+      image,
+       environment: {
+          STAGE: props.stage,
+          REGION: props.env?.region || 'us-east-1',
+        },
+        cpu: 128,
+        memoryLimitMiB: 128,
+        logging: ecs.LogDriver.awsLogs({
+          streamPrefix: this.node.id,
+          logRetention: 30,
+        })
+    });
+
     helpers.makeScheduledTask(this, id, props.stage, {
       // find more cron scheduling options here:
       // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-events.CronOptions.html
@@ -62,21 +79,7 @@ export class AppStack extends cdk.Stack {
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
-      // find more task image options here:
-      // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs-patterns.ScheduledEc2TaskImageOptions.html
-      scheduledEc2TaskImageOptions: {
-        image,
-        environment: {
-          STAGE: props.stage,
-          REGION: props.env?.region || 'us-east-1',
-        },
-        cpu: 128,
-        memoryLimitMiB: 128,
-        logDriver: ecs.LogDriver.awsLogs({
-          streamPrefix: this.node.id,
-          logRetention: 30,
-        })
-      },
+      scheduledEc2TaskDefinitionOptions: { taskDefinition }
     });
   }
 }
