@@ -50,12 +50,6 @@ export function makeDatabase(
   instance.connections.allowDefaultPortFromAnyIpv4();
 
   return instance;
-
-  // TODO send useful env vars to app:
-  // - instance.dbInstanceEndpointAddress
-  // - instance.dbInstanceEndpointPort
-  // - dbUser
-  // - instance.secret.SecretValue (can use Secret.plainText(), but it's discouraged)
 }
 
 export function makeScheduledTask(
