@@ -84,5 +84,24 @@
         ]
       }
     ]
+  },
+  "vpc-provider:account=348955818350:filter.tag:Name=infrastructure/DevPublicVPC:region=us-east-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-04d34e35848b4f075",
+    "vpcCidrBlock": "10.0.0.0/18",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Public",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-0c9dbce195cb2c829",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-09bf8c089234aea3d"
+          }
+        ]
+      }
+    ]
   }
 }

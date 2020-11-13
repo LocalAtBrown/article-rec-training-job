@@ -39,7 +39,7 @@ export function getECSCluster(scope: cdk.Construct, stage: STAGE) {
   let clusterName, vpc, securityGroups;
   const resourcePrefix = titleCase(stage);
 
-  const vpcName = `infrastructure/${resourcePrefix}VPC`;
+  const vpcName = `infrastructure/${resourcePrefix}PublicVPC`;
   const securityGroupIds = cdk.Fn.importValue(
     `${resourcePrefix}PublicCluster-security-group-ids`
   ).split(",");
