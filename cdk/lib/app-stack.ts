@@ -17,6 +17,15 @@ export class AppStack extends cdk.Stack {
     const taskRole = new iam.Role(this, `${id}Role`, {
       assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
       inlinePolicies: {
+        SecretsManagerAccess: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              sid: `SecretsManagerAccess`,
+              actions: ["secretsmanager:Get*"],
+              resources: ["*"],
+            }),
+          ],
+        }),
         SSMAccess: new iam.PolicyDocument({
           statements: [
             new iam.PolicyStatement({
@@ -32,10 +41,32 @@ export class AppStack extends cdk.Stack {
     // const bucketName = helpers.makeBucketName("change-this-bucket-name", props.stage);
     // const bucket = helpers.makeBucket(this, bucketName, taskRole, props.stage);
 
-    const { cluster } = helpers.getECSCluster(this, props.stage);
+    const vpc = helpers.getVPC(this, props.stage);
+    const { cluster } = helpers.getECSCluster(this, props.stage, vpc);
+
+    const dbName = 'ArticleRecDB';
+    const dbSecretArn = 'arn:aws:secretsmanager:us-east-1:348955818350:secret:/dev/article-rec-training-job/db-secret-q47W51';
+    helpers.makeDatabase(this, props.stage, vpc, dbName, dbSecretArn);
 
     const image = ecs.ContainerImage.fromAsset("../", {
       extraHash: Date.now().toString(),
+    });
+
+    const taskDefinition = new ecs.Ec2TaskDefinition(this, `${id}TaskDefinition`, { taskRole });
+    // find more container definition options here:
+    // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.ContainerDefinitionOptions.html
+    taskDefinition.addContainer(`${id}TaskContainer`, {
+      image,
+       environment: {
+          STAGE: props.stage,
+          REGION: props.env?.region || 'us-east-1',
+        },
+        cpu: 128,
+        memoryLimitMiB: 128,
+        logging: ecs.LogDriver.awsLogs({
+          streamPrefix: id,
+          logRetention: 30,
+        })
     });
 
     helpers.makeScheduledTask(this, id, props.stage, {
@@ -48,21 +79,7 @@ export class AppStack extends cdk.Stack {
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
-      // find more task image options here:
-      // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs-patterns.ScheduledEc2TaskImageOptions.html
-      scheduledEc2TaskImageOptions: {
-        image,
-        environment: {
-          STAGE: props.stage,
-          REGION: props.env?.region || 'us-east-1',
-        },
-        cpu: 128,
-        memoryLimitMiB: 128,
-        logDriver: ecs.LogDriver.awsLogs({
-          streamPrefix: this.node.id,
-          logRetention: 30,
-        })
-      },
+      scheduledEc2TaskDefinitionOptions: { taskDefinition }
     });
   }
 }

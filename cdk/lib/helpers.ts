@@ -7,10 +7,57 @@ import * as codebuild from "@aws-cdk/aws-codebuild";
 import { LocalCacheMode } from "@aws-cdk/aws-codebuild";
 import { ScheduledEc2Task, ScheduledEc2TaskProps } from "@aws-cdk/aws-ecs-patterns";
 import { Schedule } from "@aws-cdk/aws-events";
+import * as rds from '@aws-cdk/aws-rds';
+import * as logs from "@aws-cdk/aws-logs";
+import { Secret } from "@aws-cdk/aws-secretsmanager";
+
 
 export enum STAGE {
   PRODUCTION = "prod",
   DEVELOPMENT = "dev",
+}
+
+
+export function makeDatabase(
+    scope: cdk.Construct,
+    stage: STAGE,
+    vpc: ec2.IVpc,
+    dbName: string,
+    secretArn: string)
+{
+  let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
+  if (stage != STAGE.PRODUCTION) {
+    removalPolicy = cdk.RemovalPolicy.DESTROY;
+  }
+
+  let formattedName = dbName;
+  if (stage != STAGE.PRODUCTION) {
+    formattedName = `${titleCase(stage)}${dbName}`;
+  }
+
+  const secret = Secret.fromSecretCompleteArn(scope, `${formattedName}Secret`, secretArn);
+
+  const dbUser = 'postgres';
+  const instance = new rds.DatabaseInstance(scope, `${formattedName}Instance`, {
+      vpc,
+      removalPolicy,
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: rds.PostgresEngineVersion.VER_12_4,
+      }),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      databaseName: formattedName,
+      multiAz: true,
+      storageEncrypted: true,
+      cloudwatchLogsExports: ['postgresql'],
+      cloudwatchLogsRetention: logs.RetentionDays.ONE_MONTH,
+      credentials: rds.Credentials.fromSecret(secret),
+  });
+
+  // Allow connections on default port from any IPV4
+  instance.connections.allowDefaultPortFromAnyIpv4();
+
+  return instance;
 }
 
 export function makeScheduledTask(
@@ -35,17 +82,23 @@ export function makeScheduledTask(
   }
 
 
-export function getECSCluster(scope: cdk.Construct, stage: STAGE) {
-  let clusterName, vpc, securityGroups;
+export function getVPC(scope: cdk.Construct, stage: STAGE) {
+  const resourcePrefix = titleCase(stage);
+  const vpcName = `infrastructure/${resourcePrefix}PublicVPC`;
+  const vpc = ec2.Vpc.fromLookup(scope, "VPC", { vpcName });
+  return vpc;
+}
+
+
+export function getECSCluster(scope: cdk.Construct, stage: STAGE, vpc: ec2.IVpc) {
+  let clusterName, securityGroups;
   const resourcePrefix = titleCase(stage);
 
-  const vpcName = `infrastructure/${resourcePrefix}PublicVPC`;
   const securityGroupIds = cdk.Fn.importValue(
     `${resourcePrefix}PublicCluster-security-group-ids`
   ).split(",");
 
   clusterName = cdk.Fn.importValue(`${resourcePrefix}PublicCluster-name`);
-  vpc = ec2.Vpc.fromLookup(scope, "VPC", { vpcName });
   securityGroups = securityGroupIds.map((x, i) =>
     ec2.SecurityGroup.fromSecurityGroupId(scope, `SecurityGroup${i}`, x)
   );
@@ -57,7 +110,7 @@ export function getECSCluster(scope: cdk.Construct, stage: STAGE) {
     securityGroups,
   });
 
-  return { cluster, vpc, securityGroups };
+  return { cluster, securityGroups };
 }
 
 export function titleCase(text: string): string {
