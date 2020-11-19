@@ -23,7 +23,7 @@ export function makeDatabase(
     stage: STAGE,
     vpc: ec2.IVpc,
     dbName: string,
-    secretArn: string)
+    secretName: string)
 {
   let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
   if (stage != STAGE.PRODUCTION) {
@@ -35,9 +35,10 @@ export function makeDatabase(
     formattedName = `${titleCase(stage)}${dbName}`;
   }
 
-  const secret = Secret.fromSecretCompleteArn(scope, `${formattedName}Secret`, secretArn);
+  const secretArnPrefix = 'arn:aws:secretsmanager:us-east-1:348955818350:secret:';
+  const secretPartialArn = `${secretArnPrefix}${secretName}`
+  const secret = Secret.fromSecretPartialArn(scope, `${formattedName}Secret`, secretPartialArn);
 
-  const dbUser = 'postgres';
   const instance = new rds.DatabaseInstance(scope, `${formattedName}Instance`, {
       vpc,
       removalPolicy,
