@@ -14,4 +14,3 @@ USER = DB_CONFIG['username']
 
 engine = create_engine(f'postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{NAME}')
 Session = sessionmaker(bind=engine)
-session = Session()
