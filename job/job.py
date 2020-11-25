@@ -28,3 +28,5 @@ def run():
     rec = Rec(external_id=str(rand_int()), model_id=model.id, article_id=article.id, score=0.000001)
     session.add(rec)
     session.commit()
+
+    logging.info(f"Created rec with id {rec.id}")
