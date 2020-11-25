@@ -12,5 +12,5 @@ PORT = DB_CONFIG['port']
 HOST = DB_CONFIG['host']
 USER = DB_CONFIG['username']
 
-engine = create_engine(f'postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{NAME}')
+engine = create_engine(f'postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{NAME}')
 Session = sessionmaker(bind=engine)
