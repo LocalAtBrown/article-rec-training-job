@@ -8,11 +8,12 @@ from db.recommendation import Rec
 
 def rand_int():
     import random
+
     return random.randint(100000, 999999)
 
 
 def run():
-    logging.info('Running job...')
+    logging.info("Running job...")
 
     # TODO this is just a test of our object mappings
     # we'll need a cleaner way to handle sessions
