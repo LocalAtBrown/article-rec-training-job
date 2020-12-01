@@ -2,10 +2,10 @@ import datetime
 
 from peewee import TextField, DateTimeField, IntegerField
 
-from db.models.base import Base
+from db.models.base import BaseModel
 
 
-class Article(Base):
+class Article(BaseModel):
     class Meta:
         db_table = "article"
 

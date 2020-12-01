@@ -2,7 +2,7 @@ import enum
 
 from peewee import TextField
 
-from db.models.base import Base
+from db.models.base import BaseModel
 
 
 class Type(enum.Enum):
@@ -17,7 +17,7 @@ class Status(enum.Enum):
     FAILED = "failed"
 
 
-class Model(Base):
+class Model(BaseModel):
     class Meta:
         db_table = "model"
 

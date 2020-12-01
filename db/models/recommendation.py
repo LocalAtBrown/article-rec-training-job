@@ -1,11 +1,11 @@
 from peewee import TextField, DecimalField, ForeignKeyField
 
-from db.models.base import Base
+from db.models.base import BaseModel
 from db.models.model import Model
 from db.models.article import Article
 
 
-class Rec(Base):
+class Rec(BaseModel):
     class Meta:
         db_table = "recommendation"
 

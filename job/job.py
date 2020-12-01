@@ -1,8 +1,7 @@
 import logging
 
-from db.models.model import Model, Type
-from db.models.article import Article
-from db.models.recommendation import Rec
+from db.models.model import Type
+from job.helpers import create_model, create_article, create_rec
 
 
 def rand_int():
@@ -15,13 +14,11 @@ def run():
     logging.info("Running job...")
 
     # TODO this is just a test of our object mappings
-    # we'll need a cleaner way to handle sessions
-    model = Model(type=Type.ARTICLE.value)
-    article = Article(external_id=rand_int())
-    model.save()
-    article.save()
+    model_id = create_model(type=Type.ARTICLE.value)
+    article_id = create_article(external_id=rand_int())
 
-    rec = Rec(external_id=str(rand_int()), model_id=model.id, article_id=article.id, score=0.000001)
-    rec.save()
+    rec_id = create_rec(
+        external_id=str(rand_int()), model_id=model_id, article_id=article_id, score=0.000001
+    )
 
-    logging.info(f"Created rec with id {rec.id}")
+    logging.info(f"Created rec with id {rec_id}")
