@@ -1,5 +1,4 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from peewee import PostgresqlDatabase
 
 from lib.config import config, REGION
 from lib.secrets_manager import get_secret
@@ -12,5 +11,4 @@ PORT = DB_CONFIG["port"]
 HOST = DB_CONFIG["host"]
 USER = DB_CONFIG["username"]
 
-engine = create_engine(f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{NAME}")
-Session = sessionmaker(bind=engine)
+db = PostgresqlDatabase(NAME, user=USER, password=PASSWORD, host=HOST, port=PORT)

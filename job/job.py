@@ -1,9 +1,8 @@
 import logging
 
-from lib.db import Session
-from db.model import Model, Type
-from db.article import Article
-from db.recommendation import Rec
+from db.models.model import Model, Type
+from db.models.article import Article
+from db.models.recommendation import Rec
 
 
 def rand_int():
@@ -17,16 +16,12 @@ def run():
 
     # TODO this is just a test of our object mappings
     # we'll need a cleaner way to handle sessions
-    session = Session()
-    model = Model(type=Type.article.name)
+    model = Model(type=Type.ARTICLE.value)
     article = Article(external_id=rand_int())
-    session.add(model)
-    session.add(article)
-    session.commit()
+    model.save()
+    article.save()
 
-    session = Session()
     rec = Rec(external_id=str(rand_int()), model_id=model.id, article_id=article.id, score=0.000001)
-    session.add(rec)
-    session.commit()
+    rec.save()
 
     logging.info(f"Created rec with id {rec.id}")

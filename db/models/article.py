@@ -1,16 +1,14 @@
-from sqlalchemy import Column
-from sqlalchemy.types import Integer, String, DateTime
-from sqlalchemy.sql.functions import now
+import datetime
 
-from db.base import Base
+from peewee import TextField, DateTimeField, IntegerField
+
+from db.models.base import Base
 
 
 class Article(Base):
-    __tablename__ = "article"
+    class Meta:
+        db_table = "article"
 
-    id = Column(Integer, primary_key=True)
-    external_id = Column(Integer)
-    title = Column(String, default="")
-    published_at = Column(DateTime)
-    created_at = Column(DateTime, default=now())
-    updated_at = Column(DateTime, default=now(), onupdate=now())
+    external_id = IntegerField(null=False)
+    title = TextField(null=False, default="")
+    published_at = DateTimeField(null=True)
