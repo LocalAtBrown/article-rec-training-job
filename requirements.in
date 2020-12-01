@@ -1,4 +1,4 @@
 -e file:.#egg=lib
 boto3
-sqlalchemy
+peewee
 psycopg2-binary

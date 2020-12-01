@@ -17,10 +17,10 @@ brew bundle --file=Brewfile
 
 3. Check the pending migrations by running:
 ```
-flyway info -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -password=<PASSWORD> -locations=filesystem:migrations
+flyway info -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -password=<PASSWORD> -locations=filesystem:db/migrations
 ```
 
 4. Run the pending migrations:
 ```
-flyway migrate -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -password=<PASSWORD> -locations=filesystem:migrations
+flyway migrate -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -password=<PASSWORD> -locations=filesystem:db/migrations
 ```
