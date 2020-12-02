@@ -4,3 +4,4 @@ peewee
 psycopg2-binary
 requests
 beautifulsoup4
+pandas
