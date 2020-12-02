@@ -10,7 +10,7 @@ BUCKET_NAME = config.get("GA_DATA_BUCKET")
 
 def fetch_latest_data() -> pd.DataFrame:
     # TODO remove hardcoded s3_object when live data is available
-    latest_data_key = "google-analytics-exploration/14/a533ddd743271f9382a140d46d5c90"
+    latest_data_key = "ting.zhang/90_day_sessions_2020_09_10_2020_09_13.json"
     data_filepath = "/app/tmp/data.json"
     s3_download(BUCKET_NAME, latest_data_key, data_filepath)
     with open(data_filepath) as f:
@@ -39,7 +39,7 @@ def flatten_raw_data(sessions_dict: dict) -> pd.DataFrame:
             "hostname": activity["hostname"],
             "landing_page_path": activity["landingPagePath"],
             "activity_type": activity["activityType"],
-            **get_type_specific_fields(activity["activityType"]),
+            **get_type_specific_fields(activity),
         }
         for client_id, sessions in sessions_dict.items()
         for session in sessions
@@ -49,21 +49,21 @@ def flatten_raw_data(sessions_dict: dict) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def get_type_specific_fields(activityType: str) -> dict:
-    if activityType == "EVENT":
+def get_type_specific_fields(activity: dict) -> dict:
+    if activity["activityType"] == "EVENT":
         return {
             "event_category": activity["event"]["eventCategory"],
             "event_action": activity["event"]["eventAction"],
             "page_path": activity["landingPagePath"],
         }
-    elif activityType == "PAGEVIEW":
+    elif activity["activityType"] == "PAGEVIEW":
         return {
             "event_category": "pageview",
             "event_action": "pageview",
             "page_path": activity["pageview"]["pagePath"],
         }
     else:
-        logging.info(f"Couldn't find activity field for type: {activityType}")
+        logging.info(f"Couldn't find activity field for type: {activity['activityType']}")
         return {
             "event_category": None,
             "event_action": None,

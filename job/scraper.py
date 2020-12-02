@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from job.helpers import safe_get
 
 
-DOMAIN = "https://washingtoncitypaper.com/"
+DOMAIN = "https://washingtoncitypaper.com"
 
 
 def scrape_metadata(path: str) -> dict:
