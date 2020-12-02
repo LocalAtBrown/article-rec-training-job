@@ -1,3 +1,5 @@
+import requests as req
+
 from db.models.base import BaseModel
 from db.models.model import Model
 from db.models.article import Article
@@ -20,3 +22,9 @@ def create(model_class: BaseModel, **params: dict) -> int:
     resource = model_class(**params)
     resource.save()
     return resource.id
+
+
+def safe_get(url):
+    TIMEOUT_SECONDS = 60
+    page = req.get(url, timeout=TIMEOUT_SECONDS)
+    return page

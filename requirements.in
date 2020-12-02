@@ -2,3 +2,5 @@
 boto3
 peewee
 psycopg2-binary
+requests
+beautifulsoup4
