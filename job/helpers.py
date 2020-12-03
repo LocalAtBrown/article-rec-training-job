@@ -31,18 +31,25 @@ def _create_resource(model_class: BaseModel, **params: dict) -> int:
     return resource.id
 
 
-def find_or_create_article(external_id: int, path: str) -> dict:
+def get_article_by_external_id(external_id: int) -> dict:
     res = Article.select().where(Article.external_id == external_id)
     if res:
-        # TODO if article was published in the last 24 hrs, update metadata
         return res[0].to_dict()
+    else:
+        return None
 
-    metadata_dict = scrape_article_metadata(path)
-    article_id = create_article(external_id=external_id, **metadata_dict)
-    res = Article.select().where(Article.id == article_id)
-    article = res[0].to_dict()
 
-    return article
+def find_or_create_article(external_id: int, path: str) -> int:
+    article = get_article_by_external_id(external_id)
+    if article:
+        # TODO if article was published in the last 24 hrs, update metadata
+        return article["id"]
+
+    metadata = scrape_article_metadata(path)
+    article_data = {**metadata, "external_id": external_id}
+    article_id = create_article(**article_data)
+
+    return article_id
 
 
 def safe_get(url: str) -> str:
@@ -62,11 +69,10 @@ def extract_external_id(path: str) -> int:
 def find_or_create_articles(paths: list) -> dict:
     article_dict = {}
 
-    for path in paths[:10]:
+    for path in paths[10:15]:
         external_id = extract_external_id(path)
         if external_id:
-            article = find_or_create_article(external_id, path)
-            article_id = article["id"]
+            article_id = find_or_create_article(external_id, path)
             article_dict[external_id] = article_id
 
     return article_dict
