@@ -15,9 +15,7 @@ def fetch_latest_data() -> pd.DataFrame:
     s3_download(BUCKET_NAME, latest_data_key, data_filepath)
     with open(data_filepath) as f:
         sessions_dict = json.load(f)
-    import pdb
 
-    pdb.set_trace()
     return flatten_raw_data(sessions_dict)
 
 
