@@ -14,4 +14,8 @@ class BaseModel(Model):
         database = db
 
     def to_dict(self):
-        return model_to_dict(self)
+        resource = model_to_dict(self)
+        for key in resource.keys():
+            if isinstance(resource[key], datetime.datetime):
+                resource[key] = resource[key].isoformat()
+        return resource
