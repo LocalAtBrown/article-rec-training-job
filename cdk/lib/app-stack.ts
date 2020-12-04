@@ -41,6 +41,18 @@ export class AppStack extends cdk.Stack {
     // const bucketName = helpers.makeBucketName("change-this-bucket-name", props.stage);
     // const bucket = helpers.makeBucket(this, bucketName, taskRole, props.stage);
 
+    const policy = new iam.Policy(this, `${id}S3AccessPolicy`, {
+      statements: [
+        new iam.PolicyStatement({
+          sid: `${id}S3ReadAccess`,
+          actions: ["s3:Get*", "s3:List*"],
+          resources: ["*"],
+        }),
+      ],
+    });
+
+    taskRole.attachInlinePolicy(policy);
+
     const vpc = helpers.getVPC(this, props.stage);
     const { cluster } = helpers.getECSCluster(this, props.stage, vpc);
 
