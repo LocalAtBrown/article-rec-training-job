@@ -3,6 +3,7 @@ import re
 import requests as req
 
 from bs4 import BeautifulSoup
+from retrying import retry
 
 from db.models.base import BaseModel
 from db.models.model import Model
@@ -78,8 +79,9 @@ def find_or_create_article(external_id: int, path: str) -> int:
     return article_id
 
 
+@retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
 def safe_get(url: str) -> str:
-    TIMEOUT_SECONDS = 60
+    TIMEOUT_SECONDS = 30
     page = req.get(url, timeout=TIMEOUT_SECONDS)
     return page
 
@@ -95,7 +97,7 @@ def extract_external_id(path: str) -> int:
 def find_or_create_articles(paths: list) -> dict:
     article_dict = {}
 
-    for path in paths[10:15]:
+    for path in paths:
         external_id = extract_external_id(path)
         if external_id:
             article_id = find_or_create_article(external_id, path)
