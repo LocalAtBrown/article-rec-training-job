@@ -43,9 +43,7 @@ def extract_external_id(site: Site, path: str) -> int:
 def find_or_create_articles(site: Site, paths: list) -> dict:
     article_dict = {}
 
-    import random
-
-    for path in random.sample(paths, 5):
+    for path in paths:
         external_id = extract_external_id(site, path)
         if external_id:
             article_id = find_or_create_article(site, external_id, path)
