@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 import re
 import requests as req
 
@@ -39,10 +40,35 @@ def get_article_by_external_id(external_id: int) -> dict:
         return None
 
 
+def update_article(article_id, **params) -> None:
+    _update_resource(Article, article_id, **params)
+
+
+def _update_resource(model_class: BaseModel, resource_id: int, **params: dict) -> None:
+    q = model_class.update(**params).where(model_class.id == resource_id)
+    q.execute()
+
+
+def should_refresh(publish_ts: str) -> bool:
+    return True
+    # refresh metadata without a published time recorded yet
+    if not publish_ts:
+        return True
+
+    # refresh metadata for articles published within the last day
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    if datetime.fromisoformat(publish_ts) > yesterday:
+        return True
+
+    return False
+
+
 def find_or_create_article(external_id: int, path: str) -> int:
     article = get_article_by_external_id(external_id)
     if article:
-        # TODO if article was published in the last 24 hrs, update metadata
+        if should_refresh(article["published_at"]):
+            metadata = scrape_article_metadata(path)
+            update_article(article["id"], **metadata)
         return article["id"]
 
     metadata = scrape_article_metadata(path)
