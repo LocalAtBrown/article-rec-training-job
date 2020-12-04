@@ -1,8 +1,8 @@
 import logging
 
-from lib.config import config
 from db.models.model import Type
-from job.helpers import create_model, create_article, create_rec, find_or_create_articles
+from db.helpers import create_model
+from job.helpers import find_or_create_articles
 from job import preprocessors
 
 
