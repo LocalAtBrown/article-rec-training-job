@@ -45,12 +45,12 @@ def update_article(article_id, **params) -> None:
 
 
 def _update_resource(model_class: BaseModel, resource_id: int, **params: dict) -> None:
+    params["updated_at"] = datetime.now()
     q = model_class.update(**params).where(model_class.id == resource_id)
     q.execute()
 
 
 def should_refresh(publish_ts: str) -> bool:
-    return True
     # refresh metadata without a published time recorded yet
     if not publish_ts:
         return True
