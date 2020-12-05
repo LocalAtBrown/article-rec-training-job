@@ -71,7 +71,7 @@ export function makeScheduledTask(
     // TODO only run once on deploy
     let schedule = options.schedule;
     if (stage != STAGE.PRODUCTION) {
-      schedule = Schedule.rate(cdk.Duration.minutes(5))
+      schedule = Schedule.rate(cdk.Duration.days(365))
     }
 
     const stageOptions = {
