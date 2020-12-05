@@ -74,7 +74,7 @@ export class AppStack extends cdk.Stack {
           REGION: props.env?.region || 'us-east-1',
         },
         cpu: 128,
-        memoryLimitMiB: 128,
+        memoryLimitMiB: 1024,
         logging: ecs.LogDriver.awsLogs({
           streamPrefix: id,
           logRetention: 30,
