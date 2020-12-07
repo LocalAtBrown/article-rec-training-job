@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+import logging
 
 from db.helpers import create_article, update_article, get_article_by_external_id
 from sites.sites import Site
@@ -43,7 +44,8 @@ def extract_external_id(site: Site, path: str) -> int:
 def find_or_create_articles(site: Site, paths: list) -> dict:
     article_dict = {}
 
-    for path in paths:
+    logging.info(f"Finding or creating articles for {len(paths)} paths")
+    for path in paths[:10]:  # TODO test with first ten paths
         external_id = extract_external_id(site, path)
         if external_id:
             article_id = find_or_create_article(site, external_id, path)

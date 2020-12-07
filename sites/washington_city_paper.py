@@ -20,6 +20,7 @@ def extract_external_id(path: str) -> int:
 def scrape_article_metadata(path: str) -> dict:
     DOMAIN = "https://washingtoncitypaper.com"
     url = f"{DOMAIN}{path}"
+    logging.info(f"Scraping metadata from: {url}")
     page = safe_get(url)
     soup = BeautifulSoup(page.text, features="html.parser")
     metadata = {}
