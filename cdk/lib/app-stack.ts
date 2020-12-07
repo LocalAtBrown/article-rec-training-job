@@ -41,6 +41,18 @@ export class AppStack extends cdk.Stack {
     // const bucketName = helpers.makeBucketName("change-this-bucket-name", props.stage);
     // const bucket = helpers.makeBucket(this, bucketName, taskRole, props.stage);
 
+    const policy = new iam.Policy(this, `${id}S3AccessPolicy`, {
+      statements: [
+        new iam.PolicyStatement({
+          sid: `${id}S3ReadAccess`,
+          actions: ["s3:Get*", "s3:List*"],
+          resources: ["*"],
+        }),
+      ],
+    });
+
+    taskRole.attachInlinePolicy(policy);
+
     const vpc = helpers.getVPC(this, props.stage);
     const { cluster } = helpers.getECSCluster(this, props.stage, vpc);
 
@@ -62,7 +74,7 @@ export class AppStack extends cdk.Stack {
           REGION: props.env?.region || 'us-east-1',
         },
         cpu: 128,
-        memoryLimitMiB: 128,
+        memoryLimitMiB: 512,
         logging: ecs.LogDriver.awsLogs({
           streamPrefix: id,
           logRetention: 30,

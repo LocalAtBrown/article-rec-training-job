@@ -3,3 +3,6 @@
 __pycache__
 *.egg-info
 Brewfile.lock.json
+tmp/*
+*.pyc
+*.DS_Store
