@@ -35,4 +35,5 @@ def scrape_article_metadata(path: str) -> dict:
         tag = soup.find("meta", property=prop)
         metadata[name] = tag.get("content")
 
+    logging.info(f"Scraped metadata from: {url}")
     return metadata

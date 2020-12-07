@@ -20,15 +20,18 @@ def should_refresh(publish_ts: str) -> bool:
 
 
 def find_or_create_article(site: Site, external_id: int, path: str) -> int:
+    logging.info(f"Fetching article with external_id: {external_id}")
     article = get_article_by_external_id(external_id)
     if article:
         if should_refresh(article["published_at"]):
             metadata = scrape_article_metadata(site, path)
+            logging.info(f"Updating article with external_id: {external_id}")
             update_article(article["id"], **metadata)
         return article["id"]
 
     metadata = scrape_article_metadata(site, path)
     article_data = {**metadata, "external_id": external_id}
+    logging.info(f"Creating article with external_id: {external_id}")
     article_id = create_article(**article_data)
 
     return article_id
