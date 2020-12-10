@@ -8,6 +8,7 @@ import { Schedule } from "@aws-cdk/aws-events";
 // TODO this needs to be propagated to the tags
 export interface AppStackProps extends cdk.StackProps {
   stage: helpers.STAGE;
+  repoName: string;
 }
 
 export class AppStack extends cdk.Stack {
@@ -72,6 +73,7 @@ export class AppStack extends cdk.Stack {
        environment: {
           STAGE: props.stage,
           REGION: props.env?.region || 'us-east-1',
+          SERVICE: props.repoName,
         },
         cpu: 128,
         memoryLimitMiB: 512,

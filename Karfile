@@ -5,6 +5,7 @@ DOCKER_OPTS=$(cat <<END_HEREDOC
     -v $HOME/.aws/credentials:/root/.aws/credentials:ro \
     -v $(pwd):/app \
     -e STAGE=local \
+    -e SERVICE=$REPOSITORY \
     -it $REPOSITORY
 END_HEREDOC
 )

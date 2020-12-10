@@ -13,6 +13,7 @@ const appStackName = "ArticleRecTrainingJob";
 
 new AppStack(app, appStackName, {
   env,
+  repoName,
   stage: STAGE.PRODUCTION,
 });
 
@@ -24,5 +25,6 @@ new PipelineStack(app, `${appStackName}Pipeline`, {
 
 new AppStack(app, `Dev${appStackName}`, {
   env,
+  repoName,
   stage: STAGE.DEVELOPMENT,
 });
