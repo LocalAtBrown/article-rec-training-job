@@ -40,6 +40,14 @@ class Config:
 
         return val
 
+    def output_env(self):
+        OUTPUT_FILEPATH = "/tmp/environment"
+        with open(OUTPUT_FILEPATH, "w") as output_file:
+            output_file.write("#!/bin/bash" + "\n")
+
+            for var_name, val in self._config.items():
+                output_file.write(f"export {var_name}={val}\n")
+
     def load_env(self):
         with open(INPUT_FILEPATH) as json_file:
             env_vars = json.load(json_file)
@@ -58,3 +66,7 @@ class Config:
 
 
 config = Config()
+
+
+if __name__ == "__main__":
+    config.output_env()

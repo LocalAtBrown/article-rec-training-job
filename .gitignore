@@ -6,3 +6,4 @@ Brewfile.lock.json
 tmp/*
 *.pyc
 *.DS_Store
+*.log

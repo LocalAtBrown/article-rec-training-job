@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo 'setting env vars...'
+python /app/lib/config.py
+
+echo 'sourcing env vars...'
+source /tmp/environment
+
+echo 'running datadog agent...'
+DD_API_KEY=$DD_API_KEY DD_AGENT_MAJOR_VERSION=7 bash -c "$(curl -L https://raw.githubusercontent.com/DataDog/datadog-agent/master/cmd/agent/install_script.sh)"
+
+exec "$@"
