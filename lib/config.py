@@ -52,7 +52,10 @@ class Config:
         with open(INPUT_FILEPATH) as json_file:
             env_vars = json.load(json_file)
 
-        config = {}
+        config = {
+            "SERVICE": os.environ["SERVICE"],
+            "STAGE": os.environ["STAGE"],
+        }
         stage_env = env_vars.get("default", {})
         stage_env.update(env_vars[STAGE])
 
