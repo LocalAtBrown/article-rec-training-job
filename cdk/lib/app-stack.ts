@@ -83,14 +83,19 @@ export class AppStack extends cdk.Stack {
         })
     });
 
-    // open dogstatsd port to send metrics
-    const containerPort = 8125
-    const hostPort = 8125
+    // map ports to send metrics via datadog
+    const sslPort = 443
+    const ntpPort = 123
 
     containerDefinition.addPortMappings({
-      containerPort,
-      hostPort,
+      containerPort: ntpPort,
+      hostPort: ntpPort,
       protocol: ecs.Protocol.UDP,
+    });
+
+    containerDefinition.addPortMappings({
+      containerPort: sslPort,
+      hostPort: sslPort,
     });
 
     helpers.makeScheduledTask(this, id, props.stage, {
