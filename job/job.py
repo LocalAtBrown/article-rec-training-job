@@ -21,4 +21,4 @@ def run():
     logging.info(f"Found or created {len(article_dict)} articles")
 
     job_timing = int((time.time() - start) * 1000)
-    metrics.timing("job_timing_ms", job_timing, tags={"status": "success"})
+    metrics.timing("job_time_ms", job_timing, tags={"status": "success"})
