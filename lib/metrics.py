@@ -20,7 +20,7 @@ def serialize_tags(tags):
 
 
 class Metrics(datadog.DogStatsd):
-    """Statsd client with a better tagging interface.
+    """Statsd client with a better tagging interface, adapted from BuzzFeed.
 
     Supports passing tags as a list of colon separated strings (this is the
     Datadog client's expected format), while also suporting tags passed as a
