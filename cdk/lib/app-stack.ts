@@ -68,7 +68,7 @@ export class AppStack extends cdk.Stack {
     const taskDefinition = new ecs.Ec2TaskDefinition(this, `${id}TaskDefinition`, { taskRole });
     // find more container definition options here:
     // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.ContainerDefinitionOptions.html
-    taskDefinition.addContainer(`${id}TaskContainer`, {
+    const containerDefinition = taskDefinition.addContainer(`${id}TaskContainer`, {
       image,
        environment: {
           STAGE: props.stage,
@@ -81,6 +81,16 @@ export class AppStack extends cdk.Stack {
           streamPrefix: id,
           logRetention: 30,
         })
+    });
+
+    // open dogstatsd port to send metrics
+    const containerPort = 8125
+    const hostPort = 8125
+
+    containerDefinition.addPortMappings({
+      containerPort,
+      hostPort,
+      protocol: ecs.Protocol.UDP,
     });
 
     helpers.makeScheduledTask(this, id, props.stage, {
