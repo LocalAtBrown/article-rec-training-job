@@ -1,6 +1,6 @@
 import logging
 
-from db.models.model import Type
+from db.mappings.model import Type
 from db.helpers import create_model
 from job.helpers import find_or_create_articles
 from job import preprocessors
