@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 import logging
+import pandas as pd
 import random
 
 from db.helpers import create_article, update_article, get_article_by_external_id
@@ -46,6 +47,7 @@ def extract_external_id(site: Site, path: str) -> int:
 
 
 def find_or_create_articles(site: Site, paths: list) -> dict:
+    # article_dict = pd.DataFrame()
     article_dict = {}
 
     logging.info(f"Finding or creating articles for {len(paths)} paths")
@@ -55,5 +57,6 @@ def find_or_create_articles(site: Site, paths: list) -> dict:
         if external_id:
             article_id = find_or_create_article(site, external_id, path)
             article_dict[external_id] = article_id
+
 
     return article_dict
