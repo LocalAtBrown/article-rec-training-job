@@ -6,8 +6,8 @@ import boto3
 
 STAGE = os.environ["STAGE"]
 REGION = os.getenv("REGION", "us-east-1")
-CWD = str(Path(__file__).parent.resolve())
-INPUT_FILEPATH = f"{CWD}/../env.json"
+ROOT_DIR = str(Path(__file__).parent.parent.resolve())
+INPUT_FILEPATH = f"{ROOT_DIR}/env.json"
 CLIENT = boto3.client("ssm", REGION)
 
 

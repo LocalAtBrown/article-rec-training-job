@@ -4,6 +4,7 @@ import pandas as pd
 import random
 
 from db.helpers import create_article, update_article, get_article_by_external_id
+from job import preprocessors
 from sites.sites import Site
 
 
@@ -46,17 +47,37 @@ def extract_external_id(site: Site, path: str) -> int:
     return site.extract_external_id(path)
 
 
-def find_or_create_articles(site: Site, paths: list) -> dict:
-    # article_dict = pd.DataFrame()
-    article_dict = {}
+def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
+    articles = []
 
     logging.info(f"Finding or creating articles for {len(paths)} paths")
 
-    for path in random.sample(paths, 10):  # TODO test with ten paths
+    # for path in random.sample(paths, 10):  # TODO test with ten paths
+    for path in paths:
         external_id = extract_external_id(site, path)
         if external_id:
             article_id = find_or_create_article(site, external_id, path)
-            article_dict[external_id] = article_id
+            articles.append({
+                'article_id': article_id,
+                'external_id': external_id,
+                'page_path': path
+            })
+
+    article_df = pd.DataFrame(articles).set_index('page_path')
+
+    return article_df
 
 
-    return article_dict
+def format_ga(
+        ga_df: pd.DataFrame,
+        date_list: list = [],
+        half_life: float = 10.0
+    ) -> pd.DataFrame:
+    clean_df = preprocessors.fix_dtypes(ga_df)
+    sorted_df = preprocessors.time_activities(clean_df)
+    filtered_df = preprocessors.filter_activities(sorted_df)
+    time_df = preprocessors.aggregate_time(filtered_df, date_list)
+    exp_time_df = preprocessors.time_decay(time_df, half_life=half_life)
+
+    return exp_time_df
+
