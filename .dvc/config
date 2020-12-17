@@ -1,0 +1,2 @@
+['remote "bucket"']
+    url = s3://lnl-dvc/article-rec-training-job
