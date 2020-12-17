@@ -2,6 +2,22 @@
 
 Job that runs every two hours to create a new batch of article recommendations, using the latest Google Analytics data available.
 
+## Dev Usage
+1. Build the container
+```
+kar build
+```
+
+2. Run the job
+```
+kar run
+```
+
+3. Or, run bash in the container
+```
+kar run bash
+```
+
 ## Migrations
 
 ### Adding a Migration
@@ -24,3 +40,4 @@ flyway info -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -pass
 ```
 flyway migrate -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -password=<PASSWORD> -locations=filesystem:db/migrations
 ```
+
