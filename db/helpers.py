@@ -18,8 +18,8 @@ def create_rec(**params: dict) -> int:
     return _create_resource(Rec, **params)
 
 
-def _create_resource(model_class: BaseMapping, **params: dict) -> int:
-    resource = model_class(**params)
+def _create_resource(mapping_class: BaseMapping, **params: dict) -> int:
+    resource = mapping_class(**params)
     resource.save()
     return resource.id
 
@@ -36,7 +36,7 @@ def update_article(article_id, **params) -> None:
     _update_resource(Article, article_id, **params)
 
 
-def _update_resource(model_class: BaseMapping, resource_id: int, **params: dict) -> None:
+def _update_resource(mapping_class: BaseMapping, resource_id: int, **params: dict) -> None:
     params["updated_at"] = datetime.now()
-    q = model_class.update(**params).where(model_class.id == resource_id)
+    q = mapping_class.update(**params).where(mapping_class.id == resource_id)
     q.execute()
