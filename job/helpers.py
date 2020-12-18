@@ -71,13 +71,20 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 def format_ga(
         ga_df: pd.DataFrame,
         date_list: list = [],
+        external_id_col: str = 'external_id',
         half_life: float = 10.0
     ) -> pd.DataFrame:
     clean_df = preprocessors.fix_dtypes(ga_df)
     sorted_df = preprocessors.time_activities(clean_df)
     filtered_df = preprocessors.filter_activities(sorted_df)
-    time_df = preprocessors.aggregate_time(filtered_df, date_list)
-    exp_time_df = preprocessors.time_decay(time_df, half_life=half_life)
+    time_df = preprocessors.aggregate_time(
+        filtered_df,
+        date_list=date_list,
+        external_id_col=external_id_col
+    )
+    exp_time_df = preprocessors.time_decay(
+        time_df, half_life=half_life
+    )
 
     return exp_time_df
 

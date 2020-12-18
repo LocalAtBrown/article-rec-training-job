@@ -97,14 +97,14 @@ class ImplicitMF():
 
 
 def train_model(
-        formatted_df: pd.DataFrame,
+        X: np.array,
         reg: float,
         n_components: int,
         epochs: int
     ):
-    X = np.log(1 + np.array(formatted_df))
+    X_log = np.log(1 + X)
     X_scaler = MinMaxScaler()
-    X_scaled = X_scaler.fit_transform(X)
+    X_scaled = X_scaler.fit_transform(X_log)
 
     # Hyperparameters derived using optimize_ga_pipeline.ipynb
     model = ImplicitMF(
@@ -114,3 +114,4 @@ def train_model(
         num_iterations=epochs
     )
     model.train_model()
+    return model

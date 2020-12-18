@@ -4,6 +4,8 @@ import warnings
 from job.preprocessors import *
 from lib.config import ROOT_DIR
 
+EXPERIMENT_DATE = pd.to_datetime(datetime.date.today())
+
 
 @pytest.fixture(scope='module')
 def activity_df():
@@ -18,7 +20,7 @@ def _test_fix_dtypes(df):
     assert all((clean_df.activity_type == 'PAGEVIEW') == (clean_df.event_action == 'pageview'))
     assert clean_df.session_date.dtype == '<M8[ns]'
     assert clean_df.activity_time.dtype == 'datetime64[ns, UTC]'
-    assert all(clean_df.page_title.isna() == (clean_df.landing_page_path == '(not set)'))
+    assert all(clean_df.external_id.isna() == (clean_df.landing_page_path == '(not set)'))
     return clean_df
 
 
@@ -26,47 +28,69 @@ def _test_time_activities(clean_df):
     sorted_df = time_activities(clean_df)
     client_first_visit = clean_df.groupby('client_id').activity_time.min()
     client_last_visit = clean_df.groupby('client_id').activity_time.max()
-    client_time_spent = client_last_visit - client_first_visit
-    total_time_spent = client_time_spent.sum()
-    assert pd.to_timedelta(sorted_df.time_spent.sum()) == total_time_spent
+    client_duration = client_last_visit - client_first_visit
+    total_duration = client_duration.sum()
+    assert pd.to_timedelta(sorted_df.duration.sum()) == total_duration
     return sorted_df
 
 
 def _test_label_activities(sorted_df):
     labeled_df = label_activities(sorted_df)
-    converted = set(sorted_df[sorted_df.event_action == 'conversion'].client_id.unique())
+    converted = set(sorted_df[sorted_df.event_action == 'newsletter signup'].client_id.unique())
     assert set(labeled_df[labeled_df.converted == 1.0].client_id.unique()) == converted
-    assert set(labeled_df[~labeled_df.conversion_date.isna()].client_id.unique()) == converted
+    assert set(labeled_df[~labeled_df.conversion_time.isna()].client_id.unique()) == converted
+    assert set(labeled_df[~labeled_df.time_to_conversion.isna()].client_id.unique()) == converted
+    conversion_events = labeled_df[labeled_df.event_action == 'newsletter signup']
+    assert (conversion_events.converted == 1.0).all()
+    assert (conversion_events.conversion_time == conversion_events.activity_time).all()
+    assert (conversion_events.time_to_conversion == 0.0).all()
+    regular_events = labeled_df[labeled_df.event_action != 'newsletter signup']
+    assert len(regular_events.converted.unique()) == 2
+    assert (regular_events.activity_time <
+            regular_events.conversion_time)[~regular_events.conversion_time.isna()].all()
+    assert (regular_events.time_to_conversion != pd.to_timedelta(0)).all()
     return labeled_df
 
 
 def _test_filter_activities(labeled_df):
     times_spent_minutes = (
         pd.to_timedelta(
-            labeled_df[~labeled_df.time_spent.isna()]
-            .time_spent
+            labeled_df[~labeled_df.duration.isna()]
+            .duration
         ).dt.total_seconds() / 60
     )
     for threshold_minutes in times_spent_minutes.describe().loc[['25%', '50%', '75%']]:
-        filtered_df = filter_activities(labeled_df, threshold_minutes=threshold_minutes)
+        filtered_df = filter_activities(labeled_df, max_duration=threshold_minutes)
         # Since cutoff is a pandas quartile, it should exactly correspond to a value in the DataFrame
-        assert pd.to_timedelta(filtered_df.time_spent.max()).total_seconds() / 60 <= threshold_minutes
+        assert pd.to_timedelta(filtered_df.duration.max()).total_seconds() / 60 <= threshold_minutes
 
     filtered_df = filter_activities(labeled_df)
     return filtered_df
 
 
+def _test_aggregate_conversion_times(filtered_df):
+    conversion_df = aggregate_conversion_times(filtered_df, date_list=[EXPERIMENT_DATE], external_id_col='article_id')
+    assert all(filtered_df.groupby('article_id').duration.sum() == conversion_df.sum())
+    assert all([(client_id, EXPERIMENT_DATE) in conversion_df.index for client_id in filtered_df.client_id.unique()])
+    return conversion_df
+
+
+def _test_aggregate_pageviews(filtered_df):
+    pageview_df = aggregate_pageviews(filtered_df, date_list=[EXPERIMENT_DATE], external_id_col='article_id')
+    assert all(filtered_df.groupby('article_id').count() == pageview_df.sum())
+    assert all([(client_id, EXPERIMENT_DATE) in pageview_df.index for client_id in filtered_df.client_id.unique()])
+    return pageview_df
+
+
 def _test_aggregate_time(filtered_df):
-    EXPERIMENT_DATE = pd.to_datetime(datetime.datetime.today())
-    time_df = aggregate_time(filtered_df, date_list=[EXPERIMENT_DATE], external_id_col='page_title')
-    assert all(filtered_df.groupby('page_title').time_spent.sum() == time_df.sum())
+    time_df = aggregate_time(filtered_df, date_list=[EXPERIMENT_DATE], external_id_col='external_id')
+    assert all(filtered_df.groupby('external_id').duration.sum() == time_df.sum())
     assert all([(client_id, EXPERIMENT_DATE) in time_df.index for client_id in filtered_df.client_id.unique()])
     return time_df
 
 
 def _test_time_decay(time_df):
-    # TODO: Test that time from other users isn't leaking
-    # If a reader registers time on an article, should register at least some decayed time. And vice versa.
+    # A reader registers decayed time on an article iff reader registers some time.
     exp_time_df = time_decay(time_df, half_life=1)
     visited_articles = \
         (

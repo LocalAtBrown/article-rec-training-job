@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from itertools import product
+from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
 from lib.bucket import s3_download
@@ -74,6 +75,52 @@ def get_type_specific_fields(activity: dict) -> dict:
         }
 
 
+def _add_dummies(
+        activity_df: pd.DataFrame,
+        date_list: [datetime.date] = [],
+        external_id_col: str = 'article_id'
+    ):
+    """
+
+    :param activity_df:
+    :param date_list:
+    :param external_id_col:
+    :return:
+    """
+    filtered_df = activity_df.copy()
+    filtered_df = filtered_df.rename(columns={external_id_col: 'external_id'})
+    filtered_df = (
+        filtered_df
+            # Adding dummy rows to ensure each article ID from original activity_df is included
+            .append(
+            [
+                {
+                    'client_id': filtered_df.client_id.iloc[0],
+                    'duration': 0.0,
+                    'external_id': external_id,
+                    'session_date': pd.to_datetime(datetime_obj)
+                }
+                for datetime_obj, external_id
+                in product(date_list, activity_df[external_id_col].unique())
+            ]
+        )
+            # Adding dummy rows to ensure each client ID from original activity_df is included
+            .append(
+            [
+                {
+                    'client_id': client_id,
+                    'duration': 0.0,
+                    'external_id': filtered_df.external_id.iloc[0],
+                    'session_date': pd.to_datetime(datetime_obj)
+                }
+                for datetime_obj, client_id
+                in product(date_list, activity_df.client_id.unique())
+            ]
+        )
+    )
+    return filtered_df
+
+
 def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
     Cleans event and datetime columns of DataFrame of collected Google Analytics activities
@@ -103,12 +150,12 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     sorted_df['activity_time'] = pd.to_datetime(sorted_df['activity_time'])
 
     # Compute dwell time for each activity (diff with row before and flip the sign)
-    sorted_df['time_spent'] = pd.to_numeric(sorted_df['activity_time'].diff(-1) * -1)
+    sorted_df['duration'] = pd.to_numeric(sorted_df['activity_time'].diff(-1) * -1)
 
     # Drop the last activity from each client
     client_bounds = ~sorted_df['client_id'].eq(sorted_df['client_id'].shift(-1))
-    sorted_df.loc[client_bounds, 'time_spent'] = np.nan
-    sorted_df = sorted_df[~sorted_df.time_spent.isna()]
+    sorted_df.loc[client_bounds, 'duration'] = np.nan
+    sorted_df = sorted_df[~sorted_df.duration.isna()]
 
     return sorted_df
 
@@ -121,71 +168,112 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
 
         returns: DataFrame of activities with associated next conversion times
     """
-    labeled_df = activity_df.copy()
+    labeled_df = activity_df.set_index('client_id')
 
     # Add time of next conversion event to each activity preceding a conversion
-    labeled_df.loc[:, 'conversion_date'] = pd.to_datetime(
-        labeled_df['session_date']
-            .where(labeled_df['event_action'] == 'conversion')
-    )
-    labeled_df.loc[:, 'conversion_date'] = (
-        labeled_df
-            .groupby('client_id')['conversion_date']
+    labeled_df['conversion_time'] = (
+        labeled_df[['activity_time']]
+            .where(labeled_df['event_action'] == 'newsletter signup')
+            .groupby('client_id')['activity_time']
             .bfill()
     )
 
+    labeled_df['time_to_conversion'] = pd.to_numeric(labeled_df.conversion_time.sub(labeled_df.activity_time))
+    labeled_df.loc[labeled_df.conversion_time.isna(), 'time_to_conversion'] = np.nan
+
     # Set "converted" boolean flag to true to each activity following a conversion
-    labeled_df.loc[:, 'converted'] = (
-        (labeled_df.event_action == 'conversion')
-            .where(labeled_df.event_action == 'conversion')
-    )
-    labeled_df.loc[:, 'converted'] = (
-        labeled_df
-            .groupby('client_id')['converted']
+    labeled_df['converted'] = (
+        (labeled_df[['event_action']] == 'newsletter signup')
+            .where(labeled_df.event_action == 'newsletter signup')
+            .groupby('client_id')['event_action']
             .ffill()
             .fillna(0)
     )
 
+    labeled_df = labeled_df.reset_index()
     return labeled_df
 
 
 def filter_activities(
         activity_df: pd.DataFrame,
-        threshold_minutes: float = 10,
+        max_duration: float = 10,
+        min_dwell_time: float = 1,
         output_figure: bool = False
     ) -> pd.DataFrame:
     """
     Filters out activities that are longer than a predetermined time
 
         activity_df: DataFrame of Google Analytics activities with associated dwell times
-        threshold: Pre-determined optimal dwell time threshold (in minutes)
+        max_duration: Pre-determined optimal activity duration threshold (in minutes)
+        min_dwell_time: Pre-determined optimal dwell_time threshold (in minutes)
 
         returns: DataFrame of Google Analytics activities with invalid dwell times replaced by NaN values
     """
 
     filtered_df = activity_df.copy()
     filtered_df.loc[
-        pd.to_timedelta(filtered_df['time_spent']).dt.total_seconds() > threshold_minutes * 60,
-        'time_spent'
+        pd.to_timedelta(filtered_df['duration']).dt.total_seconds() > max_duration * 60,
+        'duration'
     ] = np.nan
 
     if output_figure and config.get("SAVE_FIGURES"):
-        t = pd.to_timedelta(activity_df.time_spent).dt.seconds.dropna() / 60
+        t = pd.to_timedelta(activity_df.duration).dt.seconds.dropna() / 60
 
         _ = plt.hist(t, bins=np.logspace(np.log(0.001), np.log(100.0), 100), log=True)
         _ = plt.xscale('log')
-        _ = plt.axvline(x=threshold_minutes, c='red')
+        _ = plt.axvline(x=max_duration, c='red')
         plt.savefig(f'{ROOT_DIR}/../outputs/activity_time_filter.png')
 
-    filtered_df = filtered_df[~filtered_df.time_spent.isna()]
+    # pd.to_timedelta(
+    #     filtered_df
+    #         .groupby('client_id')['duration']
+    #         .sum()
+    # )
+
+    filtered_df = filtered_df[~filtered_df.duration.isna()]
     return filtered_df
+
+
+def aggregate_conversion_times(
+        activity_df: pd.DataFrame,
+        date_list: [datetime.date] = [],
+        start_time: datetime.datetime=None,
+        end_time: datetime.datetime=None,
+        external_id_col: str = 'article_id'
+    ) -> pd.DataFrame:
+    """
+    Aggregates activities into minimum time to conversion on interactions with each article.
+
+        activity_df: DataFrame of Google Analytics activities with associated dwell times
+        datetime_list: List of datetimes to forcefully include in all aggregates
+        returns: DataFrame of aggregated per day dwell time statistics for each user
+    """
+    filtered_df = _add_dummies(
+        activity_df,
+        date_list=date_list,
+        external_id_col=external_id_col
+    )
+    if start_time is not None:
+        filtered_df = filtered_df[filtered_df.activity_time >= start_time]
+    if end_time is not None:
+        filtered_df = filtered_df[filtered_df.activity_time < end_time]
+    conversion_df = (
+        filtered_df
+        .groupby(['external_id', 'client_id', 'session_date'])['time_to_conversion']
+        .min()
+        .unstack(level=0)
+        .sort_index()
+        .fillna(0.0)
+    )
+
+    return conversion_df
 
 
 def aggregate_time(
         activity_df: pd.DataFrame,
         date_list: [datetime.date] = [],
-        start_time: datetime.datetime = None,
-        end_time: datetime.datetime = None,
+        start_time: datetime.datetime=None,
+        end_time: datetime.datetime=None,
         external_id_col: str = 'external_id'
     ) -> pd.DataFrame:
     """
@@ -195,48 +283,52 @@ def aggregate_time(
         datetime_list: List of datetimes to forcefully include in all aggregates
         returns: DataFrame of aggregated per day dwell time statistics for each user
     """
-    filtered_df = activity_df.copy()
-    filtered_df = filtered_df.rename(columns={external_id_col: 'external_id'})
+    filtered_df = _add_dummies(
+        activity_df,
+        date_list=date_list,
+        external_id_col=external_id_col
+    )
     if start_time is not None:
         filtered_df = filtered_df[filtered_df.activity_time >= start_time]
     if end_time is not None:
         filtered_df = filtered_df[filtered_df.activity_time < end_time]
     time_df = (
         filtered_df
-            # Adding dummy rows to ensure each article ID from original activity_df is included
-            .append(
-            [
-                {
-                    'client_id': filtered_df.client_id.iloc[0],
-                    'time_spent': 0.0,
-                    'external_id': external_id,
-                    'session_date': pd.to_datetime(datetime_obj)
-                }
-                for datetime_obj, external_id
-                in product(date_list, activity_df[external_id_col].unique())
-            ]
-        )
-            # Adding dummy rows to ensure each client ID from original activity_df is included
-            .append(
-            [
-                {
-                    'client_id': client_id,
-                    'time_spent': 0.0,
-                    'external_id': filtered_df.external_id.iloc[0],
-                    'session_date': pd.to_datetime(datetime_obj)
-                }
-                for datetime_obj, client_id
-                in product(date_list, activity_df.client_id.unique())
-            ]
-        )
-            .groupby(['external_id', 'client_id', 'session_date'])['time_spent']
-            .sum()
-            .unstack(level=0)
-            .sort_index()
-            .fillna(0.0)
+        .groupby(['external_id', 'client_id', 'session_date'])['duration']
+        .sum()
+        .unstack(level=0)
+        .sort_index()
+        .fillna(0.0)
     )
 
     return time_df
+
+
+def aggregate_pageviews(
+        activity_df: pd.DataFrame,
+        date_list: [datetime.date] = [],
+        start_time: datetime.datetime=None,
+        end_time: datetime.datetime=None,
+        external_id_col: str = 'article_id'
+    ) -> pd.DataFrame:
+    """
+    Aggregates activities into daily per-article total dwell time.
+
+        activity_df: DataFrame of Google Analytics activities with associated dwell times
+        datetime_list: List of datetimes to forcefully include in all aggregates
+        returns: DataFrame of aggregated per day dwell time statistics for each user
+    """
+    dummy_time_df = activity_df.copy()
+    dummy_time_df['duration'] = 1.0
+    time_df = aggregate_time(
+        activity_df=dummy_time_df,
+        date_list=date_list,
+        start_time=start_time,
+        end_time=end_time,
+        external_id_col=external_id_col
+    )
+    pageview_df = (time_df > 0).astype(int)
+    return pageview_df
 
 
 def time_decay(
@@ -252,17 +344,22 @@ def time_decay(
     article_cols = time_df.columns
     exp_time_df = time_df.reset_index()
 
-    for client_id, group_df in exp_time_df.groupby('client_id'):
+    # Apply exponential time decay
+    user_changed = ~(exp_time_df.client_id.eq(exp_time_df.client_id.shift(1)).fillna(False))
+    date_delta = exp_time_df.session_date.diff().dt.days.fillna(0)
+    dwell_times = np.nan_to_num(exp_time_df[article_cols])
+    bar = ProgressBar(max_value=len(exp_time_df))
+    for i in range(1, dwell_times.shape[0]):
+        if user_changed.iloc[i]:
+            continue
+        dwell_times[i, :] += apply_decay(dwell_times[i - 1, :], date_delta.iloc[i], half_life)
+        bar.update(i)
 
-        # Apply exponential time decay
-        date_delta = group_df.session_date.diff().dt.days.fillna(0)
-        dwell_times = np.nan_to_num(group_df[article_cols])
-        for i in range(1, dwell_times.shape[0]):
-            dwell_times[i, :] += apply_decay(dwell_times[i - 1,:], date_delta.iloc[i], half_life)
-
-        exp_time_df.loc[exp_time_df.client_id == client_id, article_cols] = dwell_times
-
-    exp_time_df = exp_time_df.set_index(['client_id', 'session_date'])
+    exp_time_df = pd.DataFrame(
+        data=dwell_times,
+        index=time_df.index,
+        columns=article_cols
+    )
     return exp_time_df
 
 
