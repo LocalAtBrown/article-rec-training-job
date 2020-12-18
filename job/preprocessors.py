@@ -96,7 +96,7 @@ def _add_dummies(
             [
                 {
                     'client_id': filtered_df.client_id.iloc[0],
-                    'duration': 0.0,
+                    'duration': pd.to_timedelta(0.0),
                     'external_id': external_id,
                     'session_date': pd.to_datetime(datetime_obj)
                 }
@@ -109,7 +109,7 @@ def _add_dummies(
             [
                 {
                     'client_id': client_id,
-                    'duration': 0.0,
+                    'duration': pd.to_timedelta(0.0),
                     'external_id': filtered_df.external_id.iloc[0],
                     'session_date': pd.to_datetime(datetime_obj)
                 }
@@ -150,7 +150,7 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     sorted_df['activity_time'] = pd.to_datetime(sorted_df['activity_time'])
 
     # Compute dwell time for each activity (diff with row before and flip the sign)
-    sorted_df['duration'] = pd.to_numeric(sorted_df['activity_time'].diff(-1) * -1)
+    sorted_df['duration'] = sorted_df['activity_time'].diff(-1) * -1
 
     # Drop the last activity from each client
     client_bounds = ~sorted_df['client_id'].eq(sorted_df['client_id'].shift(-1))
@@ -178,7 +178,7 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
             .bfill()
     )
 
-    labeled_df['time_to_conversion'] = pd.to_numeric(labeled_df.conversion_time.sub(labeled_df.activity_time))
+    labeled_df['time_to_conversion'] = labeled_df.conversion_time.sub(labeled_df.activity_time)
     labeled_df.loc[labeled_df.conversion_time.isna(), 'time_to_conversion'] = np.nan
 
     # Set "converted" boolean flag to true to each activity following a conversion
@@ -196,8 +196,8 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
 
 def filter_activities(
         activity_df: pd.DataFrame,
-        max_duration: float = 10,
-        min_dwell_time: float = 1,
+        max_duration: float = 10.0,
+        min_dwell_time: float = 1.0,
         output_figure: bool = False
     ) -> pd.DataFrame:
     """
@@ -212,25 +212,29 @@ def filter_activities(
 
     filtered_df = activity_df.copy()
     filtered_df.loc[
-        pd.to_timedelta(filtered_df['duration']).dt.total_seconds() > max_duration * 60,
+        filtered_df['duration'].dt.total_seconds() / 60 > max_duration,
         'duration'
     ] = np.nan
 
     if output_figure and config.get("SAVE_FIGURES"):
-        t = pd.to_timedelta(activity_df.duration).dt.seconds.dropna() / 60
+        t = pd.activity_df.duration.dt.total_seconds().dropna() / 60
 
         _ = plt.hist(t, bins=np.logspace(np.log(0.001), np.log(100.0), 100), log=True)
         _ = plt.xscale('log')
         _ = plt.axvline(x=max_duration, c='red')
         plt.savefig(f'{ROOT_DIR}/../outputs/activity_time_filter.png')
 
-    # pd.to_timedelta(
-    #     filtered_df
-    #         .groupby('client_id')['duration']
-    #         .sum()
-    # )
+    dwell_times = filtered_df.groupby('client_id')['duration'].sum()
+    valid_clients = (
+        dwell_times
+        [dwell_times.dt.total_seconds() / 60 >= min_dwell_time]
+        .reset_index()
+        .client_id
+        .unique()
+    )
 
     filtered_df = filtered_df[~filtered_df.duration.isna()]
+    filtered_df = filtered_df[filtered_df.client_id.isin(valid_clients)]
     return filtered_df
 
 
@@ -292,9 +296,10 @@ def aggregate_time(
         filtered_df = filtered_df[filtered_df.activity_time >= start_time]
     if end_time is not None:
         filtered_df = filtered_df[filtered_df.activity_time < end_time]
+    filtered_df['duration_seconds'] = filtered_df.duration.dt.total_seconds()
     time_df = (
         filtered_df
-        .groupby(['external_id', 'client_id', 'session_date'])['duration']
+        .groupby(['external_id', 'client_id', 'session_date'])['duration_seconds']
         .sum()
         .unstack(level=0)
         .sort_index()

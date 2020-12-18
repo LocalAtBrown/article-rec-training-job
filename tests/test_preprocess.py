@@ -26,11 +26,12 @@ def _test_fix_dtypes(df):
 
 def _test_time_activities(clean_df):
     sorted_df = time_activities(clean_df)
+    assert sorted_df.duration.dtype == '<m8[ns]'
     client_first_visit = clean_df.groupby('client_id').activity_time.min()
     client_last_visit = clean_df.groupby('client_id').activity_time.max()
     client_duration = client_last_visit - client_first_visit
     total_duration = client_duration.sum()
-    assert pd.to_timedelta(sorted_df.duration.sum()) == total_duration
+    assert sorted_df.duration.sum() == total_duration
     return sorted_df
 
 
@@ -43,7 +44,7 @@ def _test_label_activities(sorted_df):
     conversion_events = labeled_df[labeled_df.event_action == 'newsletter signup']
     assert (conversion_events.converted == 1.0).all()
     assert (conversion_events.conversion_time == conversion_events.activity_time).all()
-    assert (conversion_events.time_to_conversion == 0.0).all()
+    assert (conversion_events.time_to_conversion == pd.to_timedelta(0.0)).all()
     regular_events = labeled_df[labeled_df.event_action != 'newsletter signup']
     assert len(regular_events.converted.unique()) == 2
     assert (regular_events.activity_time <
@@ -53,16 +54,19 @@ def _test_label_activities(sorted_df):
 
 
 def _test_filter_activities(labeled_df):
-    times_spent_minutes = (
-        pd.to_timedelta(
-            labeled_df[~labeled_df.duration.isna()]
-            .duration
-        ).dt.total_seconds() / 60
-    )
-    for threshold_minutes in times_spent_minutes.describe().loc[['25%', '50%', '75%']]:
-        filtered_df = filter_activities(labeled_df, max_duration=threshold_minutes)
-        # Since cutoff is a pandas quartile, it should exactly correspond to a value in the DataFrame
-        assert pd.to_timedelta(filtered_df.duration.max()).total_seconds() / 60 <= threshold_minutes
+    durations = labeled_df[~labeled_df.duration.isna()].duration.dt.total_seconds() / 60
+    for duration in durations.describe().loc[['25%', '50%', '75%']]:
+        filtered_df = filter_activities(labeled_df, max_duration=duration, min_dwell_time=0)
+        assert filtered_df.duration.max().total_seconds() / 60 <= duration
+        dwell_times = filtered_df.groupby('client_id').duration.sum()
+        for dwell_time in dwell_times:
+            # Since cutoff is a pandas quartile, it should exactly correspond to a value in the DataFrame
+            filtered_df = filter_activities(
+                filtered_df,
+                max_duration=duration,
+                min_dwell_time=dwell_time.total_seconds() / 60
+            )
+            assert (filtered_df.groupby('client_id').duration.sum() >= dwell_time).all()
 
     filtered_df = filter_activities(labeled_df)
     return filtered_df
@@ -84,7 +88,14 @@ def _test_aggregate_pageviews(filtered_df):
 
 def _test_aggregate_time(filtered_df):
     time_df = aggregate_time(filtered_df, date_list=[EXPERIMENT_DATE], external_id_col='external_id')
-    assert all(filtered_df.groupby('external_id').duration.sum() == time_df.sum())
+    assert (time_df.dtypes == float).all()
+    # Lower than floating point error
+    assert all((
+        filtered_df
+        .groupby('external_id')
+        .duration.sum()
+        .dt.total_seconds() - time_df.sum()).abs() < 1e-12
+    )
     assert all([(client_id, EXPERIMENT_DATE) in time_df.index for client_id in filtered_df.client_id.unique()])
     return time_df
 
