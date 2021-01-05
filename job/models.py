@@ -41,6 +41,13 @@ def load_matrix(pageview_df, num_users, num_items):
 
 
 class ImplicitMF():
+    """
+    Python implementation of implicit matrix factorization as outlined in
+    "Collaborative Filtering for Implicit Feedback Datasets."
+
+    Source: https://github.com/MrChrisJohnson/implicit-mf
+    Paper: http://yifanhu.net/PUB/cf.pdf
+    """
 
     def __init__(self, counts, num_factors=40, num_iterations=30,
                  reg_param=0.8):
