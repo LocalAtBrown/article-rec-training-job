@@ -30,4 +30,4 @@ def run():
     article_names = formatted_df.columns
     user_names = formatted_df.index
 
-    logging.info(f"Found or created {len(article_df)} articles")
+    logging.info(f"Successfully trained model on {len(article_df)} inputs.")
