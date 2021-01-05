@@ -1,7 +1,6 @@
 from datetime import datetime, timezone, timedelta
 import logging
 import pandas as pd
-import random
 
 from db.helpers import create_article, update_article, get_article_by_external_id
 from job import preprocessors
@@ -52,7 +51,6 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 
     logging.info(f"Finding or creating articles for {len(paths)} paths")
 
-    # for path in random.sample(paths, 10):  # TODO test with ten paths
     for path in paths:
         external_id = extract_external_id(site, path)
         if external_id:
