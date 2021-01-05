@@ -101,7 +101,7 @@ def _test_aggregate_time(filtered_df):
 
 
 def _test_time_decay(time_df):
-    # A reader registers decayed time on an article iff reader registers some time.
+    # A reader registers decayed time on an article if and only if reader registers some time.
     exp_time_df = time_decay(time_df, half_life=1)
     visited_articles = \
         (
