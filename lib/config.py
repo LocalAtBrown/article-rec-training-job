@@ -9,6 +9,7 @@ REGION = os.getenv("REGION", "us-east-1")
 ROOT_DIR = str(Path(__file__).parent.parent.resolve())
 INPUT_FILEPATH = f"{ROOT_DIR}/env.json"
 CLIENT = boto3.client("ssm", REGION)
+MAX_RECS = 20
 
 
 class Config:
