@@ -47,6 +47,15 @@ def extract_external_id(site: Site, path: str) -> int:
 
 
 def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
+    """
+    Find articles on news website from list of paths, then associate with corresponding identifiers.
+
+    :param site: Site object enabling retrieval of external ID
+    :param paths: Paths on corresponding news website for which to retrieve IDs
+    :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
+        and the article ID in the database.
+        * Requisite fields: "article_id" (str), "external_id" (str), "page_path" (str)
+    """
     articles = []
 
     logging.info(f"Finding or creating articles for {len(paths)} paths")
@@ -72,6 +81,17 @@ def format_ga(
         external_id_col: str = 'external_id',
         half_life: float = 10.0
     ) -> pd.DataFrame:
+    """
+    Format clickstream Google Analytics data into user-item matrix for training.
+
+    :param ga_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str)
+    :param date_list: List of datetimes to forcefully include in all aggregates
+    :param external_id_col: Name of column being used to denote articles
+    :param half_life: Desired half life of time spent in days
+    :return: DataFrame with one row for each user at each date of interest, and one column for each article
+    """
     clean_df = preprocessors.fix_dtypes(ga_df)
     sorted_df = preprocessors.time_activities(clean_df)
     filtered_df = preprocessors.filter_activities(sorted_df)

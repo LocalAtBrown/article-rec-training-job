@@ -78,14 +78,14 @@ def get_type_specific_fields(activity: dict) -> dict:
 def _add_dummies(
         activity_df: pd.DataFrame,
         date_list: [datetime.date] = [],
-        external_id_col: str = 'article_id'
+        external_id_col: str = 'external_id'
     ):
     """
+    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+    :param date_list: List of dates to forcefully include in all aggregates
+    :param external_id_col: Name of column being used to denote articles
 
-    :param activity_df:
-    :param date_list:
-    :param external_id_col:
-    :return:
+    :return: DataFrame of Google Analytics with dummy rows for each user and date of interest included
     """
     filtered_df = activity_df.copy()
     filtered_df = filtered_df.rename(columns={external_id_col: 'external_id'})
@@ -125,9 +125,13 @@ def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
     Cleans event and datetime columns of DataFrame of collected Google Analytics activities
 
-        activity_df: DataFrame of activities collected from Google Analytics using job.py
+    :param activity_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str)
 
-        returns: DataFrame with formatted datetimes and clean event columns
+    :return: DataFrame of activities with associated dwell times
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str)
+            "event_action" (str), "event_category" (str)
     """
     clean_df = activity_df.copy()
     clean_df['event_category'] = activity_df['event_category'].fillna('pageview')
@@ -142,9 +146,11 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute and add dwell times to activity DataFrame
 
-        activity_df: Cleaned DataFrame of activities
+    :param activity_df: Cleaned DataFrame of activities
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str), "activity_time" (datetime.datetime)
 
-        returns: DataFrame of activities with associated dwell times
+    :return: DataFrame of activities with associated dwell times
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
     """
     sorted_df = activity_df.copy().sort_values(by=['client_id', 'activity_time'])
     sorted_df['activity_time'] = pd.to_datetime(sorted_df['activity_time'])
@@ -164,9 +170,12 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute and add dwell and conversion times to activity DataFrame
 
-        activity_df: Cleaned DataFrame of activities
+    :param activity_df: Cleaned DataFrame of activities
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
 
-        returns: DataFrame of activities with associated next conversion times
+    :return: DataFrame of activities with associated next conversion times.
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "converted" (int), "conversion_time" (datetime.datetime), "time_to_conversion" (datetime.timedelta)
     """
     labeled_df = activity_df.set_index('client_id')
 
@@ -203,11 +212,12 @@ def filter_activities(
     """
     Filters out activities that are longer than a predetermined time
 
-        activity_df: DataFrame of Google Analytics activities with associated dwell times
-        max_duration: Pre-determined optimal activity duration threshold (in minutes)
-        min_dwell_time: Pre-determined optimal dwell_time threshold (in minutes)
-
-        returns: DataFrame of Google Analytics activities with invalid dwell times replaced by NaN values
+    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
+    :param max_duration: Pre-determined optimal activity duration threshold (in minutes)
+    :param min_dwell_time: Pre-determined optimal dwell_time threshold (in minutes)
+    :return: DataFrame of Google Analytics activities with invalid dwell times replaced by NaN values.
+        * Requisite fields: "duration", "session_date", "client_id", "external_id"
     """
 
     filtered_df = activity_df.copy()
@@ -243,14 +253,20 @@ def aggregate_conversion_times(
         date_list: [datetime.date] = [],
         start_time: datetime.datetime=None,
         end_time: datetime.datetime=None,
-        external_id_col: str = 'article_id'
+        external_id_col: str = 'external_id'
     ) -> pd.DataFrame:
     """
     Aggregates activities into minimum time to conversion on interactions with each article.
 
-        activity_df: DataFrame of Google Analytics activities with associated dwell times
-        datetime_list: List of datetimes to forcefully include in all aggregates
-        returns: DataFrame of aggregated per day dwell time statistics for each user
+    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "activity_time" (optional datetime.datetime)
+    :param date_list: List of datetimes to forcefully include in all aggregates
+    :param start_time: (optional) Only consider events happening after a specific start time
+    :param end_time: (optional) Only consider events happening before a specific end time
+    :param external_id_col: Name of column being used to denote articles
+    :return: DataFrame of aggregated per day conversion dates with one row for each user at each date of interest,
+        and one column for each article.
     """
     filtered_df = _add_dummies(
         activity_df,
@@ -283,9 +299,11 @@ def aggregate_time(
     """
     Aggregates activities into daily per-article total dwell time.
 
-        activity_df: DataFrame of Google Analytics activities with associated dwell times
-        datetime_list: List of datetimes to forcefully include in all aggregates
-        returns: DataFrame of aggregated per day dwell time statistics for each user
+    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
+    :param date_list: List of dates to forcefully include in all aggregates
+    :return: DataFrame of aggregated per day dwell time with one row for each user at each date of interest,
+        and one column for each article.
     """
     filtered_df = _add_dummies(
         activity_df,
@@ -314,14 +332,16 @@ def aggregate_pageviews(
         date_list: [datetime.date] = [],
         start_time: datetime.datetime=None,
         end_time: datetime.datetime=None,
-        external_id_col: str = 'article_id'
+        external_id_col: str = 'external_id'
     ) -> pd.DataFrame:
     """
     Aggregates activities into daily per-article total dwell time.
 
-        activity_df: DataFrame of Google Analytics activities with associated dwell times
-        datetime_list: List of datetimes to forcefully include in all aggregates
-        returns: DataFrame of aggregated per day dwell time statistics for each user
+    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str)
+    :param date_list: List of dates to forcefully include in all aggregates
+    :return: DataFrame of aggregated pageviews with one row for each user at each date of interest,
+        and one column for each article.
     """
     dummy_time_df = activity_df.copy()
     dummy_time_df['duration'] = 1.0
@@ -343,8 +363,9 @@ def time_decay(
     """
     Computes exponential decay sum of time_df observations with decay based on session_date
 
-        time_df: DataFrame of aggregated per day dwell time statistics for each user
-        half_life: Desired half life of time spent in days
+    :param time_df: DataFrame of aggregated per day dwell time statistics for each user
+    :param half_life: Desired half life of time spent in days
+    :return: DataFrame with one row for each user at each date of interest, and one column for each article
     """
     article_cols = time_df.columns
     exp_time_df = time_df.reset_index()
@@ -372,16 +393,17 @@ def apply_decay(
         values: np.array,
         date_delta: int,
         half_life: float
-    ) -> float:
+    ) -> np.array:
     """
     Computes exponential decay of value over date_delta, with a half life of half_life.
     Can be used for cumulative row-wise sums, by the principle that:
 
         exp(T3 - T1) = exp(T3 - T2) * exp(T2 - T1)
 
-        value (float): value being decayed
-        date_delta (int): time span in days over which decay occurs
-        half_life (float): half life of decay
+    :param values: (NumPy array of floats) values being decayed
+    :param date_delta: (int) time span in days over which decay occurs
+    :param half_life: (float) half life of decay
+    :return: (NumPy array of floats) decayed values
     """
     # Decay factor should be ln(2) / lambda, where lambda is the desired half-life in days
     decay_constant = np.log(2) / half_life
