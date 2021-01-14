@@ -3,7 +3,7 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from sites.helpers import safe_get
+from sites.helpers import safe_get, BadArticleFormatError
 
 
 PATH_PATTERN = "\/article\/(\d+)\/\S+"
@@ -33,6 +33,8 @@ def scrape_article_metadata(path: str) -> dict:
 
     for name, prop in meta_tags:
         tag = soup.find("meta", property=prop)
+        if not tag:
+            raise BadArticleFormatError(f"Could not scrape article at path: {path}")
         metadata[name] = tag.get("content")
 
     logging.info(f"Scraped metadata from: {url}")

@@ -3,6 +3,10 @@ import requests as req
 from retrying import retry
 
 
+class BadArticleFormatError(Exception):
+    pass
+
+
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
 def safe_get(url: str) -> str:
     TIMEOUT_SECONDS = 30

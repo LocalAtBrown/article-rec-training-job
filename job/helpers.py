@@ -5,6 +5,7 @@ import pandas as pd
 from db.helpers import create_article, update_article, get_article_by_external_id
 from job import preprocessors
 from sites.sites import Site
+from sites.helpers import BadArticleFormatError
 
 
 def should_refresh(publish_ts: str) -> bool:
@@ -63,24 +64,26 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     for path in paths:
         external_id = extract_external_id(site, path)
         if external_id:
-            article_id = find_or_create_article(site, external_id, path)
-            articles.append({
-                'article_id': article_id,
-                'external_id': external_id,
-                'page_path': path
-            })
+            try:
+                article_id = find_or_create_article(site, external_id, path)
+            except BadArticleFormatError:
+                logging.exception(f"Skipping article with external_id: {external_id}")
+                continue
+            articles.append(
+                {"article_id": article_id, "external_id": external_id, "page_path": path}
+            )
 
-    article_df = pd.DataFrame(articles).set_index('page_path')
+    article_df = pd.DataFrame(articles).set_index("page_path")
 
     return article_df
 
 
 def format_ga(
-        ga_df: pd.DataFrame,
-        date_list: list = [],
-        external_id_col: str = 'external_id',
-        half_life: float = 10.0
-    ) -> pd.DataFrame:
+    ga_df: pd.DataFrame,
+    date_list: list = [],
+    external_id_col: str = "external_id",
+    half_life: float = 10.0,
+) -> pd.DataFrame:
     """
     Format clickstream Google Analytics data into user-item matrix for training.
 
@@ -96,13 +99,8 @@ def format_ga(
     sorted_df = preprocessors.time_activities(clean_df)
     filtered_df = preprocessors.filter_activities(sorted_df)
     time_df = preprocessors.aggregate_time(
-        filtered_df,
-        date_list=date_list,
-        external_id_col=external_id_col
+        filtered_df, date_list=date_list, external_id_col=external_id_col
     )
-    exp_time_df = preprocessors.time_decay(
-        time_df, half_life=half_life
-    )
+    exp_time_df = preprocessors.time_decay(time_df, half_life=half_life)
 
     return exp_time_df
-
