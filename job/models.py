@@ -9,6 +9,11 @@ from scipy.sparse import csr_matrix
 from sklearn.preprocessing import MinMaxScaler
 from scipy.sparse.linalg import spsolve
 
+from lib.config import config
+
+
+DISPLAY_PROGRESS = config.get("DISPLAY_PROGRESS")
+
 
 def load_matrix(pageview_df, num_users, num_items):
     t0 = time.time()
@@ -22,7 +27,8 @@ def load_matrix(pageview_df, num_users, num_items):
         users[user] = len(users) - 1
         items[item] = len(items) - 1
         count = float(count)
-        if len(users) >= num_users: continue
+        if len(users) >= num_users:
+            continue
         if len(items) >= num_items:
             continue
         if count != 0:
@@ -30,17 +36,17 @@ def load_matrix(pageview_df, num_users, num_items):
             total += count
             num_zeros -= 1
         if i % 100000 == 0:
-            logging.info('loaded %i counts...' % i)
+            logging.info("loaded %i counts..." % i)
     alpha = num_zeros / total
-    logging.info('alpha %.2f' % alpha)
+    logging.info("alpha %.2f" % alpha)
     counts *= alpha
     counts = counts.tocsr()
     t1 = time.time()
-    logging.info('Finished loading matrix in %f seconds' % (t1 - t0))
+    logging.info("Finished loading matrix in %f seconds" % (t1 - t0))
     return counts, users
 
 
-class ImplicitMF():
+class ImplicitMF:
     """
     Python implementation of implicit matrix factorization as outlined in
     "Collaborative Filtering for Implicit Feedback Datasets."
@@ -49,8 +55,7 @@ class ImplicitMF():
     Paper: http://yifanhu.net/PUB/cf.pdf
     """
 
-    def __init__(self, counts, num_factors=40, num_iterations=30,
-                 reg_param=0.8):
+    def __init__(self, counts, num_factors=40, num_iterations=30, reg_param=0.8):
         self.counts = counts
         self.num_users = counts.shape[0]
         self.num_items = counts.shape[1]
@@ -59,19 +64,17 @@ class ImplicitMF():
         self.reg_param = reg_param
 
     def train_model(self):
-        self.user_vectors = np.random.normal(size=(self.num_users,
-                                                   self.num_factors))
-        self.item_vectors = np.random.normal(size=(self.num_items,
-                                                   self.num_factors))
+        self.user_vectors = np.random.normal(size=(self.num_users, self.num_factors))
+        self.item_vectors = np.random.normal(size=(self.num_items, self.num_factors))
 
         for i in range(self.num_iterations):
             t0 = time.time()
-            logging.info('Solving for user vectors...')
+            logging.info("Solving for user vectors...")
             self.user_vectors = self.iteration(True, sparse.csr_matrix(self.item_vectors))
-            logging.info('Solving for item vectors...')
+            logging.info("Solving for item vectors...")
             self.item_vectors = self.iteration(False, sparse.csr_matrix(self.user_vectors))
             t1 = time.time()
-            logging.info('iteration %i finished in %f seconds' % (i + 1, t1 - t0))
+            logging.info("iteration %i finished in %f seconds" % (i + 1, t1 - t0))
 
     def iteration(self, user, fixed_vecs):
         num_solve = self.num_users if user else self.num_items
@@ -84,7 +87,8 @@ class ImplicitMF():
         t = time.time()
         bar = ProgressBar(max_value=num_solve)
         for i in range(num_solve):
-            bar.update(i)
+            if DISPLAY_PROGRESS:
+                bar.update(i)
             if user:
                 counts_i = self.counts[i].toarray()
             else:
@@ -97,18 +101,13 @@ class ImplicitMF():
             xu = spsolve(YTY + YTCuIY + lambda_eye, YTCupu)
             solve_vecs[i] = xu
             if i % 10000 == 0:
-                logging.info('Solved %i vecs in %d seconds' % (i, time.time() - t))
+                logging.info("Solved %i vecs in %d seconds" % (i, time.time() - t))
                 t = time.time()
 
         return solve_vecs
 
 
-def train_model(
-        X: np.array,
-        reg: float,
-        n_components: int,
-        epochs: int
-    ):
+def train_model(X: np.array, reg: float, n_components: int, epochs: int):
     X_log = np.log(1 + X)
     X_scaler = MinMaxScaler()
     X_scaled = X_scaler.fit_transform(X_log)
@@ -118,7 +117,7 @@ def train_model(
         counts=csr_matrix(X_scaled),
         reg_param=reg,
         num_factors=n_components,
-        num_iterations=epochs
+        num_iterations=epochs,
     )
     model.train_model()
     return model
