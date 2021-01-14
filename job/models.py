@@ -114,7 +114,10 @@ def train_model(X: np.array, reg: float, n_components: int, epochs: int):
 
     # Hyperparameters derived using optimize_ga_pipeline.ipynb
     model = ImplicitMF(
-        counts=csr_matrix(X_scaled), reg_param=reg, num_factors=n_components, num_iterations=epochs
+        counts=csr_matrix(X_scaled),
+        reg_param=reg,
+        num_factors=n_components,
+        num_iterations=epochs,
     )
     model.train_model()
     return model
