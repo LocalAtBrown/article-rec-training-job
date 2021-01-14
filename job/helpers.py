@@ -1,11 +1,19 @@
+from typing import List
 from datetime import datetime, timezone, timedelta
 import logging
+
 import pandas as pd
+from scipy.spatial import distance
 
 from db.helpers import create_article, update_article, get_article_by_external_id
 from job import preprocessors
+from job.models import ImplicitMF
 from sites.sites import Site
 from sites.helpers import BadArticleFormatError
+from lib.config import config
+
+
+MAX_RECS = config.get("MAX_RECS")
 
 
 def should_refresh(publish_ts: str) -> bool:
@@ -76,6 +84,19 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     article_df = pd.DataFrame(articles).set_index("page_path")
 
     return article_df
+
+
+def create_article_to_article_recs(
+    model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
+):
+    vector_distance = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
+    vector_order = vector_distance.argsort()
+    for i, order in enumerate(vector_order):
+        source_article = external_ids[i]
+        # First entry is the article itself, so skip it
+        for j in order[1:MAX_RECS]:
+            recommended_article = external_ids[j]
+            # TODO create recommendation here using article_ids from article_df
 
 
 def format_ga(
