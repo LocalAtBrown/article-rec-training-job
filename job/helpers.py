@@ -5,7 +5,7 @@ import logging
 import pandas as pd
 from scipy.spatial import distance
 
-from db.helpers import create_article, update_article, get_article_by_external_id
+from db.helpers import create_article, update_article, get_article_by_external_id, create_rec
 from job import preprocessors
 from job.models import ImplicitMF
 from sites.sites import Site
@@ -107,15 +107,12 @@ def create_article_to_article_recs(
             # fix case when some scores are negative due to a rounding error
             score = max(score, 0.0)
 
-            pdb.set_trace()
-            x = 1
-            # TODO create recommendation here using article_ids from article_df
-            # get recommended_article article_id from recommended_external_id
-            # create recommendation
-            # external_id = source_external_id
-            # model = model_id
-            # article = recommended_article_id
-            # score = 1.0 for now
+            rec_id = create_rec(
+                source_entity_id=source_external_id,
+                model_id=model_id,
+                recommended_article_id=recommended_article_id,
+                score=score,
+            )
 
 
 def format_ga(
