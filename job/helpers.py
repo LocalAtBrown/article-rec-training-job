@@ -89,14 +89,33 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
-    vector_distance = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
-    vector_order = vector_distance.argsort()
-    for i, order in enumerate(vector_order):
-        source_article = external_ids[i]
+    vector_distances = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
+    vector_orders = vector_distances.argsort()
+
+    for source_index, ranked_recommendation_indices in enumerate(vector_orders):
+        source_external_id = external_ids[source_index]
+
         # First entry is the article itself, so skip it
-        for j in order[1:MAX_RECS]:
-            recommended_article = external_ids[j]
+        for recommendation_index in ranked_recommendation_indices[1:MAX_RECS]:
+            recommended_external_id = external_ids[recommendation_index]
+
+            matching_articles = article_df[article_df["external_id"] == recommended_external_id]
+            recommended_article_id = matching_articles["article_id"][0]
+            # for distance, smaller values are more highly correlated
+            # for score, higher values are more highly correlated
+            score = 1 - vector_distances[source_index][recommendation_index]
+            # fix case when some scores are negative due to a rounding error
+            score = max(score, 0.0)
+
+            pdb.set_trace()
+            x = 1
             # TODO create recommendation here using article_ids from article_df
+            # get recommended_article article_id from recommended_external_id
+            # create recommendation
+            # external_id = source_external_id
+            # model = model_id
+            # article = recommended_article_id
+            # score = 1.0 for now
 
 
 def format_ga(
