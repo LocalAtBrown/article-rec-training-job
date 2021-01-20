@@ -13,5 +13,3 @@ CREATE TABLE recommendation (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (model_id, source_entity_id, recommended_article_id)
 );
-
-CREATE INDEX idx_source_entity_id_model_id ON recommendation (source_entity_id, model_id);
