@@ -1,3 +1,5 @@
+import logging
+
 from datetime import datetime
 
 from db.mappings.base import BaseMapping
@@ -56,3 +58,4 @@ def set_current_model(current_model_id: int, model_type: Type) -> None:
     )
     update_stale_models.execute()
     update_model(current_model_id, status=Status.CURRENT.value)
+    logging.info(f"Successfully updated current {model_type} model: {current_model_id}")
