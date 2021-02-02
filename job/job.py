@@ -2,8 +2,12 @@ import datetime
 import logging
 
 from db.mappings.model import Type
-from db.helpers import create_model
-from job.helpers import find_or_create_articles, format_ga, create_article_to_article_recs
+from db.helpers import create_model, set_current_model
+from job.helpers import (
+    find_or_create_articles,
+    format_ga,
+    create_article_to_article_recs,
+)
 from job import preprocessors
 from job import models
 from sites.sites import Sites
@@ -29,3 +33,4 @@ def run():
     external_user_ids = formatted_df.index
 
     create_article_to_article_recs(model, model_id, external_article_ids, article_df)
+    set_current_model(model_id, Type.ARTICLE.value)
