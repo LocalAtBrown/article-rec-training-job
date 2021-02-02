@@ -17,6 +17,6 @@ def s3_download(bucket_name, s3_object, local_file):
         return
 
     bucket = S3.Bucket(bucket_name)
-    with open(local_file, "wb") as data:
+    with open(local_file, "w+") as data:
         bucket.download_fileobj(s3_object, data)
     logging.info(f"Finished fetching object {s3_object} from bucket {bucket_name}")
