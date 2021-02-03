@@ -15,6 +15,7 @@ BUCKET_NAME = config.get("GA_DATA_BUCKET")
 
 
 def fetch_latest_data() -> pd.DataFrame:
+    return pd.read_csv(f"{ROOT_DIR}/tmp/wcp_sessions_20210106-20210109_20201206-20210109.csv")
     # TODO remove hardcoded s3_object when live data is available
     latest_data_key = "ting.zhang/90_day_sessions_2020_09_10_2020_09_13.json"
     data_filepath = f"{ROOT_DIR}/tmp/data.json"
