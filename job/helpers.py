@@ -23,7 +23,7 @@ def should_refresh(publish_ts: str) -> bool:
 
     # refresh metadata for articles published within the last day
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    if datetime.fromisoformat(publish_ts) > yesterday:
+    if datetime.fromisoformat(publish_ts).astimezone(timezone.utc) > yesterday:
         return True
 
     return False
