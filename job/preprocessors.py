@@ -9,20 +9,26 @@ from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
-from lib.bucket import s3_download
+from lib.bucket import download_object, list_objects
 
-BUCKET_NAME = config.get("GA_DATA_BUCKET")
+BUCKET = config.get("GA_DATA_BUCKET")
 
 
 def fetch_latest_data() -> pd.DataFrame:
-    # TODO remove hardcoded s3_object when live data is available
-    latest_data_key = "ting.zhang/90_day_sessions_2020_09_10_2020_09_13.json"
-    data_filepath = f"{ROOT_DIR}/tmp/data.json"
-    s3_download(BUCKET_NAME, latest_data_key, data_filepath)
-    with open(data_filepath) as f:
-        sessions_dict = json.load(f)
-
-    return flatten_raw_data(sessions_dict)
+    # TODO don't hardcode time values
+    year = "2021"
+    month = "01"
+    day = "30"
+    hour = "20"
+    prefix = f"enriched/good/{year}/{month}/{day}/{hour}"
+    objects = list_objects(BUCKET, prefix)
+    # TODO need to iterate over objects? or okay to grab latest?
+    object_key = objects[0]
+    data_filepath = f"{ROOT_DIR}/tmp/data.gz"
+    download_object(BUCKET, object_key, data_filepath)
+    df = pd.read_csv(data_filepath, compression="gzip", sep="\t")
+    # TODO need to flatten_raw_data?
+    return df
 
 
 def flatten_raw_data(sessions_dict: dict) -> pd.DataFrame:
