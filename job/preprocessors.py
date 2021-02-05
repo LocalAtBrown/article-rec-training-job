@@ -12,20 +12,25 @@ from lib.config import config, ROOT_DIR
 from lib.bucket import download_object, list_objects
 
 BUCKET = config.get("GA_DATA_BUCKET")
+DAYS_OF_DATA = 90
 
 
 def fetch_latest_data() -> pd.DataFrame:
-    now = datetime.datetime()
-    year, month, day, hour = now.year, now.month, now.day, now.hour
-    prefix = f"enriched/good/{year}/{month}/{day}/{hour}"
-    objects = list_objects(BUCKET, prefix)
-    # TODO need to iterate over objects? or okay to grab latest?
-    object_key = objects[0]
-    data_filepath = f"{ROOT_DIR}/tmp/data.gz"
-    download_object(BUCKET, object_key, data_filepath)
-    df = pd.read_csv(data_filepath, compression="gzip", sep="\t")
-    # TODO need to flatten_raw_data?
-    return df
+    dt = datetime.datetime.now()
+    data_df = pd.DataFrame()
+    for _ in range(DAYS_OF_DATA):
+        dt = dt - datetime.timedelta(days=1)
+        prefix = f"enriched/good/{dt.year}/{dt.month}/{dt.day}/{dt.hour}"
+        objects = list_objects(BUCKET, prefix)
+        for obj in objects:
+            object_key = objects[0]
+            data_filepath = f"{ROOT_DIR}/tmp/data.gz"
+            download_object(BUCKET, object_key, data_filepath)
+            tmp_df = pd.read_csv(data_filepath, compression="gzip", sep="\t")
+            data_df.append(tmp_df)
+
+    # TODO need to do any more transformation here?
+    return data_df
 
 
 def flatten_raw_data(sessions_dict: dict) -> pd.DataFrame:
