@@ -15,11 +15,8 @@ BUCKET = config.get("GA_DATA_BUCKET")
 
 
 def fetch_latest_data() -> pd.DataFrame:
-    # TODO don't hardcode time values
-    year = "2021"
-    month = "01"
-    day = "30"
-    hour = "20"
+    now = datetime.datetime()
+    year, month, day, hour = now.year, now.month, now.day, now.hour
     prefix = f"enriched/good/{year}/{month}/{day}/{hour}"
     objects = list_objects(BUCKET, prefix)
     # TODO need to iterate over objects? or okay to grab latest?
