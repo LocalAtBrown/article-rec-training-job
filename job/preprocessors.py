@@ -73,18 +73,8 @@ def flatten_raw_data(sessions_dict: dict) -> pd.DataFrame:
     rows = [
         {
             "client_id": client_id,
-            "session_id": session["sessionId"],
-            "device_category": session["deviceCategory"],
-            "platform": session["platform"],
-            "data_source": session["dataSource"],
             "session_date": session["sessionDate"],
             "activity_time": activity["activityTime"],
-            "source": activity["source"],
-            "medium": activity["medium"],
-            "channel_grouping": activity["channelGrouping"],
-            "campaign": activity["campaign"],
-            "keyword": activity["keyword"],
-            "hostname": activity["hostname"],
             "landing_page_path": activity["landingPagePath"],
             "activity_type": activity["activityType"],
             **get_type_specific_fields(activity),
