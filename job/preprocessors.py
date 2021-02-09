@@ -1,11 +1,19 @@
 import json
 import datetime
 import logging
+from itertools import product
+
+# BEGIN TEMP IMPORTS
+import gzip
+from io import StringIO
+from snowplow_analytics_sdk.event_transformer import ENRICHED_EVENT_FIELD_TYPES
+import boto3
+
+# END TEMP IMPORTS
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
@@ -15,18 +23,46 @@ BUCKET = config.get("GA_DATA_BUCKET")
 DAYS_OF_DATA = 90
 
 
+def pad_date(date_expr: int) -> str:
+    return str(date_expr).zfill(2)
+
+
 def fetch_latest_data() -> pd.DataFrame:
     dt = datetime.datetime.now()
     data_df = pd.DataFrame()
     for _ in range(DAYS_OF_DATA):
         dt = dt - datetime.timedelta(days=1)
-        prefix = f"enriched/good/{dt.year}/{dt.month}/{dt.day}/{dt.hour}"
+        month = pad_date(dt.month)
+        day = pad_date(dt.day)
+        prefix = f"enriched/good/{dt.year}/{month}/{day}"
         objects = list_objects(BUCKET, prefix)
         for obj in objects:
             object_key = objects[0]
-            data_filepath = f"{ROOT_DIR}/tmp/data.gz"
-            download_object(BUCKET, object_key, data_filepath)
-            tmp_df = pd.read_csv(data_filepath, compression="gzip", sep="\t")
+            local_filename = object_key.split("/")[-1].split(".")[0]
+
+            # local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.gz"
+            # download_object(BUCKET, object_key, local_filepath)
+            # tmp_df = pd.read_csv(local_filepath, compression="gzip", sep="\t")
+
+            # BEGIN TEMP CODE
+            local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.csv"
+            s3 = boto3.resource("s3")
+            header = [e[0] for e in ENRICHED_EVENT_FIELD_TYPES]
+
+            obj = s3.Object(BUCKET, object_key)
+            body = obj.get()["Body"]
+            with gzip.GzipFile(fileobj=body) as gzipfile:
+                body_str = (
+                    gzipfile.read()
+                    .decode("utf-8")
+                    .replace("washington-city-paper\t", "\nwashington-city-paper\t")
+                )
+            tmp_df = pd.read_csv(StringIO(body_str), sep="\t", names=header)
+
+            logging.info(f"Writing data to csv: {local_filepath}")
+            tmp_df.to_csv(local_filepath)
+            # END TEMP CODE
+
             data_df.append(tmp_df)
 
     # TODO need to do any more transformation here?
