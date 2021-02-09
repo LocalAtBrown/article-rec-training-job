@@ -13,7 +13,8 @@ CLIENT = boto3.client("s3")
 
 def list_objects(bucket: str, prefix: str) -> List[str]:
     response = CLIENT.list_objects_v2(Bucket=bucket, Prefix=prefix)
-    return [obj["Key"] for obj in response["Contents"]]
+    contents = response.get("Contents", [])
+    return [obj["Key"] for obj in contents]
 
 
 def download_object(bucket_name, s3_object, local_file):
