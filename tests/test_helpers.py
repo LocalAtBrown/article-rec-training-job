@@ -19,19 +19,19 @@ def generate_row(client_id, external_id):
 
 class TestHelpers(unittest.TestCase):
     def test_calculate_default_recs(self) -> None:
-        client_a = "client.a"
-        client_b = "client.b"
+        basit = "client.a"
+        kai = "client.b"
         article_a = 123
         article_b = 456
 
         data = [
-            # both clients read article a once
-            generate_row(client_a, article_a),
-            generate_row(client_b, article_a),
-            # client b read article b three times
-            generate_row(client_b, article_b),
-            generate_row(client_b, article_b),
-            generate_row(client_b, article_b),
+            # basit and kai both read article a once
+            generate_row(basit, article_a),
+            generate_row(kai, article_a),
+            # while basit was on a date with jonathan, kai read article b three times
+            generate_row(kai, article_b),
+            generate_row(kai, article_b),
+            generate_row(kai, article_b),
         ]
 
         df = pd.DataFrame(data)
