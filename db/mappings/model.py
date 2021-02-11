@@ -6,8 +6,9 @@ from db.mappings.base import BaseMapping
 
 
 class Type(enum.Enum):
-    # in the future, we imagine supporting 'user' and 'cluster' types
     ARTICLE = "article"
+    USER = "user"
+    POPULARITY = "popularity"
 
 
 class Status(enum.Enum):
