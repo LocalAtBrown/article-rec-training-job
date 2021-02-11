@@ -145,7 +145,7 @@ def format_ga(
     return exp_time_df
 
 
-def create_default_recs(ga_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
+def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
     TOTAL_VIEWS = 5000
     clean_data = preprocessors.fix_dtypes(ga_df)
     pageviews = clean_data[clean_data["event_action"] == "pageview"]
@@ -155,6 +155,11 @@ def create_default_recs(ga_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
     ]
     latest_pageviews = unique_pageviews.nlargest(TOTAL_VIEWS, "session_date")
     top_pageviews = latest_pageviews["external_id"].value_counts().nlargest(MAX_RECS)
+    return top_pageviews
+
+
+def create_default_recs(ga_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
+    top_pageviews = calculate_default_recs(ga_df)
     scores = top_pageviews / max(top_pageviews)
     model_id = create_model(type=Type.POPULARITY.value)
     logging.info("Saving default recs to db...")
