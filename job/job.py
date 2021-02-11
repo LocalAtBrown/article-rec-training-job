@@ -7,6 +7,7 @@ from job.helpers import (
     find_or_create_articles,
     format_ga,
     create_article_to_article_recs,
+    create_default_recs,
 )
 from job import preprocessors
 from job import models
@@ -21,6 +22,8 @@ def run():
     ga_df = preprocessors.fetch_latest_data()
     article_df = find_or_create_articles(Sites.WCP, list(ga_df["page_path"].unique()))
     ga_df = ga_df.join(article_df, on="page_path")
+
+    create_default_recs(ga_df, article_df)
 
     EXPERIMENT_DATE = datetime.date.today()
     # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
