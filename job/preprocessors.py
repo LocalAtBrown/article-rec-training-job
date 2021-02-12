@@ -3,14 +3,6 @@ import datetime
 import logging
 from itertools import product
 
-# BEGIN TEMP IMPORTS
-import gzip
-from io import StringIO
-from snowplow_analytics_sdk.event_transformer import ENRICHED_EVENT_FIELD_TYPES
-import boto3
-
-# END TEMP IMPORTS
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -31,7 +23,6 @@ def fetch_latest_data() -> pd.DataFrame:
     dt = datetime.datetime.now()
     data_df = pd.DataFrame()
     for _ in range(DAYS_OF_DATA):
-        dt = dt - datetime.timedelta(days=1)
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
@@ -39,74 +30,28 @@ def fetch_latest_data() -> pd.DataFrame:
         for obj in objects:
             object_key = objects[0]
             local_filename = object_key.split("/")[-1].split(".")[0]
-
-            # local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.gz"
-            # download_object(BUCKET, object_key, local_filepath)
-            # tmp_df = pd.read_csv(local_filepath, compression="gzip", sep="\t")
-
-            # BEGIN TEMP CODE
-            local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.csv"
-            s3 = boto3.resource("s3")
-            header = [e[0] for e in ENRICHED_EVENT_FIELD_TYPES]
-
-            obj = s3.Object(BUCKET, object_key)
-            body = obj.get()["Body"]
-            with gzip.GzipFile(fileobj=body) as gzipfile:
-                body_str = (
-                    gzipfile.read()
-                    .decode("utf-8")
-                    .replace("washington-city-paper\t", "\nwashington-city-paper\t")
-                )
-            tmp_df = pd.read_csv(StringIO(body_str), sep="\t", names=header)
-
-            logging.info(f"Writing data to csv: {local_filepath}")
-            tmp_df.to_csv(local_filepath)
-            # END TEMP CODE
-
+            local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.gz"
+            download_object(BUCKET, object_key, local_filepath)
+            tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
             data_df.append(tmp_df)
+        dt = dt - datetime.timedelta(days=1)
 
-    # TODO need to do any more transformation here?
-    return data_df
-
-
-def flatten_raw_data(sessions_dict: dict) -> pd.DataFrame:
-    rows = [
-        {
-            "client_id": client_id,
-            "session_date": session["sessionDate"],
-            "activity_time": activity["activityTime"],
-            "landing_page_path": activity["landingPagePath"],
-            "activity_type": activity["activityType"],
-            **get_type_specific_fields(activity),
-        }
-        for client_id, sessions in sessions_dict.items()
-        for session in sessions
-        for activity in session["activities"]
-    ]
-
-    return pd.DataFrame(rows)
+    return transform_raw_data(data_df)
 
 
-def get_type_specific_fields(activity: dict) -> dict:
-    if activity["activityType"] == "EVENT":
-        return {
-            "event_category": activity["event"]["eventCategory"],
-            "event_action": activity["event"]["eventAction"],
-            "page_path": activity["landingPagePath"],
-        }
-    elif activity["activityType"] == "PAGEVIEW":
-        return {
-            "event_category": "pageview",
-            "event_action": "pageview",
-            "page_path": activity["pageview"]["pagePath"],
-        }
-    else:
-        logging.info(f"Couldn't find activity field for type: {activity['activityType']}")
-        return {
-            "event_category": None,
-            "event_action": None,
-            "page_path": None,
-        }
+def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    returns a dataframe with the following fields:
+    - client_id
+    - session_date
+    - activity_time
+    - landing_page_path
+    - page_path
+    - activity_type
+    - event_category
+    - event_action
+    """
+    return df
 
 
 def _add_dummies(
