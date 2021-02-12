@@ -149,7 +149,7 @@ def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
     TOTAL_VIEWS = 5000
     clean_data = preprocessors.fix_dtypes(ga_df)
     pageviews = clean_data[clean_data["event_action"] == "pageview"]
-    # take only the most recent event pageview for each reader
+    # if a client has read an article multiple times, keep only the most recent
     unique_pageviews = pageviews.loc[
         pageviews.groupby(["client_id", "external_id"]).session_date.idxmax()
     ]
@@ -160,6 +160,7 @@ def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
 
 def create_default_recs(ga_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
     top_pageviews = calculate_default_recs(ga_df)
+    # the most read article will have a perfect score of 1.0, all others will be a fraction of that
     scores = top_pageviews / max(top_pageviews)
     model_id = create_model(type=Type.POPULARITY.value)
     logging.info("Saving default recs to db...")
