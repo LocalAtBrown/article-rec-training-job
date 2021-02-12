@@ -5,6 +5,8 @@ import logging
 import pandas as pd
 from scipy.spatial import distance
 
+from db.mappings.model import Type
+from db.helpers import create_model, set_current_model
 from db.helpers import create_article, update_article, get_article_by_external_id, create_rec
 from job import preprocessors
 from job.models import ImplicitMF
@@ -141,3 +143,35 @@ def format_ga(
     exp_time_df = preprocessors.time_decay(time_df, half_life=half_life)
 
     return exp_time_df
+
+
+def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
+    TOTAL_VIEWS = 5000
+    clean_data = preprocessors.fix_dtypes(ga_df)
+    pageviews = clean_data[clean_data["event_action"] == "pageview"]
+    # if a client has read an article multiple times, keep only the most recent
+    unique_pageviews = pageviews.loc[
+        pageviews.groupby(["client_id", "external_id"]).session_date.idxmax()
+    ]
+    latest_pageviews = unique_pageviews.nlargest(TOTAL_VIEWS, "session_date")
+    top_pageviews = latest_pageviews["external_id"].value_counts().nlargest(MAX_RECS)
+    return top_pageviews
+
+
+def create_default_recs(ga_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
+    top_pageviews = calculate_default_recs(ga_df)
+    # the most read article will have a perfect score of 1.0, all others will be a fraction of that
+    scores = top_pageviews / max(top_pageviews)
+    model_id = create_model(type=Type.POPULARITY.value)
+    logging.info("Saving default recs to db...")
+    for external_id, score in zip(top_pageviews.index, scores):
+        matching_articles = article_df[article_df["external_id"] == external_id]
+        article_id = matching_articles["article_id"][0]
+        rec_id = create_rec(
+            source_entity_id="default",
+            model_id=model_id,
+            recommended_article_id=article_id,
+            score=score,
+        )
+
+    set_current_model(model_id, Type.POPULARITY.value)
