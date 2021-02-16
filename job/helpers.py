@@ -6,6 +6,8 @@ from datetime import datetime, timezone, timedelta
 from scipy.spatial import distance
 from typing import List
 
+from db.mappings.model import Type
+from db.helpers import create_model, set_current_model
 from db.helpers import create_article, update_article, get_article_by_external_id, create_rec
 from job import preprocessors
 from job.models import ImplicitMF
@@ -96,9 +98,9 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
-    vector_similarities = _get_similarities(model.item_vectors)
-    vector_weights = _get_weights(external_ids, article_df)
-    vector_orders = _get_orders(vector_similarities, vector_weights)
+    vector_similarities = get_similarities(model.item_vectors)
+    vector_weights = get_weights(external_ids, article_df)
+    vector_orders = get_orders(vector_similarities, vector_weights)
 
     for source_index, ranked_recommendation_indices in enumerate(vector_orders):
         source_external_id = external_ids[source_index]
@@ -125,13 +127,13 @@ def create_article_to_article_recs(
             )
 
 
-def _get_similarities(model: ImplicitMF) -> np.array:
+def get_similarities(model: ImplicitMF) -> np.array:
     vector_distances = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
     vector_similarities = 1 - vector_distances
     return vector_similarities
 
 
-def _get_weights(external_ids: List[str], article_df: pd.DataFrame, publish_time_decay=True) -> np.array:
+def get_weights(external_ids: List[str], article_df: pd.DataFrame, publish_time_decay=True) -> np.array:
     if publish_time_decay:
         publish_time_df = article_df[['article_id', 'published_at']].set_index('article_id')
         max_diff = (pd.to_datetime(publish_time_df.published_at) - datetime.now()).dt.total_seconds().abs().max()
@@ -147,7 +149,7 @@ def _get_weights(external_ids: List[str], article_df: pd.DataFrame, publish_time
     return weights
 
 
-def _get_orders(similarities: np.array, weights: np.array):
+def get_orders(similarities: np.array, weights: np.array):
     similarities *= weights
     orders = similarities.argsort()[:, ::-1]
     return orders
@@ -179,3 +181,35 @@ def format_ga(
     exp_time_df = preprocessors.time_decay(time_df, half_life=half_life)
 
     return exp_time_df
+
+
+def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
+    TOTAL_VIEWS = 5000
+    clean_data = preprocessors.fix_dtypes(ga_df)
+    pageviews = clean_data[clean_data["event_action"] == "pageview"]
+    # if a client has read an article multiple times, keep only the most recent
+    unique_pageviews = pageviews.loc[
+        pageviews.groupby(["client_id", "external_id"]).session_date.idxmax()
+    ]
+    latest_pageviews = unique_pageviews.nlargest(TOTAL_VIEWS, "session_date")
+    top_pageviews = latest_pageviews["external_id"].value_counts().nlargest(MAX_RECS)
+    return top_pageviews
+
+
+def create_default_recs(ga_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
+    top_pageviews = calculate_default_recs(ga_df)
+    # the most read article will have a perfect score of 1.0, all others will be a fraction of that
+    scores = top_pageviews / max(top_pageviews)
+    model_id = create_model(type=Type.POPULARITY.value)
+    logging.info("Saving default recs to db...")
+    for external_id, score in zip(top_pageviews.index, scores):
+        matching_articles = article_df[article_df["external_id"] == external_id]
+        article_id = matching_articles["article_id"][0]
+        rec_id = create_rec(
+            source_entity_id="default",
+            model_id=model_id,
+            recommended_article_id=article_id,
+            score=score,
+        )
+
+    set_current_model(model_id, Type.POPULARITY.value)

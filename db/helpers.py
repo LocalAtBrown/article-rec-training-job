@@ -1,9 +1,13 @@
+import logging
 from datetime import datetime
 
+from peewee import Expression
+
 from db.mappings.base import BaseMapping
-from db.mappings.model import Model
+from db.mappings.model import Model, Type, Status
 from db.mappings.article import Article
 from db.mappings.recommendation import Rec
+from lib.db import db
 
 
 def create_model(**params: dict) -> int:
@@ -33,10 +37,24 @@ def get_article_by_external_id(external_id: int) -> dict:
 
 
 def update_article(article_id, **params) -> None:
-    _update_resource(Article, article_id, **params)
+    _update_resources(Article, Article.id == article_id, **params)
 
 
-def _update_resource(mapping_class: BaseMapping, resource_id: int, **params: dict) -> None:
+def update_model(model_id, **params) -> None:
+    _update_resources(Model, Model.id == model_id, **params)
+
+
+def _update_resources(mapping_class: BaseMapping, conditions: Expression, **params: dict) -> None:
     params["updated_at"] = datetime.now()
-    q = mapping_class.update(**params).where(mapping_class.id == resource_id)
+    q = mapping_class.update(**params).where(conditions)
     q.execute()
+
+
+# If an exception occurs, the current transaction/savepoint will be rolled back.
+# Otherwise the statements will be committed at the end.
+@db.atomic()
+def set_current_model(current_model_id: int, model_type: Type) -> None:
+    stale_conditions = (Model.type == model_type) & (Model.status == Status.CURRENT.value)
+    _update_resources(Model, stale_conditions, status=Status.STALE.value)
+    update_model(current_model_id, status=Status.CURRENT.value)
+    logging.info(f"Successfully updated current {model_type} model: {current_model_id}")
