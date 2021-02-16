@@ -7,7 +7,7 @@
 -e file:.#egg=lib         # via -r requirements.in
 attrs==20.3.0             # via pytest
 beautifulsoup4==4.9.3     # via -r requirements.in
-boto3==1.15.13            # via -r requirements.in
+boto3==1.15.13            # via -r requirements.in, snowplow-analytics-sdk
 botocore==1.18.18         # via boto3, s3transfer
 certifi==2020.11.8        # via requests
 chardet==3.0.4            # via requests
@@ -38,6 +38,7 @@ s3transfer==0.3.3         # via boto3
 scikit-learn==0.23.2      # via -r requirements.in
 scipy==1.5.4              # via -r requirements.in, scikit-learn
 six==1.15.0               # via cycler, progressbar2, python-dateutil, python-utils, retrying
+snowplow-analytics-sdk==0.2.3  # via -r requirements.in
 soupsieve==2.0.1          # via beautifulsoup4
 threadpoolctl==2.1.0      # via scikit-learn
 toml==0.10.2              # via pytest

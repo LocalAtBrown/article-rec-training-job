@@ -1,9 +1,10 @@
-from typing import List
-from datetime import datetime, timezone, timedelta
 import logging
-
+import numpy as np
 import pandas as pd
+
+from datetime import datetime, timezone, timedelta
 from scipy.spatial import distance
+from typing import List
 
 from db.helpers import create_article, update_article, get_article_by_external_id, create_rec
 from job import preprocessors
@@ -37,14 +38,15 @@ def find_or_create_article(site: Site, external_id: int, path: str) -> int:
             metadata = scrape_article_metadata(site, path)
             logging.info(f"Updating article with external_id: {external_id}")
             update_article(article["id"], **metadata)
-        return article["id"]
+        return article
 
     metadata = scrape_article_metadata(site, path)
     article_data = {**metadata, "external_id": external_id}
     logging.info(f"Creating article with external_id: {external_id}")
     article_id = create_article(**article_data)
+    article_data['id'] = article_id
 
-    return article_id
+    return article_data
 
 
 def scrape_article_metadata(site: Site, path: str) -> dict:
@@ -73,12 +75,17 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
         external_id = extract_external_id(site, path)
         if external_id:
             try:
-                article_id = find_or_create_article(site, external_id, path)
+                article = find_or_create_article(site, external_id, path)
             except BadArticleFormatError:
                 logging.exception(f"Skipping article with external_id: {external_id}")
                 continue
             articles.append(
-                {"article_id": article_id, "external_id": external_id, "page_path": path}
+                {
+                    "article_id": article['id'],
+                    "external_id": external_id,
+                    "page_path": path,
+                    "published_at": article['published_at']
+                }
             )
 
     article_df = pd.DataFrame(articles).set_index("page_path")
@@ -89,21 +96,24 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
-    vector_distances = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
-    vector_orders = vector_distances.argsort()
+    vector_similarities = _get_similarities(model.item_vectors)
+    vector_weights = _get_weights(external_ids, article_df)
+    vector_orders = _get_orders(vector_similarities, vector_weights)
 
     for source_index, ranked_recommendation_indices in enumerate(vector_orders):
         source_external_id = external_ids[source_index]
 
-        # First entry is the article itself, so skip it
-        for recommendation_index in ranked_recommendation_indices[1:MAX_RECS]:
+        for recommendation_index in ranked_recommendation_indices[:MAX_RECS]:
             recommended_external_id = external_ids[recommendation_index]
+            # If it's the article itself, skip it
+            if recommended_external_id == source_external_id:
+                continue
 
             matching_articles = article_df[article_df["external_id"] == recommended_external_id]
             recommended_article_id = matching_articles["article_id"][0]
             # for distance, smaller values are more highly correlated
             # for score, higher values are more highly correlated
-            score = 1 - vector_distances[source_index][recommendation_index]
+            score = vector_similarities[source_index][recommendation_index]
             # fix case when some scores are negative due to a rounding error
             score = max(score, 0.0)
 
@@ -113,6 +123,34 @@ def create_article_to_article_recs(
                 recommended_article_id=recommended_article_id,
                 score=score,
             )
+
+
+def _get_similarities(model: ImplicitMF) -> np.array:
+    vector_distances = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
+    vector_similarities = 1 - vector_distances
+    return vector_similarities
+
+
+def _get_weights(external_ids: List[str], article_df: pd.DataFrame, publish_time_decay=True) -> np.array:
+    if publish_time_decay:
+        publish_time_df = article_df[['article_id', 'published_at']].set_index('article_id')
+        max_diff = (pd.to_datetime(publish_time_df.published_at) - datetime.now()).dt.total_seconds().abs().max()
+        # Compute weights using
+        publish_time_df['weights'] = np.exp(
+            (pd.to_datetime(publish_time_df.published_at) - datetime.now())
+            .dt.total_seconds()
+            / max_diff
+        )
+        weights = np.array([publish_time_df.weights.loc[i] for i in external_ids])
+    else:
+        weights = np.ones(len(external_ids))
+    return weights
+
+
+def _get_orders(similarities: np.array, weights: np.array):
+    similarities *= weights
+    orders = similarities.argsort()[:, ::-1]
+    return orders
 
 
 def format_ga(
