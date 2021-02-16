@@ -26,9 +26,8 @@ def fetch_latest_data() -> pd.DataFrame:
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        objects = list_objects(BUCKET, prefix)
-        for obj in objects:
-            object_key = obj
+        obj_keys = list_objects(BUCKET, prefix)
+        for obj_key in obj_keys:
             local_filename = object_key.split("/")[-1].split(".")[0]
             local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.gz"
             download_object(BUCKET, object_key, local_filepath)
@@ -54,12 +53,14 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     - event_action (conversions, newsletter sign-ups TK)
     """
     transformed_df = pd.DataFrame()
-    transformed_df['client_id'] = df.contexts_dev_amp_snowplow_amp_id_1.apply(lambda x: x[0]['ampClientId'])
-    transformed_df['activity_time'] = pd.to_datetime(df.collector_tstamp)
-    transformed_df['session_date'] = transformed_df.activity_time.dt.date
-    transformed_df['landing_page_path'] = df.page_urlpath
-    transformed_df['event_category'] = 'snowplow_amp_page_ping'
-    transformed_df['event_action'] = 'impression'
+    transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(
+        lambda x: x[0]["ampClientId"]
+    )
+    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
+    transformed_df["session_date"] = transformed_df.activity_time.dt.date
+    transformed_df["landing_page_path"] = df.page_urlpath
+    transformed_df["event_category"] = "snowplow_amp_page_ping"
+    transformed_df["event_action"] = "impression"
     return transformed_df
 
 
