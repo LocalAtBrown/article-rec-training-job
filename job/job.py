@@ -3,14 +3,13 @@ import logging
 
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
+from job import preprocessors, models
 from job.helpers import (
-    find_or_create_articles,
-    format_ga,
     create_article_to_article_recs,
     create_default_recs,
+    find_or_create_articles,
+    format_ga,
 )
-from job import preprocessors
-from job import models
 from sites.sites import Sites
 
 
@@ -20,7 +19,7 @@ def run():
     model_id = create_model(type=Type.ARTICLE.value)
     logging.info(f"Created model with id {model_id}")
     ga_df = preprocessors.fetch_latest_data()
-    article_df = find_or_create_articles(Sites.WCP, list(ga_df["landing_page_path"].unique()))
+    article_df = find_or_create_articles(Sites.WCP, list(ga_df.page_path.unique()))
     ga_df = ga_df.join(article_df, on="page_path")
 
     create_default_recs(ga_df, article_df)

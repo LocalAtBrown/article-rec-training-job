@@ -12,3 +12,4 @@ scipy
 snowplow_analytics_sdk
 progressbar2
 scikit-learn
+gym

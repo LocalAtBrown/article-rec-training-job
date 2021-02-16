@@ -67,7 +67,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     :param paths: Paths on corresponding news website for which to retrieve IDs
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
-        * Requisite fields: "article_id" (str), "external_id" (str), "page_path" (str)
+        * Requisite fields: "article_id" (str), "external_id" (str), "landing_page_path" (str)
     """
     articles = []
 
@@ -85,12 +85,12 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                 {
                     "article_id": article['id'],
                     "external_id": external_id,
-                    "page_path": path,
+                    "landing_page_path": path,
                     "published_at": article['published_at']
                 }
             )
 
-    article_df = pd.DataFrame(articles).set_index("page_path")
+    article_df = pd.DataFrame(articles).set_index("landing_page_path")
 
     return article_df
 
