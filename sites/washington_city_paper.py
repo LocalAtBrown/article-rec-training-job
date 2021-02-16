@@ -18,7 +18,7 @@ def extract_external_id(path: str) -> int:
         return None
 
 
-def scrape_article_metadata(path: str, headline=False, body=False) -> dict:
+def scrape_article_metadata(path: str) -> dict:
     DOMAIN = "https://washingtoncitypaper.com"
     url = f"{DOMAIN}{path}"
     logging.info(f"Scraping metadata from: {url}")

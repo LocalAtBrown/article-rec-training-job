@@ -81,14 +81,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
             except BadArticleFormatError:
                 logging.exception(f"Skipping article with external_id: {external_id}")
                 continue
-            articles.append(
-                {
-                    "article_id": article['id'],
-                    "external_id": external_id,
-                    "landing_page_path": path,
-                    "published_at": article['published_at']
-                }
-            )
+            articles.append({"landing_page_path": path, **article})
 
     article_df = pd.DataFrame(articles).set_index("landing_page_path")
 
