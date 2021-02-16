@@ -117,7 +117,7 @@ def create_article_to_article_recs(
             )
 
 
-def format_ga(
+def format_data(
     ga_df: pd.DataFrame,
     date_list: list = [],
     external_id_col: str = "external_id",

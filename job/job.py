@@ -8,7 +8,7 @@ from job.helpers import (
     create_article_to_article_recs,
     create_default_recs,
     find_or_create_articles,
-    format_ga,
+    format_data,
 )
 from sites.sites import Sites
 
@@ -26,7 +26,7 @@ def run():
 
     EXPERIMENT_DATE = datetime.date.today()
     # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
-    formatted_df = format_ga(ga_df, date_list=[EXPERIMENT_DATE], half_life=59.631698)
+    formatted_df = format_data(ga_df, date_list=[EXPERIMENT_DATE], half_life=59.631698)
     model = models.train_model(X=formatted_df, reg=2.319952, n_components=130, epochs=2)
     logging.info(f"Successfully trained model on {len(article_df)} inputs.")
 
