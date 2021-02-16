@@ -19,8 +19,8 @@ def run():
     model_id = create_model(type=Type.ARTICLE.value)
     logging.info(f"Created model with id {model_id}")
     ga_df = preprocessors.fetch_latest_data()
-    article_df = find_or_create_articles(Sites.WCP, list(ga_df.page_path.unique()))
-    ga_df = ga_df.join(article_df, on="page_path")
+    article_df = find_or_create_articles(Sites.WCP, list(ga_df.landing_page_path.unique()))
+    ga_df = ga_df.join(article_df, on="landing_page_path")
 
     create_default_recs(ga_df, article_df)
 
