@@ -154,4 +154,4 @@ def test_transform_raw_data(snowplow_df):
     assert (df.session_date == pd.to_datetime('2021-02-11')).all()
     assert (df.event_category == 'snowplow_amp_page_ping').all()
     assert (df.event_action == 'impression').all()
-    assert set(df.columns) == {'activity_time', 'session_date', 'client_id', 'page_path', 'event_category', 'event_action'}
+    assert set(df.columns) == {'activity_time', 'session_date', 'client_id', 'landing_page_path', 'event_category', 'event_action'}

@@ -65,7 +65,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     :param paths: Paths on corresponding news website for which to retrieve IDs
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
-        * Requisite fields: "article_id" (str), "external_id" (str), "page_path" (str)
+        * Requisite fields: "article_id" (str), "external_id" (str), "landing_page_path" (str)
     """
     articles = []
 
@@ -80,10 +80,10 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                 logging.exception(f"Skipping article with external_id: {external_id}")
                 continue
             articles.append(
-                {"article_id": article_id, "external_id": external_id, "page_path": path}
+                {"article_id": article_id, "external_id": external_id, "landing_page_path": path}
             )
 
-    article_df = pd.DataFrame(articles).set_index("page_path")
+    article_df = pd.DataFrame(articles).set_index("landing_page_path")
 
     return article_df
 

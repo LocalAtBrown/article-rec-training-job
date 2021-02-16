@@ -49,7 +49,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     - client_id
     - session_date
     - activity_time
-    - page_path
+    - landing_page_path
     - event_category (conversions, newsletter sign-ups TK)
     - event_action (conversions, newsletter sign-ups TK)
     """
@@ -57,7 +57,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df['client_id'] = df.contexts_dev_amp_snowplow_amp_id_1.apply(lambda x: x[0]['ampClientId'])
     transformed_df['activity_time'] = pd.to_datetime(df.collector_tstamp)
     transformed_df['session_date'] = transformed_df.activity_time.dt.date
-    transformed_df['page_path'] = df.page_urlpath
+    transformed_df['landing_page_path'] = df.page_urlpath
     transformed_df['event_category'] = 'snowplow_amp_page_ping'
     transformed_df['event_action'] = 'impression'
     return transformed_df
