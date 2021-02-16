@@ -18,15 +18,15 @@ def run():
 
     model_id = create_model(type=Type.ARTICLE.value)
     logging.info(f"Created model with id {model_id}")
-    ga_df = preprocessors.fetch_latest_data()
-    article_df = find_or_create_articles(Sites.WCP, list(ga_df.landing_page_path.unique()))
-    ga_df = ga_df.join(article_df, on="landing_page_path")
+    data_df = preprocessors.fetch_latest_data()
+    article_df = find_or_create_articles(Sites.WCP, list(data_df.landing_page_path.unique()))
+    data_df = data_df.join(article_df, on="landing_page_path")
 
-    create_default_recs(ga_df, article_df)
+    create_default_recs(data_df, article_df)
 
     EXPERIMENT_DATE = datetime.date.today()
     # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
-    formatted_df = format_data(ga_df, date_list=[EXPERIMENT_DATE], half_life=59.631698)
+    formatted_df = format_data(data_df, date_list=[EXPERIMENT_DATE], half_life=59.631698)
     model = models.train_model(X=formatted_df, reg=2.319952, n_components=130, epochs=2)
     logging.info(f"Successfully trained model on {len(article_df)} inputs.")
 
