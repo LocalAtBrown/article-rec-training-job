@@ -41,15 +41,14 @@ def find_or_create_article(site: Site, external_id: int, path: str) -> int:
             metadata = scrape_article_metadata(site, path)
             logging.info(f"Updating article with external_id: {external_id}")
             update_article(article["id"], **metadata)
-        return article
+    else:
+        metadata = scrape_article_metadata(site, path)
+        article_data = {**metadata, "external_id": external_id}
+        logging.info(f"Creating article with external_id: {external_id}")
+        create_article(**article_data)
 
-    metadata = scrape_article_metadata(site, path)
-    article_data = {**metadata, "external_id": external_id}
-    logging.info(f"Creating article with external_id: {external_id}")
-    article_id = create_article(**article_data)
-    article_data['id'] = article_id
-
-    return article_data
+    article = get_article_by_external_id(article["external_id"])
+    return article
 
 
 def scrape_article_metadata(site: Site, path: str) -> dict:
@@ -106,7 +105,11 @@ def create_article_to_article_recs(
     for source_index, ranked_recommendation_indices in enumerate(vector_orders):
         source_external_id = external_ids[source_index]
 
-        for recommendation_index in ranked_recommendation_indices[:MAX_RECS]:
+        rec_ids = set()
+        for recommendation_index in ranked_recommendation_indices[:MAX_RECS+1]:
+            if len(rec_ids) == MAX_RECS:
+                break
+
             recommended_external_id = external_ids[recommendation_index]
             # If it's the article itself, skip it
             if recommended_external_id == source_external_id:
@@ -126,6 +129,7 @@ def create_article_to_article_recs(
                 recommended_article_id=recommended_article_id,
                 score=score,
             )
+            rec_ids.add(rec_id)
 
 
 def get_similarities(model: ImplicitMF) -> np.array:
