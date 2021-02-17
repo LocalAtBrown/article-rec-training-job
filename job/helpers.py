@@ -135,16 +135,18 @@ def get_similarities(model: ImplicitMF) -> np.array:
 
 def get_weights(external_ids: List[str], article_df: pd.DataFrame, publish_time_decay=True) -> np.array:
     if publish_time_decay:
-        publish_time_df = article_df[['article_id', 'published_at']].set_index('article_id')
-        max_diff = (pd.to_datetime(publish_time_df.published_at) - datetime.now()).dt.total_seconds().abs().max()
+        publish_time_df = article_df[['external_id', 'published_at']].set_index('external_id')
+        publish_time_df['published_at'] = pd.to_datetime(publish_time_df.published_at)
+        max_diff = (publish_time_df.published_at - datetime.now()).dt.total_seconds().abs().max()
         # Compute weights using
         publish_time_df['weights'] = np.exp(
-            (pd.to_datetime(publish_time_df.published_at) - datetime.now())
+            (publish_time_df.published_at - datetime.now())
             .dt.total_seconds()
             / max_diff
         )
         weights = np.array([publish_time_df.weights.loc[i] for i in external_ids])
     else:
+        # Weight equally
         weights = np.ones(len(external_ids))
     return weights
 
