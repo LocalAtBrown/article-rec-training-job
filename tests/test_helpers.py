@@ -82,10 +82,10 @@ def _test_similarities(model):
 
 
 def _test_weights(external_ids, article_df):
-    regular_weights = get_weights(external_ids, article_df, publish_time_decay=False)
+    regular_weights = get_weights(external_ids, article_df, half_life=float('inf'))
     assert regular_weights.shape == (3,)
     assert regular_weights[0] == regular_weights[1] == regular_weights[2]
-    decayed_weights = get_weights(external_ids, article_df, publish_time_decay=True)
+    decayed_weights = get_weights(external_ids, article_df, half_life=10)
     assert decayed_weights.shape == (3,)
     assert decayed_weights[0] > decayed_weights[1] > decayed_weights[2]
     assert (0 < decayed_weights).all()
@@ -95,7 +95,7 @@ def _test_weights(external_ids, article_df):
 def _test_orders(similarities, weights):
     orders = get_orders(similarities, weights)
     assert orders.shape == (3, 3)
-    assert (orders == np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]])).all()
+    assert (orders == np.array([[0, 1, 2], [1, 0, 2], [1, 0, 2]])).all()
     return orders
 
 
