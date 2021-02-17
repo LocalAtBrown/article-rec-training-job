@@ -163,7 +163,6 @@ def calculate_default_recs(prepared_df: pd.DataFrame) -> pd.Series:
     TOTAL_INTERACTIONS = 5000
     timed_interactions = prepared_df[~prepared_df.duration.isna()]
     recent_interactions = timed_interactions.nlargest(n=TOTAL_INTERACTIONS, columns=["activity_time"])
-    # if a client has read an article multiple times, keep only the most recent
     times = (
         recent_interactions[['external_id', 'duration']]
         .groupby("external_id")
