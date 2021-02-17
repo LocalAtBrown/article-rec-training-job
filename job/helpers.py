@@ -65,7 +65,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     :param paths: Paths on corresponding news website for which to retrieve IDs
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
-        * Requisite fields: "article_id" (str), "external_id" (str), "page_path" (str)
+        * Requisite fields: "article_id" (str), "external_id" (str), "landing_page_path" (str)
     """
     articles = []
 
@@ -80,10 +80,10 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                 logging.exception(f"Skipping article with external_id: {external_id}")
                 continue
             articles.append(
-                {"article_id": article_id, "external_id": external_id, "page_path": path}
+                {"article_id": article_id, "external_id": external_id, "landing_page_path": path}
             )
 
-    article_df = pd.DataFrame(articles).set_index("page_path")
+    article_df = pd.DataFrame(articles).set_index("landing_page_path")
 
     return article_df
 
@@ -117,8 +117,8 @@ def create_article_to_article_recs(
             )
 
 
-def format_ga(
-    ga_df: pd.DataFrame,
+def format_data(
+    data_df: pd.DataFrame,
     date_list: list = [],
     external_id_col: str = "external_id",
     half_life: float = 10.0,
@@ -126,7 +126,7 @@ def format_ga(
     """
     Format clickstream Google Analytics data into user-item matrix for training.
 
-    :param ga_df: DataFrame of activities collected from Google Analytics using job.py
+    :param data_df: DataFrame of activities collected from Google Analytics using job.py
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
     :param date_list: List of datetimes to forcefully include in all aggregates
@@ -134,7 +134,7 @@ def format_ga(
     :param half_life: Desired half life of time spent in days
     :return: DataFrame with one row for each user at each date of interest, and one column for each article
     """
-    clean_df = preprocessors.fix_dtypes(ga_df)
+    clean_df = preprocessors.fix_dtypes(data_df)
     sorted_df = preprocessors.time_activities(clean_df)
     filtered_df = preprocessors.filter_activities(sorted_df)
     time_df = preprocessors.aggregate_time(
@@ -145,9 +145,9 @@ def format_ga(
     return exp_time_df
 
 
-def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
+def calculate_default_recs(data_df: pd.DataFrame) -> pd.Series:
     TOTAL_VIEWS = 5000
-    clean_data = preprocessors.fix_dtypes(ga_df)
+    clean_data = preprocessors.fix_dtypes(data_df)
     pageviews = clean_data[clean_data["event_action"] == "pageview"]
     # if a client has read an article multiple times, keep only the most recent
     unique_pageviews = pageviews.loc[
@@ -158,8 +158,8 @@ def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
     return top_pageviews
 
 
-def create_default_recs(ga_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
-    top_pageviews = calculate_default_recs(ga_df)
+def create_default_recs(data_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
+    top_pageviews = calculate_default_recs(data_df)
     # the most read article will have a perfect score of 1.0, all others will be a fraction of that
     scores = top_pageviews / max(top_pageviews)
     model_id = create_model(type=Type.POPULARITY.value)

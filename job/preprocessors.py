@@ -9,70 +9,59 @@ from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
-from lib.bucket import s3_download
+from lib.bucket import download_object, list_objects
 
-BUCKET_NAME = config.get("GA_DATA_BUCKET")
+BUCKET = config.get("GA_DATA_BUCKET")
+DAYS_OF_DATA = 90
+
+
+def pad_date(date_expr: int) -> str:
+    return str(date_expr).zfill(2)
 
 
 def fetch_latest_data() -> pd.DataFrame:
-    # TODO remove hardcoded s3_object when live data is available
-    latest_data_key = "ting.zhang/90_day_sessions_2020_09_10_2020_09_13.json"
-    data_filepath = f"{ROOT_DIR}/tmp/data.json"
-    s3_download(BUCKET_NAME, latest_data_key, data_filepath)
-    with open(data_filepath) as f:
-        sessions_dict = json.load(f)
+    dt = datetime.datetime.now()
+    data_df = pd.DataFrame()
+    for _ in range(DAYS_OF_DATA):
+        month = pad_date(dt.month)
+        day = pad_date(dt.day)
+        prefix = f"enriched/good/{dt.year}/{month}/{day}"
+        obj_keys = list_objects(BUCKET, prefix)
+        for obj_key in obj_keys:
+            local_filename = object_key.split("/")[-1].split(".")[0]
+            local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.gz"
+            download_object(BUCKET, object_key, local_filepath)
+            try:
+                tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
+                data_df = data_df.append(tmp_df)
+            except ValueError:
+                logging.warning(f"{obj} incorrectly formatted, ignored.")
+                continue
+        dt = dt - datetime.timedelta(days=1)
 
-    return flatten_raw_data(sessions_dict)
-
-
-def flatten_raw_data(sessions_dict: dict) -> pd.DataFrame:
-    rows = [
-        {
-            "client_id": client_id,
-            "session_id": session["sessionId"],
-            "device_category": session["deviceCategory"],
-            "platform": session["platform"],
-            "data_source": session["dataSource"],
-            "session_date": session["sessionDate"],
-            "activity_time": activity["activityTime"],
-            "source": activity["source"],
-            "medium": activity["medium"],
-            "channel_grouping": activity["channelGrouping"],
-            "campaign": activity["campaign"],
-            "keyword": activity["keyword"],
-            "hostname": activity["hostname"],
-            "landing_page_path": activity["landingPagePath"],
-            "activity_type": activity["activityType"],
-            **get_type_specific_fields(activity),
-        }
-        for client_id, sessions in sessions_dict.items()
-        for session in sessions
-        for activity in session["activities"]
-    ]
-
-    return pd.DataFrame(rows)
+    return transform_raw_data(data_df)
 
 
-def get_type_specific_fields(activity: dict) -> dict:
-    if activity["activityType"] == "EVENT":
-        return {
-            "event_category": activity["event"]["eventCategory"],
-            "event_action": activity["event"]["eventAction"],
-            "page_path": activity["landingPagePath"],
-        }
-    elif activity["activityType"] == "PAGEVIEW":
-        return {
-            "event_category": "pageview",
-            "event_action": "pageview",
-            "page_path": activity["pageview"]["pagePath"],
-        }
-    else:
-        logging.info(f"Couldn't find activity field for type: {activity['activityType']}")
-        return {
-            "event_category": None,
-            "event_action": None,
-            "page_path": None,
-        }
+def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    returns a dataframe with the following fields:
+    - client_id
+    - session_date
+    - activity_time
+    - landing_page_path
+    - event_category (conversions, newsletter sign-ups TK)
+    - event_action (conversions, newsletter sign-ups TK)
+    """
+    transformed_df = pd.DataFrame()
+    transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(
+        lambda x: x[0]["ampClientId"]
+    )
+    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
+    transformed_df["session_date"] = transformed_df.activity_time.dt.date
+    transformed_df["landing_page_path"] = df.page_urlpath
+    transformed_df["event_category"] = "snowplow_amp_page_ping"
+    transformed_df["event_action"] = "impression"
+    return transformed_df
 
 
 def _add_dummies(
