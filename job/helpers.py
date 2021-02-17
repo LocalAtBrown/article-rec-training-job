@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from datetime import datetime, timezone, timedelta
+from requests import TooManyRedirects
 from scipy.spatial import distance
 from typing import List
 
@@ -78,12 +79,13 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
         if external_id:
             try:
                 article = find_or_create_article(site, external_id, path)
-            except BadArticleFormatError:
+            except (BadArticleFormatError, TooManyRedirects):
                 logging.exception(f"Skipping article with external_id: {external_id}")
                 continue
             articles.append({"landing_page_path": path, **article})
 
     article_df = pd.DataFrame(articles).set_index("landing_page_path")
+    article_df = article_df.rename(columns={'id': 'article_id'})
 
     return article_df
 
@@ -91,7 +93,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
-    vector_similarities = get_similarities(model.item_vectors)
+    vector_similarities = get_similarities(model)
     vector_weights = get_weights(external_ids, article_df)
     vector_orders = get_orders(vector_similarities, vector_weights)
 
@@ -128,7 +130,7 @@ def get_similarities(model: ImplicitMF) -> np.array:
 
 def get_weights(external_ids: List[str], article_df: pd.DataFrame, publish_time_decay=True) -> np.array:
     if publish_time_decay:
-        publish_time_df = article_df[['article_id', 'published_at']].set_index('article_id')
+        publish_time_df = article_df[['external_id', 'published_at']].set_index('external_id')
         max_diff = (pd.to_datetime(publish_time_df.published_at) - datetime.now()).dt.total_seconds().abs().max()
         # Compute weights using
         publish_time_df['weights'] = np.exp(
@@ -179,10 +181,9 @@ def format_ga(
 def calculate_default_recs(ga_df: pd.DataFrame) -> pd.Series:
     TOTAL_VIEWS = 5000
     clean_data = preprocessors.fix_dtypes(ga_df)
-    pageviews = clean_data[clean_data["event_action"] == "pageview"]
     # if a client has read an article multiple times, keep only the most recent
-    unique_pageviews = pageviews.loc[
-        pageviews.groupby(["client_id", "external_id"]).session_date.idxmax()
+    unique_pageviews = clean_data.loc[
+        clean_data.groupby(["client_id", "external_id"]).session_date.idxmax()
     ]
     latest_pageviews = unique_pageviews.nlargest(TOTAL_VIEWS, "session_date")
     top_pageviews = latest_pageviews["external_id"].value_counts().nlargest(MAX_RECS)

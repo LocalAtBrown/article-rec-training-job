@@ -22,10 +22,10 @@ def model():
 @pytest.fixture(scope='module')
 def article_df():
     articles = []
-    articles.append({'published_at': datetime.now() - timedelta(days=1), 'article_id': '1'})
-    articles.append({'published_at': datetime.now() - timedelta(days=10), 'article_id': '2'})
-    articles.append({'published_at': datetime.now() - timedelta(days=50), 'article_id': '3'})
-    articles.append({'published_at': datetime.now() - timedelta(days=100), 'article_id': '4'})
+    articles.append({'published_at': datetime.now() - timedelta(days=1), 'external_id': '1'})
+    articles.append({'published_at': datetime.now() - timedelta(days=10), 'external_id': '2'})
+    articles.append({'published_at': datetime.now() - timedelta(days=50), 'external_id': '3'})
+    articles.append({'published_at': datetime.now() - timedelta(days=100), 'external_id': '4'})
     article_df = pd.DataFrame(articles)
     return article_df
 
