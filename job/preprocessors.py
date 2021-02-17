@@ -27,7 +27,7 @@ def fetch_latest_data() -> pd.DataFrame:
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
         obj_keys = list_objects(BUCKET, prefix)
-        for obj_key in obj_keys:
+        for object_key in obj_keys:
             local_filename = object_key.split("/")[-1].split(".")[0]
             local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.gz"
             download_object(BUCKET, object_key, local_filepath)
@@ -35,7 +35,7 @@ def fetch_latest_data() -> pd.DataFrame:
                 tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
                 data_df = data_df.append(tmp_df)
             except ValueError:
-                logging.warning(f"{obj} incorrectly formatted, ignored.")
+                logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
         dt = dt - datetime.timedelta(days=1)
 
