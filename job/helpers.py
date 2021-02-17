@@ -47,7 +47,7 @@ def find_or_create_article(site: Site, external_id: int, path: str) -> int:
         logging.info(f"Creating article with external_id: {external_id}")
         create_article(**article_data)
 
-    article = get_article_by_external_id(article["external_id"])
+    article = get_article_by_external_id(external_id)
     return article
 
 
