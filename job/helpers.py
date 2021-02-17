@@ -134,26 +134,17 @@ def get_similarities(model: ImplicitMF) -> np.array:
     return vector_similarities
 
 
-def get_weights(external_ids: List[str], article_df: pd.DataFrame, publish_time_decay=True) -> np.array:
-    if publish_time_decay:
-        publish_time_df = (
-            article_df[['external_id', 'published_at']]
-            .drop_duplicates('external_id')
-            .set_index('external_id')
-        )
-        publish_time_df['published_at'] = pd.to_datetime(publish_time_df.published_at)
-        max_diff = (publish_time_df.published_at - datetime.now()).dt.total_seconds().abs().max()
-        # Compute weights using
-        publish_time_df['weights'] = np.exp(
-            (publish_time_df.published_at - datetime.now())
-            .dt.total_seconds()
-            / max_diff
-        )
-        weights = np.array([publish_time_df.weights.loc[i] for i in external_ids])
-    else:
-        # Weight equally
-        weights = np.ones(len(external_ids))
-    return weights
+def get_weights(external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10) -> np.array:
+    weights = np.ones(len(external_ids))
+    publish_time_df = (
+        article_df[['external_id', 'published_at']]
+        .drop_duplicates('external_id')
+        .set_index('external_id')
+        .loc[external_ids]
+    )
+    publish_time_df['published_at'] = pd.to_datetime(publish_time_df.published_at)
+    date_delta = (datetime.now() - publish_time_df.published_at).dt.total_seconds() / (3600 * 60 * 24)
+    return preprocessors.apply_decay(weights, date_delta, half_life)
 
 
 def get_orders(similarities: np.array, weights: np.array):
