@@ -1,3 +1,4 @@
+import json
 import pytest
 import warnings
 
@@ -11,6 +12,12 @@ EXPERIMENT_DATE = pd.to_datetime(datetime.date.today())
 def activity_df():
     return pd.read_csv(f"{ROOT_DIR}/tests/data/activities.csv")
 
+@pytest.fixture(scope='module')
+def snowplow_df():
+    df = pd.read_csv(f"{ROOT_DIR}/tests/data/snowplow_activities.csv")
+    # Read as Python dict (expected format)
+    df['contexts_dev_amp_snowplow_amp_id_1'] = df.contexts_dev_amp_snowplow_amp_id_1.apply(eval)
+    return df
 
 def _test_fix_dtypes(df):
     clean_df = fix_dtypes(df)
@@ -140,3 +147,11 @@ def test_pipeline(activity_df):
     filtered_df = _test_filter_activities(labeled_df)
     time_df = _test_aggregate_time(filtered_df)
     exp_time_df = _test_time_decay(time_df)
+
+
+def test_transform_raw_data(snowplow_df):
+    df = transform_raw_data(snowplow_df)
+    assert (df.session_date == pd.to_datetime('2021-02-11')).all()
+    assert (df.event_category == 'snowplow_amp_page_ping').all()
+    assert (df.event_action == 'impression').all()
+    assert set(df.columns) == {'activity_time', 'session_date', 'client_id', 'landing_page_path', 'event_category', 'event_action'}

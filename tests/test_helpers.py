@@ -35,14 +35,14 @@ def external_ids():
     return ['1', '2', '4']
 
 
-def generate_row(client_id, external_id):
+def generate_row(client_id, external_id, delta_secs=0):
     return {
         "client_id": client_id,
         "external_id": external_id,
-        "event_category": "pageview",
-        "event_action": "pageview",
-        "session_date": datetime.now(),
-        "activity_time": datetime.now(),
+        "event_category": "snowplow_amp_page_ping",
+        "event_action": "impression",
+        "session_date": datetime.now().date(),
+        "activity_time": datetime.now() + timedelta(seconds=delta_secs),
     }
 
 
@@ -54,21 +54,24 @@ class TestHelpers(unittest.TestCase):
         article_b = 456
 
         data = [
-            # basit and kai both read article a once
+            # basit and kai both read article a for 2 minutes
             generate_row(basit, article_a),
+            generate_row(basit, article_a, 120),
             generate_row(kai, article_a),
-            # while basit was on a date with jonathan, kai read article b three times
-            generate_row(kai, article_b),
-            generate_row(kai, article_b),
-            generate_row(kai, article_b),
+            generate_row(kai, article_a, 120),
+            # kai read article b for 1 minute, basit read article b for 30 seconds
+            generate_row(kai, article_b, 120),
+            generate_row(kai, article_b, 150),
+            generate_row(kai, article_b, 180),
+            generate_row(basit, article_b, 120),
+            generate_row(basit, article_b, 150),
         ]
 
         df = pd.DataFrame(data)
-        top_pageviews = helpers.calculate_default_recs(df)
-        # expect article a to be ranked higher than article b
-        assert all(top_pageviews.index == [article_a, article_b])
-        # expect article a to have two unique pageviews, and article b to have one
-        assert all(top_pageviews == [2, 1])
+        prepared_df = helpers.prepare_data(df)
+        top_times_per_view = helpers.calculate_default_recs(prepared_df)
+        # article a should have 2 minutes per interaction, article b should have 45 seconds per interaction
+        assert all(top_times_per_view.index == [article_a, article_b])
 
 
 def _test_similarities(model):
