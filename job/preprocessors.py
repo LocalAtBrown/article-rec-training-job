@@ -2,6 +2,7 @@ import json
 import datetime
 import logging
 import matplotlib.pyplot as plt
+import multiprocessing
 import numpy as np
 import pandas as pd
 
@@ -26,14 +27,18 @@ def fetch_latest_data() -> pd.DataFrame:
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        obj_keys = list_objects(BUCKET, prefix)
-        for object_key in obj_keys:
-            local_filename = object_key.split("/")[-1].split(".")[0]
-            local_filepath = f"{ROOT_DIR}/tmp/{local_filename}.gz"
-            download_object(BUCKET, object_key, local_filepath)
+        object_keys = list_objects(BUCKET, prefix)
+        local_filenames = [object_key.split("/")[-1].split(".")[0] for object_key in object_keys]
+        local_filepaths = [f"{ROOT_DIR}/tmp/{local_filename}.gz" for local_filename in local_filenames]
+        pool = multiprocessing.Pool(multiprocessing.cpu_count())
+        pool.starmap(download_object, list(zip([BUCKET] * len(object_keys), object_keys, local_filepaths)))
+        pool.close()
+        pool.join()
+        for object_key, local_filepath in zip(object_keys, local_filepaths):
             try:
                 tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
                 data_df = data_df.append(tmp_df)
+                logging.info(f"Successfully read {object_key}.")
             except ValueError:
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
