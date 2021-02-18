@@ -9,7 +9,7 @@ from job.helpers import (
     create_default_recs,
     find_or_create_articles,
     format_data,
-    prepare_data
+    prepare_data,
 )
 from sites.sites import Sites
 

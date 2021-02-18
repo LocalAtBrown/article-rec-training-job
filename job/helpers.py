@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from datetime import datetime, timezone, timedelta
+from requests import TooManyRedirects
 from scipy.spatial import distance
 from typing import List
 
@@ -78,7 +79,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
         if external_id:
             try:
                 article = find_or_create_article(site, external_id, path)
-            except BadArticleFormatError:
+            except (BadArticleFormatError, TooManyRedirects):
                 logging.exception(f"Skipping article with external_id: {external_id}")
                 continue
             articles.append(
@@ -86,7 +87,8 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                     "article_id": article['id'],
                     "external_id": external_id,
                     "landing_page_path": path,
-                    "published_at": article['published_at']
+                    "published_at": article['published_at'],
+                    "title": article['title'],
                 }
             )
 
@@ -98,7 +100,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
-    vector_similarities = get_similarities(model.item_vectors)
+    vector_similarities = get_similarities(model)
     vector_weights = get_weights(external_ids, article_df)
     vector_orders = get_orders(vector_similarities, vector_weights)
 
