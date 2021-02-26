@@ -8,7 +8,12 @@ from typing import List
 
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
-from db.helpers import create_article, update_article, get_article_by_external_id, create_rec
+from db.helpers import (
+    create_article,
+    update_article,
+    get_article_by_external_id,
+    create_rec,
+)
 from job import preprocessors
 from job.models import ImplicitMF
 from sites.sites import Site
@@ -83,10 +88,10 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                 continue
             articles.append(
                 {
-                    "article_id": article['id'],
+                    "article_id": article["id"],
                     "external_id": external_id,
                     "landing_page_path": path,
-                    "published_at": article['published_at']
+                    "published_at": article["published_at"],
                 }
             )
 
@@ -106,7 +111,7 @@ def create_article_to_article_recs(
         source_external_id = external_ids[source_index]
 
         rec_ids = set()
-        for recommendation_index in ranked_recommendation_indices[:MAX_RECS+1]:
+        for recommendation_index in ranked_recommendation_indices[: MAX_RECS + 1]:
             if len(rec_ids) == MAX_RECS:
                 break
 
@@ -115,7 +120,9 @@ def create_article_to_article_recs(
             if recommended_external_id == source_external_id:
                 continue
 
-            matching_articles = article_df[article_df["external_id"] == recommended_external_id]
+            matching_articles = article_df[
+                article_df["external_id"] == recommended_external_id
+            ]
             recommended_article_id = matching_articles["article_id"][0]
             # for distance, smaller values are more highly correlated
             # for score, higher values are more highly correlated
@@ -133,21 +140,27 @@ def create_article_to_article_recs(
 
 
 def get_similarities(model: ImplicitMF) -> np.array:
-    vector_distances = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
+    vector_distances = distance.cdist(
+        model.item_vectors, model.item_vectors, metric="cosine"
+    )
     vector_similarities = 1 - vector_distances
     return vector_similarities
 
 
-def get_weights(external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10) -> np.array:
+def get_weights(
+    external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10
+) -> np.array:
     weights = np.ones(len(external_ids))
     publish_time_df = (
-        article_df[['external_id', 'published_at']]
-        .drop_duplicates('external_id')
-        .set_index('external_id')
+        article_df[["external_id", "published_at"]]
+        .drop_duplicates("external_id")
+        .set_index("external_id")
         .loc[external_ids]
     )
-    publish_time_df['published_at'] = pd.to_datetime(publish_time_df.published_at)
-    date_delta = (datetime.now() - publish_time_df.published_at).dt.total_seconds() / (3600 * 60 * 24)
+    publish_time_df["published_at"] = pd.to_datetime(publish_time_df.published_at)
+    date_delta = (datetime.now() - publish_time_df.published_at).dt.total_seconds() / (
+        3600 * 60 * 24
+    )
     return preprocessors.apply_decay(weights, date_delta, half_life)
 
 
@@ -201,24 +214,23 @@ def format_data(
 def calculate_default_recs(prepared_df: pd.DataFrame) -> pd.Series:
     TOTAL_INTERACTIONS = 5000
     timed_interactions = prepared_df[~prepared_df.duration.isna()]
-    recent_interactions = timed_interactions.nlargest(n=TOTAL_INTERACTIONS, columns=["activity_time"])
+    recent_interactions = timed_interactions.nlargest(
+        n=TOTAL_INTERACTIONS, columns=["activity_time"]
+    )
     times = (
-        recent_interactions[['external_id', 'duration']]
+        recent_interactions[["external_id", "duration"]]
         .groupby("external_id")
         .sum()
         .sort_index()
     )
     pageviews = (
-        recent_interactions[['external_id', 'client_id']]
+        recent_interactions[["external_id", "client_id"]]
         .groupby("external_id")
         .nunique("client_id")
         .sort_index()
     )
     times_per_view = times.duration / pageviews.client_id
-    top_times_per_view = (
-        times_per_view
-        .sort_values(ascending=False)
-    )
+    top_times_per_view = times_per_view.sort_values(ascending=False)
     return top_times_per_view
 
 
