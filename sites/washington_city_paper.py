@@ -18,6 +18,17 @@ def extract_external_id(path: str) -> int:
         return None
 
 
+def scrape_title(soup: BeautifulSoup) -> str:
+    headers = soup.find_all("h1")
+    return headers[0].text.strip()
+
+
+def scrape_published_at(soup: BeautifulSoup) -> str:
+    PROPERTY_TAG = "article:published_time"
+    tag = soup.find("meta", property=PROPERTY_TAG)
+    return tag.get("content")
+
+
 def scrape_article_metadata(path: str) -> dict:
     DOMAIN = "https://washingtoncitypaper.com"
     url = f"{DOMAIN}{path}"
@@ -26,16 +37,18 @@ def scrape_article_metadata(path: str) -> dict:
     soup = BeautifulSoup(page.text, features="html.parser")
     metadata = {}
 
-    meta_tags = [
-        ("title", "og:title"),
-        ("published_at", "article:published_time"),
+    scraper_funcs = [
+        ("title", scrape_title, ""),
+        ("published_at", scrape_published_at, None),
     ]
 
-    for name, prop in meta_tags:
-        tag = soup.find("meta", property=prop)
-        if not tag:
-            raise BadArticleFormatError(f"Could not scrape article at path: {path}")
-        metadata[name] = tag.get("content")
+    for prop, func, default in scraper_funcs:
+        val = default
+        try:
+            val = func(soup)
+        except Exception:
+            logging.exception(f"Error scraping {prop} for article: {url}")
+        metadata[prop] = val
 
     logging.info(f"Scraped metadata from: {url}")
     return metadata
