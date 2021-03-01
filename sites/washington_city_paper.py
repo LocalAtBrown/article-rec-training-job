@@ -46,17 +46,18 @@ def scrape_article_metadata(path: str) -> dict:
     metadata = {}
 
     scraper_funcs = [
-        ("title", scrape_title, ""),
-        ("published_at", scrape_published_at, None),
-        ("path", scrape_path, path),
+        ("title", scrape_title),
+        ("published_at", scrape_published_at),
+        ("path", scrape_path),
     ]
 
-    for prop, func, default in scraper_funcs:
-        val = default
+    for prop, func in scraper_funcs:
         try:
             val = func(page, soup)
         except Exception:
-            logging.exception(f"Error scraping {prop} for article: {url}")
+            msg = f"Error scraping {prop} for article: {url}"
+            logging.exception(msg)
+            raise BadArticleFormatError(msg)
         metadata[prop] = val
 
     logging.info(f"Scraped metadata from: {url}")
