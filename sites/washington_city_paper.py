@@ -1,5 +1,7 @@
 import re
 import logging
+from urllib.parse import urlparse
+from requests.models import Response
 
 from bs4 import BeautifulSoup
 
@@ -18,15 +20,21 @@ def extract_external_id(path: str) -> int:
         return None
 
 
-def scrape_title(soup: BeautifulSoup) -> str:
+def scrape_title(page: Response, soup: BeautifulSoup) -> str:
     headers = soup.find_all("h1")
     return headers[0].text.strip()
 
 
-def scrape_published_at(soup: BeautifulSoup) -> str:
+def scrape_published_at(page: Response, soup: BeautifulSoup) -> str:
     PROPERTY_TAG = "article:published_time"
     tag = soup.find("meta", property=PROPERTY_TAG)
     return tag.get("content")
+
+
+def scrape_path(page: Response, soup: BeautifulSoup) -> str:
+    # there are times when older articles redirect to an alternate path, for ex:
+    # https://washingtoncitypaper.com/food/article/20830693/awardwinning-chef-michel-richard-dies-at-age-68
+    return urlparse(page.url).path
 
 
 def scrape_article_metadata(path: str) -> dict:
@@ -40,12 +48,13 @@ def scrape_article_metadata(path: str) -> dict:
     scraper_funcs = [
         ("title", scrape_title, ""),
         ("published_at", scrape_published_at, None),
+        ("path", scrape_path, path),
     ]
 
     for prop, func, default in scraper_funcs:
         val = default
         try:
-            val = func(soup)
+            val = func(page, soup)
         except Exception:
             logging.exception(f"Error scraping {prop} for article: {url}")
         metadata[prop] = val
