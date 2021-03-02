@@ -31,7 +31,6 @@ def should_refresh(publish_ts: str) -> bool:
 
     # refresh metadata for articles published within the last day
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    # PATCH: cast to UTC - need to revist later
     if datetime.fromisoformat(publish_ts).astimezone(timezone.utc) > yesterday:
         return True
 
@@ -103,7 +102,7 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
-    vector_similarities = get_similarities(model.item_vectors)
+    vector_similarities = get_similarities(model)
     vector_weights = get_weights(external_ids, article_df)
     vector_orders = get_orders(vector_similarities, vector_weights)
 
