@@ -25,19 +25,23 @@ MAX_RECS = config.get("MAX_RECS")
 BACKFILL_ISO_DATE = "2021-03-01"
 
 
-def should_refresh(publish_ts: str) -> bool:
+def should_refresh(article: dict) -> bool:
     # refresh metadata without a published time recorded yet
-    if not publish_ts:
+    if not article["published_at"]:
         return True
 
     # refresh metadata for articles published within the last day
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    if datetime.fromisoformat(publish_ts).astimezone(timezone.utc) > yesterday:
+    published_at = datetime.fromisoformat(article["published_at"]).astimezone(
+        timezone.utc
+    )
+    if published_at > yesterday:
         return True
 
     # refresh metadata for articles last updated before the backfill
     backfill_date = datetime.fromisoformat(BACKFILL_ISO_DATE).astimezone(timezone.utc)
-    if backfill_date > datetime.fromisoformat(publish_ts).astimezone(timezone.utc):
+    updated_at = datetime.fromisoformat(article["updated_at"]).astimezone(timezone.utc)
+    if backfill_date > updated_at:
         return True
 
     return False
@@ -47,7 +51,7 @@ def find_or_create_article(site: Site, external_id: int, path: str) -> int:
     logging.info(f"Fetching article with external_id: {external_id}")
     article = get_article_by_external_id(external_id)
     if article:
-        if should_refresh(article["published_at"]):
+        if should_refresh(article):
             metadata = scrape_article_metadata(site, path)
             logging.info(f"Updating article with external_id: {external_id}")
             update_article(article["id"], **metadata)
