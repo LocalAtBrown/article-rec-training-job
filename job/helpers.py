@@ -22,6 +22,7 @@ from lib.config import config
 
 
 MAX_RECS = config.get("MAX_RECS")
+BACKFILL_ISO_DATE = "2021-03-01"
 
 
 def should_refresh(publish_ts: str) -> bool:
@@ -32,6 +33,11 @@ def should_refresh(publish_ts: str) -> bool:
     # refresh metadata for articles published within the last day
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     if datetime.fromisoformat(publish_ts).astimezone(timezone.utc) > yesterday:
+        return True
+
+    # refresh metadata for articles last updated before the backfill
+    backfill_date = datetime.fromisoformat(BACKFILL_ISO_DATE).astimezone(timezone.utc)
+    if backfill_date > datetime.fromisoformat(publish_ts).astimezone(timezone.utc):
         return True
 
     return False
