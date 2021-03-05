@@ -21,7 +21,7 @@ def extract_external_id(path: str) -> int:
 
 
 def scrape_title(page: Response, soup: BeautifulSoup) -> str:
-    headers = soup.find_all("h1")
+    headers = soup.select("header h1")
     return headers[0].text.strip()
 
 
