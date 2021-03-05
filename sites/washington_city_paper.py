@@ -57,7 +57,7 @@ def scrape_article_metadata(path: str) -> dict:
         except Exception as e:
             msg = f"Error scraping {prop} for article: {url}"
             logging.exception(msg)
-            raise BadArticleFormatError(msg)
+            raise BadArticleFormatError(msg) from e
         metadata[prop] = val
 
     logging.info(f"Scraped metadata from: {url}")
