@@ -48,8 +48,7 @@ def scrape_article_metadata(path: str) -> dict:
     scraper_funcs = [
         ("title", scrape_title),
         ("published_at", scrape_published_at),
-        # TODO uncomment this after migration pr to add path field
-        # ("path", scrape_path),
+        ("path", scrape_path),
     ]
 
     for prop, func in scraper_funcs:
