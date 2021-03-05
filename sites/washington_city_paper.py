@@ -1,5 +1,7 @@
 import re
 import logging
+from urllib.parse import urlparse
+from requests.models import Response
 
 from bs4 import BeautifulSoup
 
@@ -18,6 +20,23 @@ def extract_external_id(path: str) -> int:
         return None
 
 
+def scrape_title(page: Response, soup: BeautifulSoup) -> str:
+    headers = soup.select("header h1")
+    return headers[0].text.strip()
+
+
+def scrape_published_at(page: Response, soup: BeautifulSoup) -> str:
+    PROPERTY_TAG = "article:published_time"
+    tag = soup.find("meta", property=PROPERTY_TAG)
+    return tag.get("content")
+
+
+def scrape_path(page: Response, soup: BeautifulSoup) -> str:
+    # there are times when older articles redirect to an alternate path, for ex:
+    # https://washingtoncitypaper.com/food/article/20830693/awardwinning-chef-michel-richard-dies-at-age-68
+    return urlparse(page.url).path
+
+
 def scrape_article_metadata(path: str) -> dict:
     DOMAIN = "https://washingtoncitypaper.com"
     url = f"{DOMAIN}{path}"
@@ -26,16 +45,20 @@ def scrape_article_metadata(path: str) -> dict:
     soup = BeautifulSoup(page.text, features="html.parser")
     metadata = {}
 
-    meta_tags = [
-        ("title", "og:title"),
-        ("published_at", "article:published_time"),
+    scraper_funcs = [
+        ("title", scrape_title),
+        ("published_at", scrape_published_at),
+        ("path", scrape_path),
     ]
 
-    for name, prop in meta_tags:
-        tag = soup.find("meta", property=prop)
-        if not tag:
-            raise BadArticleFormatError(f"Could not scrape article at path: {path}")
-        metadata[name] = tag.get("content")
+    for prop, func in scraper_funcs:
+        try:
+            val = func(page, soup)
+        except Exception as e:
+            msg = f"Error scraping {prop} for article: {url}"
+            logging.exception(msg)
+            raise BadArticleFormatError(msg) from e
+        metadata[prop] = val
 
     logging.info(f"Scraped metadata from: {url}")
     return metadata
