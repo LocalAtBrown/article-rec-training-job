@@ -54,7 +54,7 @@ def scrape_article_metadata(path: str) -> dict:
     for prop, func in scraper_funcs:
         try:
             val = func(page, soup)
-        except Exception:
+        except Exception as e:
             msg = f"Error scraping {prop} for article: {url}"
             logging.exception(msg)
             raise BadArticleFormatError(msg)
