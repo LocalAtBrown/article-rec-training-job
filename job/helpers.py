@@ -22,7 +22,7 @@ from lib.config import config
 
 
 MAX_RECS = config.get("MAX_RECS")
-BACKFILL_ISO_DATE = "2021-03-01"
+BACKFILL_ISO_DATE = "2021-03-05"
 
 
 def should_refresh(article: dict) -> bool:
