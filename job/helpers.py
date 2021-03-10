@@ -119,13 +119,14 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
     article_df = pd.DataFrame(articles).set_index("landing_page_path")
-
     return article_df
 
 
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
+    start_ts = time.time()
+    created_recs = 0
     vector_similarities = get_similarities(model)
     vector_weights = get_weights(external_ids, article_df)
     vector_orders = get_orders(vector_similarities, vector_weights)
@@ -160,6 +161,11 @@ def create_article_to_article_recs(
                 score=score,
             )
             rec_ids.add(rec_id)
+            created_recs += 1
+
+    latency = time.time() - start_ts
+    write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
+    write_metric("rec_creation_total", created_recs)
 
 
 def get_similarities(model: ImplicitMF) -> np.array:
