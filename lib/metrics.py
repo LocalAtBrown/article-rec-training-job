@@ -9,7 +9,7 @@ client = boto3.client("cloudwatch", REGION)
 SERVICE = config.get("SERVICE")
 
 
-def write(
+def write_metric(
     name: str,
     value: float,
     unit: str = "Count",
