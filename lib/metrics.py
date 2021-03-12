@@ -45,7 +45,7 @@ def write_metric(
     tags: Dict[str, str] = None,
 ) -> None:
     if STAGE == "local":
-        logging.info("Skipping metric write")
+        logging.info(f"Skipping metric write for name:{name} value:{value}")
         return
     default_tags = {"stage": STAGE}
     if tags:

@@ -35,6 +35,15 @@ export class AppStack extends cdk.Stack {
             }),
           ],
         }),
+        CloudwatchPutAccess: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              sid: `CloudwatchPutAccess`,
+              actions: ["cloudwatch:Put*"],
+              resources: ["*"],
+            }),
+          ],
+        }),
       },
     });
 
