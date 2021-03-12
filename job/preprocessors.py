@@ -1,15 +1,17 @@
 import json
 import datetime
 import logging
+import time
+from itertools import product
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
 from lib.bucket import download_object, list_objects
+from lib.metrics import write_metric, Unit
 
 BUCKET = config.get("GA_DATA_BUCKET")
 DAYS_OF_DATA = 90
@@ -20,6 +22,7 @@ def pad_date(date_expr: int) -> str:
 
 
 def fetch_latest_data() -> pd.DataFrame:
+    start_ts = time.time()
     dt = datetime.datetime.now()
     data_df = pd.DataFrame()
     for _ in range(DAYS_OF_DATA):
@@ -39,7 +42,11 @@ def fetch_latest_data() -> pd.DataFrame:
                 continue
         dt = dt - datetime.timedelta(days=1)
 
-    return transform_raw_data(data_df)
+    data_df = transform_raw_data(data_df)
+    write_metric("downloaded_rows", data_df.shape[0])
+    latency = time.time() - start_ts
+    write_metric("download_time", latency, unit=Unit.SECONDS)
+    return data_df
 
 
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:

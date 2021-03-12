@@ -1,3 +1,4 @@
+import time
 import logging
 import numpy as np
 import pandas as pd
@@ -19,6 +20,7 @@ from job.models import ImplicitMF
 from sites.sites import Site
 from sites.helpers import BadArticleFormatError
 from lib.config import config
+from lib.metrics import write_metric, Unit
 
 
 MAX_RECS = config.get("MAX_RECS")
@@ -47,22 +49,25 @@ def should_refresh(article: dict) -> bool:
     return False
 
 
-def find_or_create_article(site: Site, external_id: int, path: str) -> int:
+def find_or_create_article(site: Site, external_id: int, path: str) -> (bool, dict):
     logging.info(f"Fetching article with external_id: {external_id}")
     article = get_article_by_external_id(external_id)
+    scraped = False
     if article:
         if should_refresh(article):
             metadata = scrape_article_metadata(site, path)
+            scraped = True
             logging.info(f"Updating article with external_id: {external_id}")
             update_article(article["id"], **metadata)
     else:
         metadata = scrape_article_metadata(site, path)
+        scraped = True
         article_data = {**metadata, "external_id": external_id}
         logging.info(f"Creating article with external_id: {external_id}")
         create_article(**article_data)
 
     article = get_article_by_external_id(external_id)
-    return article
+    return scraped, article
 
 
 def scrape_article_metadata(site: Site, path: str) -> dict:
@@ -86,14 +91,19 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     articles = []
 
     logging.info(f"Finding or creating articles for {len(paths)} paths")
-
+    total_scraped = 0
+    scraping_errors = 0
+    start_ts = time.time()
     for path in paths:
         external_id = extract_external_id(site, path)
         if external_id:
             try:
-                article = find_or_create_article(site, external_id, path)
+                scraped, article = find_or_create_article(site, external_id, path)
+                if scraped:
+                    total_scraped += 1
             except BadArticleFormatError:
                 logging.exception(f"Skipping article with external_id: {external_id}")
+                scraping_errors += 1
                 continue
             articles.append(
                 {
@@ -104,14 +114,19 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                 }
             )
 
+    write_metric("article_scraping_total", total_scraped)
+    write_metric("article_scraping_errors", scraping_errors)
+    latency = time.time() - start_ts
+    write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
     article_df = pd.DataFrame(articles).set_index("landing_page_path")
-
     return article_df
 
 
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
+    start_ts = time.time()
+    created_recs = 0
     vector_similarities = get_similarities(model)
     vector_weights = get_weights(external_ids, article_df)
     vector_orders = get_orders(vector_similarities, vector_weights)
@@ -146,6 +161,11 @@ def create_article_to_article_recs(
                 score=score,
             )
             rec_ids.add(rec_id)
+            created_recs += 1
+
+    latency = time.time() - start_ts
+    write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
+    write_metric("rec_creation_total", created_recs)
 
 
 def get_similarities(model: ImplicitMF) -> np.array:
