@@ -67,12 +67,7 @@ export function makeScheduledTask(
     stage: STAGE,
     options: ScheduledEc2TaskProps)
   {
-    // override schedule in dev
-    // TODO only run once on deploy
     let schedule = options.schedule;
-    if (stage != STAGE.PRODUCTION) {
-      schedule = Schedule.rate(cdk.Duration.days(365))
-    }
 
     const stageOptions = {
       ...options,
