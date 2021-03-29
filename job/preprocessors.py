@@ -3,6 +3,7 @@ import datetime
 import logging
 import time
 from itertools import product
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,13 +37,14 @@ def fetch_latest_data() -> pd.DataFrame:
             download_object(BUCKET, object_key, local_filepath)
             try:
                 tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
+                tmp_df = transform_raw_data(tmp_df)
                 data_df = data_df.append(tmp_df)
+                os.remove(local_filepath)
             except ValueError:
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
         dt = dt - datetime.timedelta(days=1)
 
-    data_df = transform_raw_data(data_df)
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)

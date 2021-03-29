@@ -45,6 +45,7 @@ def run():
 
         # External IDs to map articles back to
         external_article_ids = formatted_df.columns
+        external_article_ids = external_article_ids.astype("int32")
         external_user_ids = formatted_df.index
 
         create_article_to_article_recs(

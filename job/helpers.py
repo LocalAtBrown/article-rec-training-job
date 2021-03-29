@@ -155,7 +155,7 @@ def create_article_to_article_recs(
             score = max(score, 0.0)
 
             rec_id = create_rec(
-                source_entity_id=source_external_id,
+                source_entity_id=int(source_external_id),
                 model_id=model_id,
                 recommended_article_id=recommended_article_id,
                 score=score,
