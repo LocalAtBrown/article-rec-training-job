@@ -2,7 +2,7 @@
 
 Job that runs every two hours to create a new batch of article recommendations, using the latest Google Analytics data available.
 
-## Dev Usage
+## Local Usage
 1. Build the container
 ```
 kar build
@@ -17,6 +17,12 @@ kar run
 ```
 kar run bash
 ```
+
+## Running Tasks Manually
+
+- [Dev](https://console.aws.amazon.com/ecs/home?region=us-east-1#/taskDefinitions/DevArticleRecTrainingJobDevArticleRecTrainingJobTaskDefinitionF0FE4113/35/runTask)
+- [Prod](https://console.aws.amazon.com/ecs/home?region=us-east-1#/taskDefinitions/ArticleRecTrainingJobArticleRecTrainingJobTaskDefinitionE9349351/11/runTask)
+
 
 ## Monitoring
 
