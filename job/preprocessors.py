@@ -91,6 +91,11 @@ def fetch_latest_data() -> pd.DataFrame:
 
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
+    requires a dataframe with the following fields:
+    - contexts_dev_amp_snowplow_amp_id_1
+    - collector_tstamp
+    - page_urlpath
+
     returns a dataframe with the following fields:
     - client_id
     - session_date
