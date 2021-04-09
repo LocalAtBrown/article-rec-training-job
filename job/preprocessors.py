@@ -26,6 +26,7 @@ def pad_date(date_expr: int) -> str:
 
 
 def s3_select(bucket_name: str, s3_object: str, fields: List[str]):
+    logging.info(f"Fetching object {s3_object} from bucket {bucket_name}")
     fields = [f"s.{field}" for field in fields]
     field_str = ", ".join(fields)
     query = f"select {field_str} from s3object s"
