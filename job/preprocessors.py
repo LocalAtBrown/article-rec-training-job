@@ -65,10 +65,16 @@ def fetch_latest_data() -> pd.DataFrame:
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
         obj_keys = list_objects(BUCKET, prefix)
         for object_key in obj_keys:
-            local_filename = "data.gz"
-            download_object(BUCKET, object_key, local_filename)
+            local_filename = "tmp.json"
+            fields = [
+                "collector_tstamp",
+                "page_urlpath",
+                "contexts_dev_amp_snowplow_amp_id_1",
+            ]
+            event_stream = s3_select(BUCKET, object_key, fields)
             try:
-                tmp_df = pd.read_json(local_filename, compression="gzip", lines=True)
+                event_stream_to_file(event_stream, local_filename)
+                tmp_df = pd.read_json(local_filename, lines=True)
                 tmp_df = transform_raw_data(tmp_df)
                 data_df = data_df.append(tmp_df)
                 os.remove(local_filename)
