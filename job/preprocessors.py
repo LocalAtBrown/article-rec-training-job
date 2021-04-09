@@ -4,22 +4,55 @@ import logging
 import time
 from itertools import product
 import os
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from progressbar import ProgressBar
+import boto3
 
 from lib.config import config, ROOT_DIR
-from lib.bucket import download_object, list_objects
+from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
 BUCKET = config.get("GA_DATA_BUCKET")
-DAYS_OF_DATA = 90
+DAYS_OF_DATA = 30
+s3 = boto3.client("s3")
 
 
 def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
+
+
+def s3_select(bucket_name: str, s3_object: str, fields: List[str]):
+    fields = [f"s.{field}" for field in fields]
+    field_str = ", ".join(fields)
+    query = f"select {field_str} from s3object s"
+    r = s3.select_object_content(
+        Bucket=bucket_name,
+        Key=s3_object,
+        ExpressionType="SQL",
+        Expression=query,
+        InputSerialization={
+            "CompressionType": "GZIP",
+            "JSON": {"Type": "LINES"},
+        },
+        OutputSerialization={
+            "JSON": {"RecordDelimiter": "\n"},
+        },
+    )
+    return r
+
+
+def event_stream_to_file(event_stream, filename):
+    with open(filename, "wb") as f:
+        # Iterate over events in the event stream as they come
+        for event in event_stream["Payload"]:
+            # If we received a records event, write the data to a file
+            if "Records" in event:
+                data = event["Records"]["Payload"]
+                f.write(data)
 
 
 def fetch_latest_data() -> pd.DataFrame:
