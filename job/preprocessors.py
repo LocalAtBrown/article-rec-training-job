@@ -33,12 +33,12 @@ def fetch_latest_data() -> pd.DataFrame:
         obj_keys = list_objects(BUCKET, prefix)
         for object_key in obj_keys:
             local_filename = "data.gz"
-            local_filepath = download_object(BUCKET, object_key, local_filename)
+            download_object(BUCKET, object_key, local_filename)
             try:
-                tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
+                tmp_df = pd.read_json(local_filename, compression="gzip", lines=True)
                 tmp_df = transform_raw_data(tmp_df)
                 data_df = data_df.append(tmp_df)
-                os.remove(local_filepath)
+                os.remove(local_filename)
             except ValueError:
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
