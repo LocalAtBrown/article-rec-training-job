@@ -18,6 +18,16 @@ kar run
 kar run bash
 ```
 
+## Monitoring
+
+### Logs
+- [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/DevArticleRecTrainingJob-DevArticleRecTrainingJobTaskDefinitionDevArticleRecTrainingJobTaskContainerLogGroup9A13F6F1-5dyoUd3VPezx)
+- [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/ArticleRecTrainingJob-ArticleRecTrainingJobTaskDefinitionArticleRecTrainingJobTaskContainerLogGroup2D7DFB71-xD2hRJTbp6vc)
+
+### Dashboards
+- [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-article-rec-training-job)
+- [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-training-job)
+
 ## Migrations
 
 ### Adding a Migration
@@ -33,11 +43,11 @@ brew bundle --file=Brewfile
 
 3. Check the pending migrations by running:
 ```
-flyway info -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -password=<PASSWORD> -locations=filesystem:db/migrations
+flyway info -url=jdbc:postgresql://<HOST>:5432/<DBNAME> -user=localnewslab -password=<PASSWORD> -locations=filesystem:db/migrations
 ```
 
 4. Run the pending migrations:
 ```
-flyway migrate -url=jdbc:postgresql://<HOST>:<PORT>/<DBNAME> -user=<USERNAME> -password=<PASSWORD> -locations=filesystem:db/migrations
+flyway migrate -url=jdbc:postgresql://<HOST>:5432/<DBNAME> -user=localnewslab -password=<PASSWORD> -locations=filesystem:db/migrations
 ```
 

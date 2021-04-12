@@ -10,6 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.sparse.linalg import spsolve
 
 from lib.config import config
+from lib.metrics import write_metric, Unit
 
 
 DISPLAY_PROGRESS = config.get("DISPLAY_PROGRESS")
@@ -64,17 +65,25 @@ class ImplicitMF:
         self.reg_param = reg_param
 
     def train_model(self):
+        start_ts = time.time()
         self.user_vectors = np.random.normal(size=(self.num_users, self.num_factors))
         self.item_vectors = np.random.normal(size=(self.num_items, self.num_factors))
 
         for i in range(self.num_iterations):
             t0 = time.time()
             logging.info("Solving for user vectors...")
-            self.user_vectors = self.iteration(True, sparse.csr_matrix(self.item_vectors))
+            self.user_vectors = self.iteration(
+                True, sparse.csr_matrix(self.item_vectors)
+            )
             logging.info("Solving for item vectors...")
-            self.item_vectors = self.iteration(False, sparse.csr_matrix(self.user_vectors))
+            self.item_vectors = self.iteration(
+                False, sparse.csr_matrix(self.user_vectors)
+            )
             t1 = time.time()
             logging.info("iteration %i finished in %f seconds" % (i + 1, t1 - t0))
+
+        latency = time.time() - start_ts
+        write_metric("model_training_time", latency, unit=Unit.SECONDS)
 
     def iteration(self, user, fixed_vecs):
         num_solve = self.num_users if user else self.num_items

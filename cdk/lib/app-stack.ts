@@ -35,6 +35,15 @@ export class AppStack extends cdk.Stack {
             }),
           ],
         }),
+        CloudwatchPutAccess: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              sid: `CloudwatchPutAccess`,
+              actions: ["cloudwatch:Put*"],
+              resources: ["*"],
+            }),
+          ],
+        }),
       },
     });
 
@@ -84,10 +93,7 @@ export class AppStack extends cdk.Stack {
     helpers.makeScheduledTask(this, id, props.stage, {
       // find more cron scheduling options here:
       // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-events.CronOptions.html
-      schedule: Schedule.cron({
-        hour: "1",  // 1:00 am (UTC)
-        minute: "0",
-      }),
+      schedule: Schedule.rate(cdk.Duration.hours(2)),
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },

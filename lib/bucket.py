@@ -19,11 +19,6 @@ def list_objects(bucket: str, prefix: str) -> List[str]:
 
 def download_object(bucket_name, s3_object, local_file):
     logging.info(f"Fetching object {s3_object} from bucket {bucket_name}")
-    # speed up local development
-    if config.get("NO_REDOWNLOAD") and path.exists(local_file):
-        logging.info(f"Skipped fetching object {s3_object} from bucket {bucket_name}")
-        return
-
     bucket = RESOURCE.Bucket(bucket_name)
     with open(local_file, "wb") as data:
         bucket.download_fileobj(s3_object, data)

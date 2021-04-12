@@ -1,53 +1,102 @@
-import json
 import datetime
 import logging
+import time
+from itertools import product
+from typing import List
+
 import matplotlib.pyplot as plt
-import multiprocessing
 import numpy as np
 import os
 import pandas as pd
-
-from functools import partial
-from itertools import product
 from progressbar import ProgressBar
+import boto3
 
 from lib.config import config, ROOT_DIR
-from lib.bucket import download_objects, list_objects
+from lib.bucket import list_objects
+from lib.metrics import write_metric, Unit
 
 BUCKET = config.get("GA_DATA_BUCKET")
-# DAYS_OF_DATA = 90
-DAYS_OF_DATA = 2
+DAYS_OF_DATA = 30
+s3 = boto3.client("s3")
 
 
 def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
 
 
+def s3_select(bucket_name: str, s3_object: str, fields: List[str]):
+    logging.info(f"Fetching object {s3_object} from bucket {bucket_name}")
+    fields = [f"s.{field}" for field in fields]
+    field_str = ", ".join(fields)
+    query = f"select {field_str} from s3object s"
+    r = s3.select_object_content(
+        Bucket=bucket_name,
+        Key=s3_object,
+        ExpressionType="SQL",
+        Expression=query,
+        InputSerialization={
+            "CompressionType": "GZIP",
+            "JSON": {"Type": "LINES"},
+        },
+        OutputSerialization={
+            "JSON": {"RecordDelimiter": "\n"},
+        },
+    )
+    return r
+
+
+def event_stream_to_file(event_stream, filename):
+    with open(filename, "wb") as f:
+        # Iterate over events in the event stream as they come
+        for event in event_stream["Payload"]:
+            # If we received a records event, write the data to a file
+            if "Records" in event:
+                data = event["Records"]["Payload"]
+                f.write(data)
+
+
 def fetch_latest_data() -> pd.DataFrame:
+    start_ts = time.time()
     dt = datetime.datetime.now()
     data_df = pd.DataFrame()
     for _ in range(DAYS_OF_DATA):
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        object_keys = list_objects(BUCKET, prefix)
-        local_filenames = [object_key.split("/")[-1].split(".")[0] for object_key in object_keys]
-        local_filepaths = [f"{ROOT_DIR}/tmp/{local_filename}.gz" for local_filename in local_filenames]
-        for object_key, local_filepath in zip(object_keys, local_filepaths):
+        obj_keys = list_objects(BUCKET, prefix)
+        for object_key in obj_keys:
+            local_filename = "tmp.json"
+            fields = [
+                "collector_tstamp",
+                "page_urlpath",
+                "contexts_dev_amp_snowplow_amp_id_1",
+            ]
+            event_stream = s3_select(BUCKET, object_key, fields)
             try:
-                tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
+                event_stream_to_file(event_stream, local_filename)
+                tmp_df = pd.read_json(local_filename, lines=True)
+                tmp_df = transform_raw_data(tmp_df)
                 data_df = data_df.append(tmp_df)
                 logging.info(f"Successfully read {object_key}.")
+                os.remove(local_filename)
             except (ValueError, EOFError):
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
         dt = dt - datetime.timedelta(days=1)
 
-    return transform_raw_data(data_df)
+    write_metric("downloaded_rows", data_df.shape[0])
+    latency = time.time() - start_ts
+    write_metric("download_time", latency, unit=Unit.SECONDS)
+    return data_df
 
 
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
+    requires a dataframe with the following fields:
+    - contexts_dev_amp_snowplow_amp_id_1
+    - collector_tstamp
+    - page_urlpath
+
     returns a dataframe with the following fields:
     - client_id
     - session_date
@@ -75,7 +124,9 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_dummies(
-    activity_df: pd.DataFrame, date_list: [datetime.date] = [], external_id_col: str = "external_id"
+    activity_df: pd.DataFrame,
+    date_list: [datetime.date] = [],
+    external_id_col: str = "external_id",
 ):
     """
     :param activity_df: DataFrame of Google Analytics activities with associated dwell times
@@ -111,7 +162,9 @@ def _add_dummies(
                     "external_id": filtered_df.external_id.iloc[0],
                     "session_date": pd.to_datetime(datetime_obj),
                 }
-                for datetime_obj, client_id in product(date_list, activity_df.client_id.unique())
+                for datetime_obj, client_id in product(
+                    date_list, activity_df.client_id.unique()
+                )
             ]
         )
     )
@@ -168,11 +221,21 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     Compute and add dwell and conversion times to activity DataFrame
 
     :param activity_df: Cleaned DataFrame of activities
-        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
+        * Requisite fields:
+            "duration" (float),
+            "session_date" (datetime.date),
+            "client_id" (str),
+            "external_id" (str)
 
     :return: DataFrame of activities with associated next conversion times.
-        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str),
-            "converted" (int), "conversion_time" (datetime.datetime), "time_to_conversion" (datetime.timedelta)
+        * Requisite fields:
+            "duration" (float),
+            "session_date" (datetime.date),
+            "client_id" (str),
+            "external_id" (str),
+            "converted" (int),
+            "conversion_time" (datetime.datetime),
+            "time_to_conversion" (datetime.timedelta)
     """
     labeled_df = activity_df.set_index("client_id")
 
@@ -184,13 +247,15 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
         .bfill()
     )
 
-    labeled_df["time_to_conversion"] = labeled_df.conversion_time.sub(labeled_df.activity_time)
+    labeled_df["time_to_conversion"] = labeled_df.conversion_time.sub(
+        labeled_df.activity_time
+    )
     labeled_df.loc[labeled_df.conversion_time.isna(), "time_to_conversion"] = np.nan
 
     # Set "converted" boolean flag to true to each activity following a conversion
     labeled_df["converted"] = (
-        (labeled_df[["event_action"]] == "newsletter signup")
-        .where(labeled_df.event_action == "newsletter signup")
+        (labeled_df[["event_action"]] == "Form Submissions")
+        .where(labeled_df.event_action == "Form Submissions")
         .groupby("client_id")["event_action"]
         .ffill()
         .fillna(0)
@@ -262,13 +327,17 @@ def aggregate_conversion_times(
     :return: DataFrame of aggregated per day conversion dates with one row for each user at each date of interest,
         and one column for each article.
     """
-    filtered_df = _add_dummies(activity_df, date_list=date_list, external_id_col=external_id_col)
+    filtered_df = _add_dummies(
+        activity_df, date_list=date_list, external_id_col=external_id_col
+    )
     if start_time is not None:
         filtered_df = filtered_df[filtered_df.activity_time >= start_time]
     if end_time is not None:
         filtered_df = filtered_df[filtered_df.activity_time < end_time]
     conversion_df = (
-        filtered_df.groupby(["external_id", "client_id", "session_date"])["time_to_conversion"]
+        filtered_df.groupby(["external_id", "client_id", "session_date"])[
+            "time_to_conversion"
+        ]
         .min()
         .unstack(level=0)
         .sort_index()
@@ -294,14 +363,18 @@ def aggregate_time(
     :return: DataFrame of aggregated per day dwell time with one row for each user at each date of interest,
         and one column for each article.
     """
-    filtered_df = _add_dummies(activity_df, date_list=date_list, external_id_col=external_id_col)
+    filtered_df = _add_dummies(
+        activity_df, date_list=date_list, external_id_col=external_id_col
+    )
     if start_time is not None:
         filtered_df = filtered_df[filtered_df.activity_time >= start_time]
     if end_time is not None:
         filtered_df = filtered_df[filtered_df.activity_time < end_time]
     filtered_df["duration_seconds"] = filtered_df.duration.dt.total_seconds()
     time_df = (
-        filtered_df.groupby(["external_id", "client_id", "session_date"])["duration_seconds"]
+        filtered_df.groupby(["external_id", "client_id", "session_date"])[
+            "duration_seconds"
+        ]
         .sum()
         .unstack(level=0)
         .sort_index()
@@ -355,17 +428,23 @@ def time_decay(
     exp_time_df = time_df.reset_index()
 
     # Apply exponential time decay
-    user_changed = ~(exp_time_df.client_id.eq(exp_time_df.client_id.shift(1)).fillna(False))
+    user_changed = ~(
+        exp_time_df.client_id.eq(exp_time_df.client_id.shift(1)).fillna(False)
+    )
     date_delta = exp_time_df.session_date.diff().dt.days.fillna(0)
     dwell_times = np.nan_to_num(exp_time_df[article_cols])
     bar = ProgressBar(max_value=len(exp_time_df))
     for i in range(1, dwell_times.shape[0]):
         if user_changed.iloc[i]:
             continue
-        dwell_times[i, :] += apply_decay(dwell_times[i - 1, :], date_delta.iloc[i], half_life)
+        dwell_times[i, :] += apply_decay(
+            dwell_times[i - 1, :], date_delta.iloc[i], half_life
+        )
         bar.update(i)
 
-    exp_time_df = pd.DataFrame(data=dwell_times, index=time_df.index, columns=article_cols)
+    exp_time_df = pd.DataFrame(
+        data=dwell_times, index=time_df.index, columns=article_cols
+    )
     return exp_time_df
 
 

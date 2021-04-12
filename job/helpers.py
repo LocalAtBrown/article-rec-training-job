@@ -1,3 +1,4 @@
+import time
 import logging
 import numpy as np
 import pandas as pd
@@ -9,47 +10,65 @@ from typing import List
 
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
-from db.helpers import create_article, update_article, get_article_by_external_id, create_rec
+from db.helpers import (
+    create_article,
+    update_article,
+    get_article_by_external_id,
+    create_rec,
+)
 from job import preprocessors
 from job.models import ImplicitMF
 from sites.sites import Site
 from sites.helpers import BadArticleFormatError
 from lib.config import config
+from lib.metrics import write_metric, Unit
 
 
 MAX_RECS = config.get("MAX_RECS")
+BACKFILL_ISO_DATE = "2021-03-05"
 
 
-def should_refresh(publish_ts: str) -> bool:
+def should_refresh(article: dict) -> bool:
     # refresh metadata without a published time recorded yet
-    if not publish_ts:
+    if not article["published_at"]:
         return True
 
     # refresh metadata for articles published within the last day
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    # PATCH: cast to UTC - need to revist later
-    if datetime.fromisoformat(publish_ts).astimezone(timezone.utc) > yesterday:
+    published_at = datetime.fromisoformat(article["published_at"]).astimezone(
+        timezone.utc
+    )
+    if published_at > yesterday:
+        return True
+
+    # refresh metadata for articles last updated before the backfill
+    backfill_date = datetime.fromisoformat(BACKFILL_ISO_DATE).astimezone(timezone.utc)
+    updated_at = datetime.fromisoformat(article["updated_at"]).astimezone(timezone.utc)
+    if backfill_date > updated_at:
         return True
 
     return False
 
 
-def find_or_create_article(site: Site, external_id: int, path: str) -> int:
+def find_or_create_article(site: Site, external_id: int, path: str) -> (bool, dict):
     logging.info(f"Fetching article with external_id: {external_id}")
     article = get_article_by_external_id(external_id)
+    scraped = False
     if article:
-        if should_refresh(article["published_at"]):
+        if should_refresh(article):
             metadata = scrape_article_metadata(site, path)
+            scraped = True
             logging.info(f"Updating article with external_id: {external_id}")
             update_article(article["id"], **metadata)
     else:
         metadata = scrape_article_metadata(site, path)
+        scraped = True
         article_data = {**metadata, "external_id": external_id}
         logging.info(f"Creating article with external_id: {external_id}")
         create_article(**article_data)
 
     article = get_article_by_external_id(external_id)
-    return article
+    return scraped, article
 
 
 def scrape_article_metadata(site: Site, path: str) -> dict:
@@ -73,18 +92,23 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
     articles = []
 
     logging.info(f"Finding or creating articles for {len(paths)} paths")
-
+    total_scraped = 0
+    scraping_errors = 0
+    start_ts = time.time()
     for path in paths:
         external_id = extract_external_id(site, path)
         if external_id:
             try:
-                article = find_or_create_article(site, external_id, path)
-            except (BadArticleFormatError, TooManyRedirects):
+                scraped, article = find_or_create_article(site, external_id, path)
+                if scraped:
+                    total_scraped += 1
+            except BadArticleFormatError:
                 logging.exception(f"Skipping article with external_id: {external_id}")
+                scraping_errors += 1
                 continue
             articles.append(
                 {
-                    "article_id": article['id'],
+                    "article_id": article["id"],
                     "external_id": external_id,
                     "landing_page_path": path,
                     "published_at": article['published_at'],
@@ -92,14 +116,20 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                 }
             )
 
+    write_metric("article_scraping_total", total_scraped)
+    write_metric("article_scraping_errors", scraping_errors)
+    latency = time.time() - start_ts
+    write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
     article_df = pd.DataFrame(articles).set_index("landing_page_path")
-
     return article_df
 
 
 def create_article_to_article_recs(
     model: ImplicitMF, model_id: int, external_ids: List[str], article_df: pd.DataFrame
 ):
+
+    start_ts = time.time()
+    created_recs = 0
     vector_similarities = get_similarities(model)
     vector_weights = get_weights(external_ids, article_df)
     vector_orders = get_orders(vector_similarities, vector_weights)
@@ -108,7 +138,7 @@ def create_article_to_article_recs(
         source_external_id = external_ids[source_index]
 
         rec_ids = set()
-        for recommendation_index in ranked_recommendation_indices[:MAX_RECS+1]:
+        for recommendation_index in ranked_recommendation_indices[: MAX_RECS + 1]:
             if len(rec_ids) == MAX_RECS:
                 break
 
@@ -117,7 +147,9 @@ def create_article_to_article_recs(
             if recommended_external_id == source_external_id:
                 continue
 
-            matching_articles = article_df[article_df["external_id"] == recommended_external_id]
+            matching_articles = article_df[
+                article_df["external_id"] == recommended_external_id
+            ]
             recommended_article_id = matching_articles["article_id"][0]
             # for distance, smaller values are more highly correlated
             # for score, higher values are more highly correlated
@@ -126,30 +158,41 @@ def create_article_to_article_recs(
             score = max(score, 0.0)
 
             rec_id = create_rec(
-                source_entity_id=source_external_id,
+                source_entity_id=int(source_external_id),
                 model_id=model_id,
                 recommended_article_id=recommended_article_id,
                 score=score,
             )
             rec_ids.add(rec_id)
+            created_recs += 1
+
+    latency = time.time() - start_ts
+    write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
+    write_metric("rec_creation_total", created_recs)
 
 
 def get_similarities(model: ImplicitMF) -> np.array:
-    vector_distances = distance.cdist(model.item_vectors, model.item_vectors, metric="cosine")
+    vector_distances = distance.cdist(
+        model.item_vectors, model.item_vectors, metric="cosine"
+    )
     vector_similarities = 1 - vector_distances
     return vector_similarities
 
 
-def get_weights(external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10) -> np.array:
+def get_weights(
+    external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10
+) -> np.array:
     weights = np.ones(len(external_ids))
     publish_time_df = (
-        article_df[['external_id', 'published_at']]
-        .drop_duplicates('external_id')
-        .set_index('external_id')
+        article_df[["external_id", "published_at"]]
+        .drop_duplicates("external_id")
+        .set_index("external_id")
         .loc[external_ids]
     )
-    publish_time_df['published_at'] = pd.to_datetime(publish_time_df.published_at)
-    date_delta = (datetime.now() - publish_time_df.published_at).dt.total_seconds() / (3600 * 60 * 24)
+    publish_time_df["published_at"] = pd.to_datetime(publish_time_df.published_at)
+    date_delta = (datetime.now() - publish_time_df.published_at).dt.total_seconds() / (
+        3600 * 60 * 24
+    )
     return preprocessors.apply_decay(weights, date_delta, half_life)
 
 
@@ -203,24 +246,23 @@ def format_data(
 def calculate_default_recs(prepared_df: pd.DataFrame) -> pd.Series:
     TOTAL_INTERACTIONS = 5000
     timed_interactions = prepared_df[~prepared_df.duration.isna()]
-    recent_interactions = timed_interactions.nlargest(n=TOTAL_INTERACTIONS, columns=["activity_time"])
+    recent_interactions = timed_interactions.nlargest(
+        n=TOTAL_INTERACTIONS, columns=["activity_time"]
+    )
     times = (
-        recent_interactions[['external_id', 'duration']]
+        recent_interactions[["external_id", "duration"]]
         .groupby("external_id")
         .sum()
         .sort_index()
     )
     pageviews = (
-        recent_interactions[['external_id', 'client_id']]
+        recent_interactions[["external_id", "client_id"]]
         .groupby("external_id")
         .nunique("client_id")
         .sort_index()
     )
     times_per_view = times.duration / pageviews.client_id
-    top_times_per_view = (
-        times_per_view
-        .sort_values(ascending=False)
-    )
+    top_times_per_view = times_per_view.sort_values(ascending=False)
     return top_times_per_view
 
 
