@@ -1,8 +1,8 @@
+import boto3
 import logging
+
 from os import path
 from typing import List
-
-import boto3
 
 from lib.config import config
 

@@ -177,7 +177,7 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     labeled_df = activity_df.set_index("client_id")
 
     # Add time of next conversion event to each activity preceding a conversion
-    labeled_df["conversion_time"`] = (
+    labeled_df["conversion_time"] = (
         labeled_df[["activity_time"]]
         .where(labeled_df["event_action"] == "Form Submissions")
         .groupby("client_id")["activity_time"]
