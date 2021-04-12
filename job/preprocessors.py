@@ -4,22 +4,56 @@ import logging
 import time
 from itertools import product
 import os
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from progressbar import ProgressBar
+import boto3
 
 from lib.config import config, ROOT_DIR
-from lib.bucket import download_object, list_objects
+from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
 BUCKET = config.get("GA_DATA_BUCKET")
-DAYS_OF_DATA = 90
+DAYS_OF_DATA = 30
+s3 = boto3.client("s3")
 
 
 def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
+
+
+def s3_select(bucket_name: str, s3_object: str, fields: List[str]):
+    logging.info(f"Fetching object {s3_object} from bucket {bucket_name}")
+    fields = [f"s.{field}" for field in fields]
+    field_str = ", ".join(fields)
+    query = f"select {field_str} from s3object s"
+    r = s3.select_object_content(
+        Bucket=bucket_name,
+        Key=s3_object,
+        ExpressionType="SQL",
+        Expression=query,
+        InputSerialization={
+            "CompressionType": "GZIP",
+            "JSON": {"Type": "LINES"},
+        },
+        OutputSerialization={
+            "JSON": {"RecordDelimiter": "\n"},
+        },
+    )
+    return r
+
+
+def event_stream_to_file(event_stream, filename):
+    with open(filename, "wb") as f:
+        # Iterate over events in the event stream as they come
+        for event in event_stream["Payload"]:
+            # If we received a records event, write the data to a file
+            if "Records" in event:
+                data = event["Records"]["Payload"]
+                f.write(data)
 
 
 def fetch_latest_data() -> pd.DataFrame:
@@ -32,10 +66,16 @@ def fetch_latest_data() -> pd.DataFrame:
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
         obj_keys = list_objects(BUCKET, prefix)
         for object_key in obj_keys:
-            local_filename = "data.gz"
-            download_object(BUCKET, object_key, local_filename)
+            local_filename = "tmp.json"
+            fields = [
+                "collector_tstamp",
+                "page_urlpath",
+                "contexts_dev_amp_snowplow_amp_id_1",
+            ]
+            event_stream = s3_select(BUCKET, object_key, fields)
             try:
-                tmp_df = pd.read_json(local_filename, compression="gzip", lines=True)
+                event_stream_to_file(event_stream, local_filename)
+                tmp_df = pd.read_json(local_filename, lines=True)
                 tmp_df = transform_raw_data(tmp_df)
                 data_df = data_df.append(tmp_df)
                 os.remove(local_filename)
@@ -52,6 +92,11 @@ def fetch_latest_data() -> pd.DataFrame:
 
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
+    requires a dataframe with the following fields:
+    - contexts_dev_amp_snowplow_amp_id_1
+    - collector_tstamp
+    - page_urlpath
+
     returns a dataframe with the following fields:
     - client_id
     - session_date
