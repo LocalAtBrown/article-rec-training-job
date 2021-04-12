@@ -4,16 +4,19 @@ import logging
 import matplotlib.pyplot as plt
 import multiprocessing
 import numpy as np
+import os
 import pandas as pd
 
+from functools import partial
 from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
-from lib.bucket import download_object, list_objects
+from lib.bucket import download_objects, list_objects
 
 BUCKET = config.get("GA_DATA_BUCKET")
-DAYS_OF_DATA = 90
+# DAYS_OF_DATA = 90
+DAYS_OF_DATA = 2
 
 
 def pad_date(date_expr: int) -> str:
@@ -30,16 +33,12 @@ def fetch_latest_data() -> pd.DataFrame:
         object_keys = list_objects(BUCKET, prefix)
         local_filenames = [object_key.split("/")[-1].split(".")[0] for object_key in object_keys]
         local_filepaths = [f"{ROOT_DIR}/tmp/{local_filename}.gz" for local_filename in local_filenames]
-        pool = multiprocessing.Pool(multiprocessing.cpu_count())
-        pool.starmap(download_object, list(zip([BUCKET] * len(object_keys), object_keys, local_filepaths)))
-        pool.close()
-        pool.join()
         for object_key, local_filepath in zip(object_keys, local_filepaths):
             try:
                 tmp_df = pd.read_json(local_filepath, compression="gzip", lines=True)
                 data_df = data_df.append(tmp_df)
                 logging.info(f"Successfully read {object_key}.")
-            except ValueError:
+            except (ValueError, EOFError):
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
         dt = dt - datetime.timedelta(days=1)
@@ -62,10 +61,16 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
         lambda x: x[0]["ampClientId"]
     )
     transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
+    transformed_df["etl_time"] = pd.to_datetime(df.etl_tstamp)
     transformed_df["session_date"] = transformed_df.activity_time.dt.date
     transformed_df["landing_page_path"] = df.page_urlpath
-    transformed_df["event_category"] = "snowplow_amp_page_ping"
-    transformed_df["event_action"] = "impression"
+    transformed_df["event_type"] = df.event
+    transformed_df["event_category"] = df.se_category
+    transformed_df["event_action"] = df.se_action
+    transformed_df["duration_seconds"] = df.unstruct_event_dev_amp_snowplow_amp_page_ping_1.apply(
+        lambda x: x['totalEngagedTime'] if not type(x) == float else np.nan
+    )
+    transformed_df['source'] = np.nan # if it came from a module click, fill with that previous URL
     return transformed_df
 
 
@@ -172,9 +177,9 @@ def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     labeled_df = activity_df.set_index("client_id")
 
     # Add time of next conversion event to each activity preceding a conversion
-    labeled_df["conversion_time"] = (
+    labeled_df["conversion_time"`] = (
         labeled_df[["activity_time"]]
-        .where(labeled_df["event_action"] == "newsletter signup")
+        .where(labeled_df["event_action"] == "Form Submissions")
         .groupby("client_id")["activity_time"]
         .bfill()
     )
