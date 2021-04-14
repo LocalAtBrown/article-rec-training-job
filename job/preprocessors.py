@@ -59,7 +59,7 @@ def event_stream_to_file(event_stream, filename):
 def fetch_latest_data() -> pd.DataFrame:
     start_ts = time.time()
     dt = datetime.datetime.now()
-    data_df = pd.DataFrame()
+    data_dfs = []
     for _ in range(DAYS_OF_DATA):
         month = pad_date(dt.month)
         day = pad_date(dt.day)
@@ -75,15 +75,16 @@ def fetch_latest_data() -> pd.DataFrame:
             event_stream = s3_select(BUCKET, object_key, fields)
             try:
                 event_stream_to_file(event_stream, local_filename)
-                tmp_df = pd.read_json(local_filename, lines=True)
-                tmp_df = transform_raw_data(tmp_df)
-                data_df = data_df.append(tmp_df)
+                df = pd.read_json(local_filename, lines=True)
+                df = transform_raw_data(df)
+                data_dfs.append(df)
                 os.remove(local_filename)
             except ValueError:
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
         dt = dt - datetime.timedelta(days=1)
 
+    data_df = pd.concat(data_dfs)
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)
