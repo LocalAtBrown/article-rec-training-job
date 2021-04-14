@@ -60,7 +60,9 @@ def fetch_latest_data() -> pd.DataFrame:
     start_ts = time.time()
     dt = datetime.datetime.now()
     data_dfs = []
+
     for _ in range(DAYS_OF_DATA):
+
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
@@ -73,6 +75,7 @@ def fetch_latest_data() -> pd.DataFrame:
                 "contexts_dev_amp_snowplow_amp_id_1",
             ]
             event_stream = s3_select(BUCKET, object_key, fields)
+
             try:
                 event_stream_to_file(event_stream, local_filename)
                 df = pd.read_json(local_filename, lines=True)
@@ -82,6 +85,7 @@ def fetch_latest_data() -> pd.DataFrame:
             except ValueError:
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
+
         dt = dt - datetime.timedelta(days=1)
 
     data_df = pd.concat(data_dfs)

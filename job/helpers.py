@@ -12,7 +12,7 @@ from db.helpers import create_model, set_current_model
 from db.helpers import (
     create_article,
     update_article,
-    get_article_by_external_id,
+    get_articles_by_external_ids,
     create_rec,
 )
 from job import preprocessors
@@ -49,36 +49,7 @@ def should_refresh(article: dict) -> bool:
     return False
 
 
-def find_or_create_article(site: Site, external_id: int, path: str) -> (bool, dict):
-    logging.info(f"Fetching article with external_id: {external_id}")
-    article = get_article_by_external_id(external_id)
-    scraped = False
-    if article:
-        if should_refresh(article):
-            metadata = scrape_article_metadata(site, path)
-            scraped = True
-            logging.info(f"Updating article with external_id: {external_id}")
-            update_article(article["id"], **metadata)
-    else:
-        metadata = scrape_article_metadata(site, path)
-        scraped = True
-        article_data = {**metadata, "external_id": external_id}
-        logging.info(f"Creating article with external_id: {external_id}")
-        create_article(**article_data)
-
-    article = get_article_by_external_id(external_id)
-    return scraped, article
-
-
-def scrape_article_metadata(site: Site, path: str) -> dict:
-    return site.scrape_article_metadata(path)
-
-
-def extract_external_id(site: Site, path: str) -> int:
-    return site.extract_external_id(path)
-
-
-def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
+def find_or_create_articles(site: Site, paths: List[int]) -> (int, int):
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
@@ -88,40 +59,73 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
         and the article ID in the database.
         * Requisite fields: "article_id" (str), "external_id" (str), "landing_page_path" (str)
     """
-    articles = []
-
-    logging.info(f"Finding or creating articles for {len(paths)} paths")
+    start_ts = time.time()
     total_scraped = 0
     scraping_errors = 0
-    start_ts = time.time()
-    for path in paths:
-        external_id = extract_external_id(site, path)
-        if external_id:
-            try:
-                scraped, article = find_or_create_article(site, external_id, path)
-                if scraped:
-                    total_scraped += 1
-            except BadArticleFormatError:
-                logging.exception(f"Skipping article with external_id: {external_id}")
-                scraping_errors += 1
-                continue
-            articles.append(
-                {
-                    "article_id": article["id"],
-                    "external_id": external_id,
-                    "landing_page_path": path,
-                    "published_at": datetime.fromisoformat(
-                        article["published_at"]
-                    ).astimezone(timezone.utc),
-                }
-            )
 
+    external_ids = [extract_external_id(site, path) for path in paths]
+    articles = get_articles_by_external_ids(external_ids)
+    refresh_articles = [a for a in articles if should_refresh(a)]
+    found_external_ids = {a["external_id"] for a in articles}
+
+    for article in refresh_articles:
+        try:
+            scrape_and_update_article(site=site, article=article)
+            total_scraped += 1
+        except BadArticleFormatError:
+            logging.exception(
+                f"Skipping article with external_id: {article['external_id']}"
+            )
+            scraping_errors += 1
+    for path, external_id in zip(paths, external_ids):
+        if external_id in found_external_ids or external_id is None:
+            continue
+        try:
+            scrape_and_create_article(site=site, path=path, external_id=external_id)
+            total_scraped += 1
+        except BadArticleFormatError:
+            logging.exception(f"Skipping article with external_id: {external_id}")
+            scraping_errors += 1
+    articles = get_articles_by_external_ids(external_ids)
     write_metric("article_scraping_total", total_scraped)
     write_metric("article_scraping_errors", scraping_errors)
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
-    article_df = pd.DataFrame(articles).set_index("landing_page_path")
+    article_df = (
+        pd.DataFrame(articles)
+        .rename(
+            columns={
+                "path": "landing_page_path",
+                "id": "article_id",
+            }
+        )
+        .set_index("landing_page_path")
+    )
     return article_df
+
+
+def scrape_and_update_article(site: Site, article: dict) -> None:
+    article_id = article["id"]
+    external_id = article["external_id"]
+    path = article["path"]
+    metadata = scrape_article_metadata(site, path)
+    logging.info(f"Updating article with external_id: {external_id}")
+    update_article(article_id, **metadata)
+
+
+def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
+    metadata = scrape_article_metadata(site, path)
+    article_data = {**metadata, "external_id": external_id}
+    logging.info(f"Creating article with external_id: {external_id}")
+    create_article(**article_data)
+
+
+def scrape_article_metadata(site: Site, path: str) -> dict:
+    return site.scrape_article_metadata(path)
+
+
+def extract_external_id(site: Site, path: str) -> int:
+    return site.extract_external_id(path)
 
 
 def create_article_to_article_recs(
