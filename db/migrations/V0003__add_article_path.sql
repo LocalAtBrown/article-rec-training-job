@@ -1,2 +1,0 @@
-ALTER TABLE article
-    ADD path TEXT NOT NULL DEFAULT '';
