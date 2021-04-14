@@ -56,22 +56,32 @@ def event_stream_to_file(event_stream, filename):
 
 
 def fetch_latest_data() -> pd.DataFrame:
+
     start_ts = time.time()
     dt = datetime.datetime.now()
     data_df = pd.DataFrame()
+
     for _ in range(DAYS_OF_DATA):
+
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
         obj_keys = list_objects(BUCKET, prefix)
         for object_key in obj_keys:
+
             local_filename = "tmp.json"
             fields = [
                 "collector_tstamp",
+                "etl_tstamp",
                 "page_urlpath",
                 "contexts_dev_amp_snowplow_amp_id_1",
+                "se_action",
+                "se_category",
+                "event",
+                "unstruct_event_dev_amp_snowplow_amp_page_ping_1",
             ]
             event_stream = s3_select(BUCKET, object_key, fields)
+
             try:
                 event_stream_to_file(event_stream, local_filename)
                 tmp_df = pd.read_json(local_filename, lines=True)
@@ -82,6 +92,7 @@ def fetch_latest_data() -> pd.DataFrame:
             except (ValueError, EOFError):
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
+                
         dt = dt - datetime.timedelta(days=1)
 
     write_metric("downloaded_rows", data_df.shape[0])
@@ -95,7 +106,12 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     requires a dataframe with the following fields:
     - contexts_dev_amp_snowplow_amp_id_1
     - collector_tstamp
+    - etl_tstamp
     - page_urlpath
+    - se_action
+    - se_category
+    - event
+    - unstruct_event_dev_amp_snowplow_amp_page_ping_1
 
     returns a dataframe with the following fields:
     - client_id
