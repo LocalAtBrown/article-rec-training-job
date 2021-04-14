@@ -114,9 +114,14 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     )
     transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
     transformed_df["session_date"] = transformed_df.activity_time.dt.date
+    transformed_df["session_date"] = transformed_df["session_date"].astype("category")
     transformed_df["landing_page_path"] = df.page_urlpath
     transformed_df["event_category"] = "snowplow_amp_page_ping"
+    transformed_df["event_category"] = transformed_df["event_category"].astype(
+        "category"
+    )
     transformed_df["event_action"] = "impression"
+    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
     return transformed_df
 
 
