@@ -1,7 +1,8 @@
 import logging
-from datetime import datetime
 
+from datetime import datetime
 from peewee import Expression
+from typing import List
 
 from db.mappings.base import BaseMapping
 from db.mappings.model import Model, Type, Status
@@ -32,6 +33,14 @@ def get_article_by_external_id(external_id: int) -> dict:
     res = Article.select().where(Article.external_id == external_id)
     if res:
         return res[0].to_dict()
+    else:
+        return None
+
+
+def get_articles_by_external_ids(external_ids: List[int]) -> List[dict]:
+    res = Article.select().where(Article.external_id.in_(external_ids))
+    if res:
+        return [r.to_dict() for r in res]
     else:
         return None
 
