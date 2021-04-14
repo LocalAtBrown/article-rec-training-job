@@ -11,14 +11,13 @@ import numpy as np
 import pandas as pd
 from progressbar import ProgressBar
 import boto3
-from memory_profiler import profile
 
 from lib.config import config, ROOT_DIR
 from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
 BUCKET = config.get("GA_DATA_BUCKET")
-DAYS_OF_DATA = 1
+DAYS_OF_DATA = 30
 s3 = boto3.client("s3")
 
 
@@ -57,7 +56,6 @@ def event_stream_to_file(event_stream, filename):
                 f.write(data)
 
 
-@profile
 def fetch_latest_data() -> pd.DataFrame:
     start_ts = time.time()
     dt = datetime.datetime.now()
