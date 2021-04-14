@@ -123,7 +123,17 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     )
     transformed_df["event_action"] = "impression"
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
-    return transformed_df
+
+    # only keep the first and last event for each client pageview
+    transformed_df = transformed_df.sort_values(by="activity_time")
+    first_df = transformed_df.drop_duplicates(
+        subset=["client_id", "landing_page_path"], keep="first"
+    )
+    last_df = transformed_df.drop_duplicates(
+        subset=["client_id", "landing_page_path"], keep="last"
+    )
+
+    return pd.concat([first_df, last_df]).drop_duplicates()
 
 
 def _add_dummies(
