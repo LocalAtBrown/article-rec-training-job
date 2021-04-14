@@ -11,7 +11,3 @@ pytest
 scipy
 progressbar2
 scikit-learn
-multiprocessing_logging
-gym
-gensim
-nltk
