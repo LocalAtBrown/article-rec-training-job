@@ -187,8 +187,10 @@ def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
             "event_action" (str), "event_category" (str)
     """
     clean_df = activity_df.copy()
-    clean_df["event_category"] = activity_df["event_category"].fillna("pageview")
-    clean_df["event_action"] = activity_df["event_action"].fillna("pageview")
+    clean_df["event_category"] = activity_df["event_category"].fillna(
+        "snowplow_amp_page_ping"
+    )
+    clean_df["event_action"] = activity_df["event_action"].fillna("impression")
     clean_df["session_date"] = pd.to_datetime(clean_df["session_date"])
     clean_df["activity_time"] = pd.to_datetime(clean_df["activity_time"])
 
