@@ -16,7 +16,7 @@ from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
 BUCKET = config.get("GA_DATA_BUCKET")
-DAYS_OF_DATA = 30
+DAYS_OF_DATA = 1
 s3 = boto3.client("s3")
 
 
@@ -66,7 +66,9 @@ def fetch_latest_data() -> pd.DataFrame:
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        obj_keys = list_objects(BUCKET, prefix)
+        # TODO: Remove fetching of just the last object ([-1:])
+        obj_keys = list_objects(BUCKET, prefix)[-1:]
+
         for object_key in obj_keys:
 
             local_filename = "tmp.json"
