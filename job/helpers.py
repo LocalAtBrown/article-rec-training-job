@@ -82,6 +82,7 @@ def find_or_create_articles(site: Site, paths: List[int]) -> (int, int):
             continue
         try:
             scrape_and_create_article(site=site, path=path, external_id=external_id)
+            found_external_ids.add(external_id)
             total_scraped += 1
         except BadArticleFormatError:
             logging.exception(f"Skipping article with external_id: {external_id}")
@@ -193,6 +194,9 @@ def get_weights(
         .loc[external_ids]
     )
     publish_time_df["published_at"] = pd.to_datetime(publish_time_df.published_at)
+    publish_time_df["published_at"] = publish_time_df["published_at"].apply(
+        lambda x: x.astimezone(timezone.utc)
+    )
     date_delta = (
         datetime.now(timezone.utc) - publish_time_df.published_at
     ).dt.total_seconds() / (3600 * 60 * 24)
