@@ -4,7 +4,7 @@ from datetime import datetime
 from peewee import Expression
 from typing import List
 
-from db.mappings.base import BaseMapping
+from db.mappings.base import BaseMapping, tzaware_now
 from db.mappings.model import Model, Type, Status
 from db.mappings.article import Article
 from db.mappings.recommendation import Rec
@@ -48,7 +48,7 @@ def update_model(model_id, **params) -> None:
 def _update_resources(
     mapping_class: BaseMapping, conditions: Expression, **params: dict
 ) -> None:
-    params["updated_at"] = datetime.now()
+    params["updated_at"] = tzaware_now()
     q = mapping_class.update(**params).where(conditions)
     q.execute()
 
