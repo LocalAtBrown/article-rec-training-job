@@ -102,10 +102,10 @@ def find_or_create_articles(site: Site, paths: List[int]) -> pd.DataFrame:
     return article_df
 
 
-def scrape_and_update_article(site: Site, article: dict) -> None:
-    article_id = article["id"]
-    external_id = article["external_id"]
-    path = article["path"]
+def scrape_and_update_article(site: Site, article: Article) -> None:
+    article_id = article.id
+    external_id = article.external_id
+    path = article.path
     metadata = scrape_article_metadata(site, path)
     logging.info(f"Updating article with external_id: {external_id}")
     update_article(article_id, **metadata)
@@ -191,9 +191,6 @@ def get_weights(
         .loc[external_ids]
     )
     publish_time_df["published_at"] = pd.to_datetime(publish_time_df.published_at)
-    publish_time_df["published_at"] = publish_time_df["published_at"].apply(
-        lambda x: x.astimezone(timezone.utc)
-    )
     date_delta = (
         datetime.now(timezone.utc) - publish_time_df.published_at
     ).dt.total_seconds() / (3600 * 60 * 24)
