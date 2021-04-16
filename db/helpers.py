@@ -32,7 +32,7 @@ def _create_resource(mapping_class: BaseMapping, **params: dict) -> int:
 def get_articles_by_external_ids(external_ids: List[int]) -> List[dict]:
     res = Article.select().where(Article.external_id.in_(external_ids))
     if res:
-        return [r.to_dict() for r in res]
+        return [r for r in res]
     else:
         return []
 
