@@ -59,7 +59,7 @@ def event_stream_to_file(event_stream, filename):
 def fetch_latest_data() -> pd.DataFrame:
     start_ts = time.time()
     dt = datetime.datetime.now()
-    data_df = pd.DataFrame()
+    data_dfs = []
     for _ in range(DAYS_OF_DATA):
         month = pad_date(dt.month)
         day = pad_date(dt.day)
@@ -75,15 +75,16 @@ def fetch_latest_data() -> pd.DataFrame:
             event_stream = s3_select(BUCKET, object_key, fields)
             try:
                 event_stream_to_file(event_stream, local_filename)
-                tmp_df = pd.read_json(local_filename, lines=True)
-                tmp_df = transform_raw_data(tmp_df)
-                data_df = data_df.append(tmp_df)
+                df = pd.read_json(local_filename, lines=True)
+                df = transform_raw_data(df)
+                data_dfs.append(df)
                 os.remove(local_filename)
             except ValueError:
                 logging.warning(f"{object_key} incorrectly formatted, ignored.")
                 continue
         dt = dt - datetime.timedelta(days=1)
 
+    data_df = pd.concat(data_dfs)
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)
@@ -110,11 +111,27 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
         lambda x: x[0]["ampClientId"]
     )
     transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
-    transformed_df["session_date"] = transformed_df.activity_time.dt.date
+    transformed_df["session_date"] = pd.to_datetime(
+        transformed_df.activity_time.dt.date
+    )
     transformed_df["landing_page_path"] = df.page_urlpath
     transformed_df["event_category"] = "snowplow_amp_page_ping"
+    transformed_df["event_category"] = transformed_df["event_category"].astype(
+        "category"
+    )
     transformed_df["event_action"] = "impression"
-    return transformed_df
+    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
+
+    # only keep the first and last event for each client pageview
+    transformed_df = transformed_df.sort_values(by="activity_time")
+    first_df = transformed_df.drop_duplicates(
+        subset=["client_id", "landing_page_path"], keep="first"
+    )
+    last_df = transformed_df.drop_duplicates(
+        subset=["client_id", "landing_page_path"], keep="last"
+    )
+
+    return pd.concat([first_df, last_df]).drop_duplicates()
 
 
 def _add_dummies(
@@ -178,8 +195,10 @@ def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
             "event_action" (str), "event_category" (str)
     """
     clean_df = activity_df.copy()
-    clean_df["event_category"] = activity_df["event_category"].fillna("pageview")
-    clean_df["event_action"] = activity_df["event_action"].fillna("pageview")
+    clean_df["event_category"] = activity_df["event_category"].fillna(
+        "snowplow_amp_page_ping"
+    )
+    clean_df["event_action"] = activity_df["event_action"].fillna("impression")
     clean_df["session_date"] = pd.to_datetime(clean_df["session_date"])
     clean_df["activity_time"] = pd.to_datetime(clean_df["activity_time"])
 

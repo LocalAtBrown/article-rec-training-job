@@ -110,7 +110,9 @@ def find_or_create_articles(site: Site, paths: list) -> pd.DataFrame:
                     "article_id": article["id"],
                     "external_id": external_id,
                     "landing_page_path": path,
-                    "published_at": article["published_at"],
+                    "published_at": datetime.fromisoformat(
+                        article["published_at"]
+                    ).astimezone(timezone.utc),
                 }
             )
 
@@ -187,9 +189,9 @@ def get_weights(
         .loc[external_ids]
     )
     publish_time_df["published_at"] = pd.to_datetime(publish_time_df.published_at)
-    date_delta = (datetime.now() - publish_time_df.published_at).dt.total_seconds() / (
-        3600 * 60 * 24
-    )
+    date_delta = (
+        datetime.now(timezone.utc) - publish_time_df.published_at
+    ).dt.total_seconds() / (3600 * 60 * 24)
     return preprocessors.apply_decay(weights, date_delta, half_life)
 
 
