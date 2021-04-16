@@ -55,7 +55,11 @@ def find_or_create_articles(site: Site, paths: List[int]) -> pd.DataFrame:
     :param paths: Paths on corresponding news website for which to retrieve IDs
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
-        * Requisite fields: "article_id" (str), "external_id" (str), "landing_page_path" (str)
+        * Requisite fields:
+            "article_id" (str),
+            "external_id" (str),
+            "landing_page_path" (str),
+            "published_at" (datetime)
     """
     start_ts = time.time()
     total_scraped = 0
@@ -90,16 +94,13 @@ def find_or_create_articles(site: Site, paths: List[int]) -> pd.DataFrame:
     write_metric("article_scraping_errors", scraping_errors)
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
-    article_df = (
-        pd.DataFrame(articles)
-        .rename(
-            columns={
-                "path": "landing_page_path",
-                "id": "article_id",
-            }
-        )
-        .set_index("landing_page_path")
-    )
+    df_data = {
+        "article_id": [a.id for a in articles],
+        "external_id": [a.external_id for a in articles],
+        "published_at": [a.published_at for a in articles],
+        "landing_page_path": [a.path for a in articles],
+    }
+    article_df = pd.DataFrame(df_data).set_index("landing_page_path")
     return article_df
 
 
