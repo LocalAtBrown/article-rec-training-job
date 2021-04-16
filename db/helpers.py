@@ -1,7 +1,8 @@
 import logging
-from datetime import datetime
 
+from datetime import datetime
 from peewee import Expression
+from typing import List
 
 from db.mappings.base import BaseMapping
 from db.mappings.model import Model, Type, Status
@@ -28,12 +29,12 @@ def _create_resource(mapping_class: BaseMapping, **params: dict) -> int:
     return resource.id
 
 
-def get_article_by_external_id(external_id: int) -> dict:
-    res = Article.select().where(Article.external_id == external_id)
+def get_articles_by_external_ids(external_ids: List[int]) -> List[dict]:
+    res = Article.select().where(Article.external_id.in_(external_ids))
     if res:
-        return res[0].to_dict()
+        return [r.to_dict() for r in res]
     else:
-        return None
+        return []
 
 
 def update_article(article_id, **params) -> None:
@@ -44,7 +45,9 @@ def update_model(model_id, **params) -> None:
     _update_resources(Model, Model.id == model_id, **params)
 
 
-def _update_resources(mapping_class: BaseMapping, conditions: Expression, **params: dict) -> None:
+def _update_resources(
+    mapping_class: BaseMapping, conditions: Expression, **params: dict
+) -> None:
     params["updated_at"] = datetime.now()
     q = mapping_class.update(**params).where(conditions)
     q.execute()
@@ -54,7 +57,9 @@ def _update_resources(mapping_class: BaseMapping, conditions: Expression, **para
 # Otherwise the statements will be committed at the end.
 @db.atomic()
 def set_current_model(current_model_id: int, model_type: Type) -> None:
-    stale_conditions = (Model.type == model_type) & (Model.status == Status.CURRENT.value)
-    _update_resources(Model, stale_conditions, status=Status.STALE.value)
+    current_model_query = (Model.type == model_type) & (
+        Model.status == Status.CURRENT.value
+    )
+    _update_resources(Model, current_model_query, status=Status.STALE.value)
     update_model(current_model_id, status=Status.CURRENT.value)
     logging.info(f"Successfully updated current {model_type} model: {current_model_id}")
