@@ -1,3 +1,4 @@
+import random
 import json
 import datetime
 import logging
@@ -17,12 +18,14 @@ DAYS_OF_DATA = 1
 s3 = boto3.client("s3")
 
 
-def fetch() -> pd.DataFrame:
+def fetch_data() -> pd.DataFrame:
     start_ts = time.time()
     dt = datetime.datetime.now()
     data_dfs = []
 
     for _ in range(DAYS_OF_DATA):
+        if random.random() > 0.9:
+            continue
 
         month = pad_date(dt.month)
         day = pad_date(dt.day)

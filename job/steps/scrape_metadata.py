@@ -22,7 +22,7 @@ from lib.metrics import write_metric, Unit
 BACKFILL_ISO_DATE = "2021-03-05"
 
 
-def scrape(site: Site, paths: List[int]) -> pd.DataFrame:
+def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 

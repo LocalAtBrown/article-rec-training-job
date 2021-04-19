@@ -3,8 +3,8 @@ import logging
 import time
 
 from job.steps import (
-    fetch,
-    scrape,
+    fetch_data,
+    scrape_metadata,
     preprocess,
     save_defaults,
     train_model,
@@ -23,9 +23,11 @@ def run():
     try:
         model_id = create_model(type=Type.ARTICLE.value)
         logging.info(f"Created model with id {model_id}")
-        data_df = fetch.fetch()
+        data_df = fetch_data.fetch_data()
 
-        article_df = scrape.scrape(Sites.WCP, list(data_df.landing_page_path.unique()))
+        article_df = scrape_metadata.scrape_metadata(
+            Sites.WCP, list(data_df.landing_page_path.unique())
+        )
         data_df = data_df.join(article_df, on="landing_page_path")
         prepared_df = preprocess.common_preprocessing(data_df)
 
