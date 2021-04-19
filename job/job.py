@@ -4,14 +4,16 @@ import time
 
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
-from job import preprocessors, models
+from job import models
 from job.helpers import (
     create_article_to_article_recs,
-    create_default_recs,
-    format_data,
-    prepare_data,
 )
-from job.steps import fetch, scrape
+from job.steps import (
+    fetch,
+    scrape,
+    preprocess,
+    save_defaults,
+)
 from sites.sites import Sites
 from lib.metrics import write_metric, Unit
 
@@ -27,13 +29,13 @@ def run():
 
         article_df = scrape.scrape(Sites.WCP, list(data_df.landing_page_path.unique()))
         data_df = data_df.join(article_df, on="landing_page_path")
-        prepared_df = prepare_data(data_df)
+        prepared_df = preprocess.common_preprocessing(data_df)
 
-        create_default_recs(prepared_df, article_df)
-
+        save_defaults.save_defaults(prepared_df, article_df)
+        return
         EXPERIMENT_DATE = datetime.date.today()
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
-        formatted_df = format_data(
+        formatted_df = preprocess.model_preprocessing(
             prepared_df, date_list=[EXPERIMENT_DATE], half_life=59.631698
         )
         model = models.train_model(

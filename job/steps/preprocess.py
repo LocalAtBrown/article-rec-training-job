@@ -10,6 +10,47 @@ from progressbar import ProgressBar
 from lib.config import config, ROOT_DIR
 
 
+def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str)
+    :param date_list:
+    :param external_id_col:
+    :param half_life:
+    :return:
+    """
+    clean_df = fix_dtypes(data_df)
+    sorted_df = time_activities(clean_df)
+    filtered_df = filter_activities(sorted_df)
+    return filtered_df
+
+
+def model_preprocessing(
+    prepared_df: pd.DataFrame,
+    date_list: list = [],
+    external_id_col: str = "external_id",
+    half_life: float = 10.0,
+) -> pd.DataFrame:
+    """
+    Format clickstream Google Analytics data into user-item matrix for training.
+
+    :param prepared_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str), "duration" (timedelta)
+    :param date_list: List of datetimes to forcefully include in all aggregates
+    :param external_id_col: Name of column being used to denote articles
+    :param half_life: Desired half life of time spent in days
+    :return: DataFrame with one row for each user at each date of interest, and one column for each article
+    """
+    time_df = aggregate_time(
+        prepared_df, date_list=date_list, external_id_col=external_id_col
+    )
+    exp_time_df = time_decay(time_df, half_life=half_life)
+
+    return exp_time_df
+
+
 def _add_dummies(
     activity_df: pd.DataFrame,
     date_list: [datetime.date] = [],
