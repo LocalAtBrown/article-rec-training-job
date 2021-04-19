@@ -9,6 +9,7 @@ from typing import List
 from peewee import IntegrityError
 
 from db.mappings.model import Type
+from db.mappings.article import Article
 from db.helpers import create_model, set_current_model
 from db.helpers import (
     create_article,
@@ -28,29 +29,25 @@ MAX_RECS = config.get("MAX_RECS")
 BACKFILL_ISO_DATE = "2021-03-05"
 
 
-def should_refresh(article: dict) -> bool:
+def should_refresh(article: Article) -> bool:
     # refresh metadata without a published time recorded yet
-    if not article["published_at"]:
+    if not article.published_at:
         return True
 
     # refresh metadata for articles published within the last day
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    published_at = datetime.fromisoformat(article["published_at"]).astimezone(
-        timezone.utc
-    )
-    if published_at > yesterday:
+    if article.published_at > yesterday:
         return True
 
     # refresh metadata for articles last updated before the backfill
     backfill_date = datetime.fromisoformat(BACKFILL_ISO_DATE).astimezone(timezone.utc)
-    updated_at = datetime.fromisoformat(article["updated_at"]).astimezone(timezone.utc)
-    if backfill_date > updated_at:
+    if backfill_date > article.updated_at:
         return True
 
     return False
 
 
-def find_or_create_articles(site: Site, paths: List[int]) -> (int, int):
+def find_or_create_articles(site: Site, paths: List[int]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
@@ -67,7 +64,7 @@ def find_or_create_articles(site: Site, paths: List[int]) -> (int, int):
     external_ids = [extract_external_id(site, path) for path in paths]
     articles = get_articles_by_external_ids(external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
-    found_external_ids = {a["external_id"] for a in articles}
+    found_external_ids = {a.external_id for a in articles}
 
     for article in refresh_articles:
         try:
@@ -75,7 +72,7 @@ def find_or_create_articles(site: Site, paths: List[int]) -> (int, int):
             total_scraped += 1
         except BadArticleFormatError:
             logging.exception(
-                f"Skipping article with external_id: {article['external_id']}"
+                f"Skipping article with external_id: {article.external_id}"
             )
             scraping_errors += 1
     for path, external_id in zip(paths, external_ids):
@@ -106,10 +103,10 @@ def find_or_create_articles(site: Site, paths: List[int]) -> (int, int):
     return article_df
 
 
-def scrape_and_update_article(site: Site, article: dict) -> None:
-    article_id = article["id"]
-    external_id = article["external_id"]
-    path = article["path"]
+def scrape_and_update_article(site: Site, article: Article) -> None:
+    article_id = article.id
+    external_id = article.external_id
+    path = article.path
     metadata = scrape_article_metadata(site, path)
     logging.info(f"Updating article with external_id: {external_id}")
     update_article(article_id, **metadata)
@@ -195,9 +192,6 @@ def get_weights(
         .loc[external_ids]
     )
     publish_time_df["published_at"] = pd.to_datetime(publish_time_df.published_at)
-    publish_time_df["published_at"] = publish_time_df["published_at"].apply(
-        lambda x: x.astimezone(timezone.utc)
-    )
     date_delta = (
         datetime.now(timezone.utc) - publish_time_df.published_at
     ).dt.total_seconds() / (3600 * 60 * 24)

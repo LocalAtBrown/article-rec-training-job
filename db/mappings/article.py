@@ -1,8 +1,8 @@
 import datetime
 
-from peewee import TextField, DateTimeField, IntegerField
+from peewee import TextField, IntegerField
 
-from db.mappings.base import BaseMapping
+from db.mappings.base import BaseMapping, DateTimeTZField
 
 
 class Article(BaseMapping):
@@ -12,4 +12,4 @@ class Article(BaseMapping):
     external_id = IntegerField(null=False)
     title = TextField(null=False, default="")
     path = TextField(null=False, default="")
-    published_at = DateTimeField(null=True)
+    published_at = DateTimeTZField(null=True)

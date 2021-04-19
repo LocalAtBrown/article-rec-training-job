@@ -4,7 +4,7 @@ from datetime import datetime
 from peewee import Expression
 from typing import List
 
-from db.mappings.base import BaseMapping
+from db.mappings.base import BaseMapping, tzaware_now
 from db.mappings.model import Model, Type, Status
 from db.mappings.article import Article
 from db.mappings.recommendation import Rec
@@ -32,7 +32,7 @@ def _create_resource(mapping_class: BaseMapping, **params: dict) -> int:
 def get_articles_by_external_ids(external_ids: List[int]) -> List[dict]:
     res = Article.select().where(Article.external_id.in_(external_ids))
     if res:
-        return [r.to_dict() for r in res]
+        return [r for r in res]
     else:
         return []
 
@@ -48,7 +48,7 @@ def update_model(model_id, **params) -> None:
 def _update_resources(
     mapping_class: BaseMapping, conditions: Expression, **params: dict
 ) -> None:
-    params["updated_at"] = datetime.now()
+    params["updated_at"] = tzaware_now()
     q = mapping_class.update(**params).where(conditions)
     q.execute()
 
