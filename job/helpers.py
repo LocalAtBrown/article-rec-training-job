@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime, timezone, timedelta
 from scipy.spatial import distance
 from typing import List
+from peewee import IntegrityError
 
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
@@ -84,7 +85,7 @@ def find_or_create_articles(site: Site, paths: List[int]) -> (int, int):
             scrape_and_create_article(site=site, path=path, external_id=external_id)
             found_external_ids.add(external_id)
             total_scraped += 1
-        except BadArticleFormatError:
+        except (BadArticleFormatError, IntegrityError):
             logging.exception(f"Skipping article with external_id: {external_id}")
             scraping_errors += 1
     articles = get_articles_by_external_ids(external_ids)
