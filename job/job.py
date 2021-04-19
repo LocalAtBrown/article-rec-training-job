@@ -8,12 +8,10 @@ from job.steps import (
     preprocess,
     save_defaults,
     train_model,
+    save_predictions,
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
-from job.helpers import (
-    create_article_to_article_recs,
-)
 from sites.sites import Sites
 from lib.metrics import write_metric, Unit
 
@@ -32,7 +30,7 @@ def run():
         prepared_df = preprocess.common_preprocessing(data_df)
 
         save_defaults.save_defaults(prepared_df, article_df)
-        return
+
         EXPERIMENT_DATE = datetime.date.today()
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
@@ -42,13 +40,12 @@ def run():
             X=formatted_df, reg=2.319952, n_components=130, epochs=2
         )
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
-
         # External IDs to map articles back to
         external_article_ids = formatted_df.columns
         external_article_ids = external_article_ids.astype("int32")
         external_user_ids = formatted_df.index
 
-        create_article_to_article_recs(
+        save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df
         )
         set_current_model(model_id, Type.ARTICLE.value)
