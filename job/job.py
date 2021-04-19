@@ -2,17 +2,17 @@ import datetime
 import logging
 import time
 
-from db.mappings.model import Type
-from db.helpers import create_model, set_current_model
-from job import models
-from job.helpers import (
-    create_article_to_article_recs,
-)
 from job.steps import (
     fetch,
     scrape,
     preprocess,
     save_defaults,
+    train_model,
+)
+from db.mappings.model import Type
+from db.helpers import create_model, set_current_model
+from job.helpers import (
+    create_article_to_article_recs,
 )
 from sites.sites import Sites
 from lib.metrics import write_metric, Unit
@@ -38,7 +38,7 @@ def run():
         formatted_df = preprocess.model_preprocessing(
             prepared_df, date_list=[EXPERIMENT_DATE], half_life=59.631698
         )
-        model = models.train_model(
+        model = train_model.train_model(
             X=formatted_df, reg=2.319952, n_components=130, epochs=2
         )
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
