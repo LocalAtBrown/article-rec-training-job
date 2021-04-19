@@ -12,6 +12,7 @@ from job.helpers import (
     format_data,
     prepare_data,
 )
+from job.steps import fetch
 from sites.sites import Sites
 from lib.metrics import write_metric, Unit
 
@@ -23,7 +24,7 @@ def run():
     try:
         model_id = create_model(type=Type.ARTICLE.value)
         logging.info(f"Created model with id {model_id}")
-        data_df = preprocessors.fetch_latest_data()
+        data_df = fetch.fetch()
 
         article_df = find_or_create_articles(
             Sites.WCP, list(data_df.landing_page_path.unique())
