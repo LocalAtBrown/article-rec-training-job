@@ -8,11 +8,10 @@ from job import preprocessors, models
 from job.helpers import (
     create_article_to_article_recs,
     create_default_recs,
-    find_or_create_articles,
     format_data,
     prepare_data,
 )
-from job.steps import fetch
+from job.steps import fetch, scrape
 from sites.sites import Sites
 from lib.metrics import write_metric, Unit
 
@@ -26,9 +25,7 @@ def run():
         logging.info(f"Created model with id {model_id}")
         data_df = fetch.fetch()
 
-        article_df = find_or_create_articles(
-            Sites.WCP, list(data_df.landing_page_path.unique())
-        )
+        article_df = scrape.scrape(Sites.WCP, list(data_df.landing_page_path.unique()))
         data_df = data_df.join(article_df, on="landing_page_path")
         prepared_df = prepare_data(data_df)
 
