@@ -8,13 +8,15 @@ from typing import List, Callable
 
 import pandas as pd
 import boto3
+from botocore.exceptions import EventStreamError
+from retrying import retry
 
 from lib.config import config, ROOT_DIR
 from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
 BUCKET = config.get("GA_DATA_BUCKET")
-DAYS_OF_DATA = 3
+DAYS_OF_DATA = 1
 FIELDS = [
     "collector_tstamp",
     "page_urlpath",
@@ -66,6 +68,26 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([first_df, last_df]).drop_duplicates()
 
 
+@retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+def retry_s3_select(object_key: str, fields: List[str]) -> pd.DataFrame:
+    local_filename = "tmp.json"
+    event_stream = s3_select(BUCKET, object_key, fields)
+
+    try:
+        event_stream_to_file(event_stream, local_filename)
+        df = pd.read_json(local_filename, lines=True)
+        df = transform_raw_data(df)
+        os.remove(local_filename)
+    except ValueError:
+        logging.exception(f"{object_key} incorrectly formatted, ignored.")
+        return pd.DataFrame()
+    except EventStreamError as e:
+        logging.exception(f"{object_key} encountered ephemeral streaming error.")
+        raise e
+
+    return df
+
+
 def fetch_data(
     days: int = DAYS_OF_DATA,
     fields: List[str] = FIELDS,
@@ -81,18 +103,9 @@ def fetch_data(
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
         obj_keys = list_objects(BUCKET, prefix)
         for object_key in obj_keys:
-            local_filename = "tmp.json"
-            event_stream = s3_select(BUCKET, object_key, fields)
-
-            try:
-                event_stream_to_file(event_stream, local_filename)
-                df = pd.read_json(local_filename, lines=True)
-                df = transformer(df)
+            df = retry_s3_select(object_key, fields)
+            if df.size:
                 data_dfs.append(df)
-                os.remove(local_filename)
-            except ValueError:
-                logging.warning(f"{object_key} incorrectly formatted, ignored.")
-                continue
 
         dt = dt - datetime.timedelta(days=1)
 
