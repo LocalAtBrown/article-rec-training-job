@@ -70,7 +70,10 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
 
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
 def retry_s3_select(object_key: str, fields: List[str]) -> pd.DataFrame:
-    local_filename = "tmp.json"
+    path = "/downloads"
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    local_filename = f"{path}/tmp.json"
     event_stream = s3_select(BUCKET, object_key, fields)
 
     try:
