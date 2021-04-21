@@ -69,7 +69,11 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
-def retry_s3_select(object_key: str, fields: List[str]) -> pd.DataFrame:
+def retry_s3_select(
+    object_key: str,
+    fields: List[str],
+    transformer: Callable,
+) -> pd.DataFrame:
     path = "/downloads"
     if not os.path.isdir(path):
         os.makedirs(path)
@@ -79,7 +83,7 @@ def retry_s3_select(object_key: str, fields: List[str]) -> pd.DataFrame:
     try:
         event_stream_to_file(event_stream, local_filename)
         df = pd.read_json(local_filename, lines=True)
-        df = transform_raw_data(df)
+        df = transformer(df)
         os.remove(local_filename)
     except ValueError:
         logging.exception(f"{object_key} incorrectly formatted, ignored.")
@@ -106,7 +110,7 @@ def fetch_data(
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
         obj_keys = list_objects(BUCKET, prefix)
         for object_key in obj_keys:
-            df = retry_s3_select(object_key, fields)
+            df = retry_s3_select(object_key, fields, transformer)
             if df.size:
                 data_dfs.append(df)
 
