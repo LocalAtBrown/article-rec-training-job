@@ -86,6 +86,7 @@ export class AppStack extends cdk.Stack {
       cpu,
       memoryLimitMiB,
     });
+
     // find more container definition options here:
     // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.ContainerDefinitionOptions.html
     taskDefinition.addContainer(`${id}TaskContainer`, {
@@ -109,7 +110,8 @@ export class AppStack extends cdk.Stack {
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
-      scheduledFargateTaskDefinitionOptions: { taskDefinition }
+      scheduledFargateTaskDefinitionOptions: { taskDefinition },
+      vpc
     })
   }
 }
