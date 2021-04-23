@@ -74,7 +74,18 @@ export class AppStack extends cdk.Stack {
       extraHash: Date.now().toString(),
     });
 
-    const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, { taskRole });
+    // find more cpu and memory options for fargate here:
+    // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
+    const cpu = 1024;
+    // take half a t3.small instance in dev
+    // take half a t3.large instance in prod
+    const memoryLimitMiB = props.stage == helpers.STAGE.PRODUCTION ? 4096 : 1024,
+
+    const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, {
+      taskRole,
+      cpu,
+      memoryLimitMiB,
+    });
     // find more container definition options here:
     // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.ContainerDefinitionOptions.html
     taskDefinition.addContainer(`${id}TaskContainer`, {
@@ -83,10 +94,8 @@ export class AppStack extends cdk.Stack {
           STAGE: props.stage,
           REGION: props.env?.region || 'us-east-1',
         },
-        cpu: 1024,
-        // take half a t3.small instance in dev
-        // take half a t3.large instance in prod
-        memoryLimitMiB: props.stage == helpers.STAGE.PRODUCTION ? 4096 : 1024,
+        cpu,
+        memoryLimitMiB,
         logging: ecs.LogDriver.awsLogs({
           streamPrefix: id,
           logRetention: 30,
