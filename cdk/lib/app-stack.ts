@@ -4,6 +4,7 @@ import * as ec2 from "@aws-cdk/aws-ec2";
 import * as iam from "@aws-cdk/aws-iam";
 import * as helpers from "./helpers";
 import { Schedule } from "@aws-cdk/aws-events";
+import { ScheduledFargateTask } from "@aws-cdk/aws-ecs-patterns";
 
 // TODO this needs to be propagated to the tags
 export interface AppStackProps extends cdk.StackProps {
@@ -73,7 +74,7 @@ export class AppStack extends cdk.Stack {
       extraHash: Date.now().toString(),
     });
 
-    const taskDefinition = new ecs.Ec2TaskDefinition(this, `${id}TaskDefinition`, { taskRole });
+    const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, { taskRole });
     // find more container definition options here:
     // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.ContainerDefinitionOptions.html
     taskDefinition.addContainer(`${id}TaskContainer`, {
@@ -92,14 +93,14 @@ export class AppStack extends cdk.Stack {
         })
     });
 
-    helpers.makeScheduledTask(this, id, props.stage, {
+    new ScheduledFargateTask(this, `${id}ScheduledFargateTask`, {
       // find more cron scheduling options here:
       // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-events.CronOptions.html
       schedule: Schedule.rate(cdk.Duration.hours(2)),
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
-      scheduledEc2TaskDefinitionOptions: { taskDefinition }
-    });
+      scheduledFargateTaskDefinitionOptions: { taskDefinition }
+    })
   }
 }
