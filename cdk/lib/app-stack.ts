@@ -83,9 +83,9 @@ export class AppStack extends cdk.Stack {
           REGION: props.env?.region || 'us-east-1',
         },
         cpu: 1024,
-        // take up a full t3.small instance in dev
-        // take up a full t3.large instance in prod
-        memoryLimitMiB: props.stage == helpers.STAGE.PRODUCTION ? 8192 : 2048,
+        // take half a t3.small instance in dev
+        // take half a t3.large instance in prod
+        memoryLimitMiB: props.stage == helpers.STAGE.PRODUCTION ? 4096 : 1024,
         logging: ecs.LogDriver.awsLogs({
           streamPrefix: id,
           logRetention: 30,
