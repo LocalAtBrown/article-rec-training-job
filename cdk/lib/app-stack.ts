@@ -79,7 +79,7 @@ export class AppStack extends cdk.Stack {
     const cpu = 1024;
     // take half a t3.small instance in dev
     // take half a t3.large instance in prod
-    const memoryLimitMiB = props.stage == helpers.STAGE.PRODUCTION ? 4096 : 1024;
+    const memoryLimitMiB = props.stage == helpers.STAGE.PRODUCTION ? 8192 : 2048;
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, {
       taskRole,
