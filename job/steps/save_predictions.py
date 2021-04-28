@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import List
 
@@ -52,6 +53,8 @@ def save_predictions(
             )
             rec_ids.add(rec_id)
             created_recs += 1
+            if created_recs % 1000 == 0:
+                logging.info(f"Created {created_recs} recommendations...")
 
     latency = time.time() - start_ts
     write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
