@@ -48,9 +48,6 @@ export class AppStack extends cdk.Stack {
       },
     });
 
-    // const bucketName = helpers.makeBucketName("change-this-bucket-name", props.stage);
-    // const bucket = helpers.makeBucket(this, bucketName, taskRole, props.stage);
-
     const policy = new iam.Policy(this, `${id}S3AccessPolicy`, {
       statements: [
         new iam.PolicyStatement({
@@ -77,8 +74,6 @@ export class AppStack extends cdk.Stack {
     // find more cpu and memory options for fargate here:
     // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
     const cpu = 1024;
-    // take half a t3.small instance in dev
-    // take half a t3.large instance in prod
     const memoryLimitMiB = props.stage == helpers.STAGE.PRODUCTION ? 8192 : 2048;
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, {
