@@ -21,8 +21,11 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     :param half_life:
     :return:
     """
+    logging.info("Preprocessing: setting datatypes...")
     clean_df = fix_dtypes(data_df)
+    logging.info("Preprocessing: calculating dwell time...")
     sorted_df = time_activities(clean_df)
+    logging.info("Preprocessing: filtering activities...")
     filtered_df = filter_activities(sorted_df)
     return filtered_df
 
@@ -44,9 +47,11 @@ def model_preprocessing(
     :param half_life: Desired half life of time spent in days
     :return: DataFrame with one row for each user at each date of interest, and one column for each article
     """
+    logging.info("Preprocessing: creating aggregate dwell time df...")
     time_df = aggregate_time(
         prepared_df, date_list=date_list, external_id_col=external_id_col
     )
+    logging.info("Preprocessing: applying time decay...")
     exp_time_df = time_decay(time_df, half_life=half_life)
 
     return exp_time_df
