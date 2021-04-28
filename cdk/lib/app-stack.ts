@@ -73,8 +73,8 @@ export class AppStack extends cdk.Stack {
 
     // find more cpu and memory options for fargate here:
     // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
-    const cpu = 1024;
-    const memoryLimitMiB = props.stage == helpers.STAGE.PRODUCTION ? 8192 : 2048;
+    const cpu = 4096;
+    const memoryLimitMiB = 8192;
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, {
       taskRole,
