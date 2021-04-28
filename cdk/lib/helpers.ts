@@ -74,16 +74,16 @@ export function getECSCluster(scope: cdk.Construct, stage: STAGE, vpc: ec2.IVpc)
   const resourcePrefix = titleCase(stage);
 
   const securityGroupIds = cdk.Fn.importValue(
-    `${resourcePrefix}PublicCluster-security-group-ids`
+    `${resourcePrefix}PublicFargateCluster-security-group-ids`
   ).split(",");
 
-  clusterName = cdk.Fn.importValue(`${resourcePrefix}PublicCluster-name`);
+  clusterName = cdk.Fn.importValue(`${resourcePrefix}PublicFargateCluster-name`);
   securityGroups = securityGroupIds.map((x, i) =>
     ec2.SecurityGroup.fromSecurityGroupId(scope, `SecurityGroup${i}`, x)
   );
 
 
-  const cluster = ecs.Cluster.fromClusterAttributes(scope, `${resourcePrefix}PublicCluster`, {
+  const cluster = ecs.Cluster.fromClusterAttributes(scope, `${resourcePrefix}PublicFargateCluster`, {
     clusterName,
     vpc,
     securityGroups,
