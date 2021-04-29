@@ -98,10 +98,12 @@ export class AppStack extends cdk.Stack {
         })
     });
 
+    const rate = props.stage == helpers.STAGE.PRODUCTION ? cdk.Duration.hours(2) : cdk.Duration.days(1);
+
     new ScheduledFargateTask(this, `${id}ScheduledFargateTask`, {
       // find more cron scheduling options here:
       // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-events.CronOptions.html
-      schedule: Schedule.rate(cdk.Duration.hours(2)),
+      schedule: Schedule.rate(rate),
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
