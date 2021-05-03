@@ -4,6 +4,7 @@ import * as ec2 from "@aws-cdk/aws-ec2";
 import * as iam from "@aws-cdk/aws-iam";
 import * as helpers from "./helpers";
 import { Schedule } from "@aws-cdk/aws-events";
+import { ScheduledFargateTask } from "@aws-cdk/aws-ecs-patterns";
 
 // TODO this needs to be propagated to the tags
 export interface AppStackProps extends cdk.StackProps {
@@ -47,9 +48,6 @@ export class AppStack extends cdk.Stack {
       },
     });
 
-    // const bucketName = helpers.makeBucketName("change-this-bucket-name", props.stage);
-    // const bucket = helpers.makeBucket(this, bucketName, taskRole, props.stage);
-
     const policy = new iam.Policy(this, `${id}S3AccessPolicy`, {
       statements: [
         new iam.PolicyStatement({
@@ -73,7 +71,17 @@ export class AppStack extends cdk.Stack {
       extraHash: Date.now().toString(),
     });
 
-    const taskDefinition = new ecs.Ec2TaskDefinition(this, `${id}TaskDefinition`, { taskRole });
+    // find more cpu and memory options for fargate here:
+    // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
+    const cpu = 4096;
+    const memoryLimitMiB = 30720;
+
+    const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, {
+      taskRole,
+      cpu,
+      memoryLimitMiB,
+    });
+
     // find more container definition options here:
     // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.ContainerDefinitionOptions.html
     taskDefinition.addContainer(`${id}TaskContainer`, {
@@ -82,24 +90,25 @@ export class AppStack extends cdk.Stack {
           STAGE: props.stage,
           REGION: props.env?.region || 'us-east-1',
         },
-        cpu: 1024,
-        // take half a t3.small instance in dev
-        // take half a t3.large instance in prod
-        memoryLimitMiB: props.stage == helpers.STAGE.PRODUCTION ? 4096 : 1024,
+        cpu,
+        memoryLimitMiB,
         logging: ecs.LogDriver.awsLogs({
           streamPrefix: id,
           logRetention: 30,
         })
     });
 
-    helpers.makeScheduledTask(this, id, props.stage, {
+    const rate = props.stage == helpers.STAGE.PRODUCTION ? cdk.Duration.hours(2) : cdk.Duration.days(1);
+
+    new ScheduledFargateTask(this, `${id}ScheduledFargateTask`, {
       // find more cron scheduling options here:
       // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-events.CronOptions.html
-      schedule: Schedule.rate(cdk.Duration.hours(2)),
+      schedule: Schedule.rate(rate),
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
-      scheduledEc2TaskDefinitionOptions: { taskDefinition }
-    });
+      scheduledFargateTaskDefinitionOptions: { taskDefinition },
+      vpc
+    })
   }
 }

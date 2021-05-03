@@ -5,7 +5,6 @@ import * as iam from "@aws-cdk/aws-iam";
 import * as s3 from '@aws-cdk/aws-s3';
 import * as codebuild from "@aws-cdk/aws-codebuild";
 import { LocalCacheMode } from "@aws-cdk/aws-codebuild";
-import { ScheduledEc2Task, ScheduledEc2TaskProps } from "@aws-cdk/aws-ecs-patterns";
 import { Schedule } from "@aws-cdk/aws-events";
 import * as rds from '@aws-cdk/aws-rds';
 import * as logs from "@aws-cdk/aws-logs";
@@ -61,22 +60,6 @@ export function makeDatabase(
   return instance;
 }
 
-export function makeScheduledTask(
-    scope: cdk.Construct,
-    appId: string,
-    stage: STAGE,
-    options: ScheduledEc2TaskProps)
-  {
-    let schedule = options.schedule;
-
-    const stageOptions = {
-      ...options,
-      schedule,
-    }
-
-    new ScheduledEc2Task(scope, `${appId}ScheduledEc2Task`, stageOptions);
-  }
-
 
 export function getVPC(scope: cdk.Construct, stage: STAGE) {
   const resourcePrefix = titleCase(stage);
@@ -91,16 +74,16 @@ export function getECSCluster(scope: cdk.Construct, stage: STAGE, vpc: ec2.IVpc)
   const resourcePrefix = titleCase(stage);
 
   const securityGroupIds = cdk.Fn.importValue(
-    `${resourcePrefix}PublicCluster-security-group-ids`
+    `${resourcePrefix}PublicFargateCluster-security-group-ids`
   ).split(",");
 
-  clusterName = cdk.Fn.importValue(`${resourcePrefix}PublicCluster-name`);
+  clusterName = cdk.Fn.importValue(`${resourcePrefix}PublicFargateCluster-name`);
   securityGroups = securityGroupIds.map((x, i) =>
     ec2.SecurityGroup.fromSecurityGroupId(scope, `SecurityGroup${i}`, x)
   );
 
 
-  const cluster = ecs.Cluster.fromClusterAttributes(scope, `${resourcePrefix}PublicCluster`, {
+  const cluster = ecs.Cluster.fromClusterAttributes(scope, `${resourcePrefix}PublicFargateCluster`, {
     clusterName,
     vpc,
     securityGroups,

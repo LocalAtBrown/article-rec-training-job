@@ -15,8 +15,8 @@ from lib.config import config, ROOT_DIR
 from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
-BUCKET = config.get("GA_DATA_BUCKET")
 DAYS_OF_DATA = config.get("DAYS_OF_DATA")
+BUCKET = config.get("GA_DATA_BUCKET")
 FIELDS = [
     "collector_tstamp",
     "page_urlpath",
