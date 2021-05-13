@@ -11,14 +11,30 @@ from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 
 
+def filter_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str)
+    :return: data_df with flyby users removed
+    """
+    valid_ids = (
+        data_df
+            .drop_duplicates(['client_id', 'landing_page_path'])
+            .groupby('client_id')
+            .filter(lambda x: len(x) > 1)
+            .client_id
+            .unique()
+    )
+    filtered_df = data_df[data_df.client_id.isin(valid_ids)]
+    return filtered_df
+
+
 def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Google Analytics using job.py
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
-    :param date_list:
-    :param external_id_col:
-    :param half_life:
     :return:
     """
     logging.info("Preprocessing: setting datatypes...")
