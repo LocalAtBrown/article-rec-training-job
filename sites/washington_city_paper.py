@@ -10,7 +10,7 @@ from sites.helpers import safe_get, BadArticleFormatError
 
 DOMAIN = "washingtoncitypaper.com"
 # supported url formats:
-# '/v/s/washingtoncitypaper.com/article/289103/the-african-american-tea-ceremony/'
+# 'washingtoncitypaper.com/v/s/washingtoncitypaper.com/article/289103/the-african-american-tea-ceremony/'
 # 'washingtoncitypaper.com/article/289103/the-african-american-tea-ceremony/'
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
