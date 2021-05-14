@@ -18,15 +18,10 @@ def filter_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
             "event_action" (str), "event_category" (str)
     :return: data_df with flyby users removed
     """
-    valid_ids = (
-        data_df
-            .drop_duplicates(['client_id', 'landing_page_path'])
-            .groupby('client_id')
-            .filter(lambda x: len(x) > 1)
-            .client_id
-            .unique()
-    )
-    filtered_df = data_df[data_df.client_id.isin(valid_ids)]
+    unique_df = data_df.drop_duplicates(['client_id', 'landing_page_path'])
+    valid_ids = unique_df.groupby('client_id').filter(lambda x: len(x) > 1).client_id.unique()
+    valid_articles = unique_df.groupby('landing_page_path').filter(lambda x: len(x) > 1).landing_page_path.unique()
+    filtered_df = data_df[data_df.client_id.isin(valid_ids) & data_df.landing_page_path.isin(valid_articles)]
     return filtered_df
 
 
