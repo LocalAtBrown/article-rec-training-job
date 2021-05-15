@@ -22,18 +22,20 @@ def run():
     logging.info("Running job...")
     start_ts = time.time()
     status = "success"
+
     try:
         model_id = create_model(type=Type.ARTICLE.value)
         logging.info(f"Created model with id {model_id}")
         data_df = fetch_data.fetch_data()
-        filtered_df = preprocess.filter_preprocessing(data_df)
+        filtered_df = preprocess.filter_users(data_df)
 
         article_df = scrape_metadata.scrape_metadata(
             Sites.WCP, list(filtered_df.landing_page_path.unique())
         )
         filtered_df = filtered_df.join(article_df, on="landing_page_path")
-        prepared_df = preprocess.common_preprocessing(filtered_df)
+        filtered_df = preprocess.filter_articles(filtered_df)
 
+        prepared_df = preprocess.common_preprocessing(filtered_df)
         save_defaults.save_defaults(prepared_df, article_df)
 
         EXPERIMENT_DATE = datetime.date.today()
