@@ -15,9 +15,7 @@ from db.helpers import create_model, set_current_model
 from sites.sites import Sites
 from lib.metrics import write_metric, Unit
 
-from memory_profiler import profile
 
-@profile
 def run():
     logging.info("Running job...")
     start_ts = time.time()
@@ -27,7 +25,8 @@ def run():
         model_id = create_model(type=Type.ARTICLE.value)
         logging.info(f"Created model with id {model_id}")
         data_df = fetch_data.fetch_data()
-        filtered_df = preprocess.filter_users(data_df)
+        filtered_df = preprocess.filter_emailnewsletter(data_df)
+        filtered_df = preprocess.filter_users(filtered_df)
 
         article_df = scrape_metadata.scrape_metadata(
             Sites.WCP, list(filtered_df.landing_page_path.unique())
