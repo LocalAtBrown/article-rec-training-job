@@ -184,8 +184,50 @@ def _test_time_decay(time_df):
     return exp_time_df
 
 
+def _test_filter_emailnewsletter(activity_df):
+    no_newsletter_df = filter_emailnewsletter(activity_df)
+    assert len(no_newsletter_df) < len(activity_df)
+    not_newsletters = sum(activity_df.landing_page_path.apply(lambda x: "emailnewsletter" not in x))
+    assert len(no_newsletter_df) == not_newsletters
+    assert (no_newsletter_df.landing_page_path.apply(lambda x: "emailnewsletter" not in x)).all()
+    return no_newsletter_df
+
+
+def _test_filter_users(activity_df):
+    returning_user_df = filter_users(activity_df)
+    assert len(returning_user_df.client_id.unique()) < len(activity_df.client_id.unique())
+    assert (
+        returning_user_df
+        .groupby('client_id')
+        .landing_page_path.nunique() > 1
+    ).all()
+    return returning_user_df
+
+
+def _test_filter_articles(activity_df):
+    top_article_df = filter_articles(activity_df)
+    # Filter articles also filters out users iteratively to ensure:
+    # * All users have at least two valid articles associated with them
+    # * All articles have at least two valid users associated with them
+    assert len(top_article_df.client_id.unique()) < len(activity_df.client_id.unique())
+    assert (
+        top_article_df
+        .groupby('client_id')
+        .external_id.nunique() > 1
+    ).all()
+    assert (
+            top_article_df
+            .groupby('external_id')
+            .client_id.nunique() > 1
+    ).all()
+    return top_article_df
+
+
 def test_pipeline(activity_df):
-    clean_df = _test_fix_dtypes(activity_df)
+    no_newsletter_df = _test_filter_emailnewsletter(activity_df)
+    returning_user_df = _test_filter_users(no_newsletter_df)
+    top_article_df = _test_filter_articles(returning_user_df)
+    clean_df = _test_fix_dtypes(top_article_df)
     sorted_df = _test_time_activities(clean_df)
     labeled_df = _test_label_activities(sorted_df)
     filtered_df = _test_filter_activities(labeled_df)
