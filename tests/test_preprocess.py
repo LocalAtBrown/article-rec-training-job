@@ -28,11 +28,7 @@ def _test_fix_dtypes(df):
     assert all(~clean_df.event_category.isna())
     assert all(~clean_df.event_action.isna())
     assert all(
-        (clean_df.activity_type == "PAGEVIEW")
-        == (clean_df.event_category == "snowplow_amp_page_ping")
-    )
-    assert all(
-        (clean_df.activity_type == "PAGEVIEW")
+        (clean_df.event_category == "snowplow_amp_page_ping")
         == (clean_df.event_action == "impression")
     )
     assert clean_df.session_date.dtype == "<M8[ns]"
