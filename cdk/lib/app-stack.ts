@@ -65,7 +65,6 @@ export class AppStack extends cdk.Stack {
 
     const dbName = 'ArticleRecDB';
     const secretName = `/${props.stage}/article-rec-training-job/db-password`;
-    helpers.makeDatabase(this, props.stage, vpc, dbName, secretName);
 
     const image = ecs.ContainerImage.fromAsset("../", {
       extraHash: Date.now().toString(),

@@ -6,7 +6,6 @@ import * as s3 from '@aws-cdk/aws-s3';
 import * as codebuild from "@aws-cdk/aws-codebuild";
 import { LocalCacheMode } from "@aws-cdk/aws-codebuild";
 import { Schedule } from "@aws-cdk/aws-events";
-import * as rds from '@aws-cdk/aws-rds';
 import * as logs from "@aws-cdk/aws-logs";
 import { Secret } from "@aws-cdk/aws-secretsmanager";
 
@@ -14,50 +13,6 @@ import { Secret } from "@aws-cdk/aws-secretsmanager";
 export enum STAGE {
   PRODUCTION = "prod",
   DEVELOPMENT = "dev",
-}
-
-
-export function makeDatabase(
-    scope: cdk.Construct,
-    stage: STAGE,
-    vpc: ec2.IVpc,
-    dbName: string,
-    secretName: string)
-{
-  let removalPolicy = cdk.RemovalPolicy.SNAPSHOT;
-  if (stage != STAGE.PRODUCTION) {
-    removalPolicy = cdk.RemovalPolicy.DESTROY;
-  }
-
-  let formattedName = dbName;
-  if (stage != STAGE.PRODUCTION) {
-    formattedName = `${titleCase(stage)}${dbName}`;
-  }
-
-  const secretArnPrefix = 'arn:aws:secretsmanager:us-east-1:348955818350:secret:';
-  const secretPartialArn = `${secretArnPrefix}${secretName}`
-  const secret = Secret.fromSecretPartialArn(scope, `${formattedName}Secret`, secretPartialArn);
-
-  const instance = new rds.DatabaseInstance(scope, `${formattedName}Instance`, {
-      vpc,
-      removalPolicy,
-      engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_12_4,
-      }),
-      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      databaseName: formattedName,
-      multiAz: true,
-      storageEncrypted: true,
-      cloudwatchLogsExports: ['postgresql'],
-      cloudwatchLogsRetention: logs.RetentionDays.ONE_MONTH,
-      credentials: rds.Credentials.fromSecret(secret),
-  });
-
-  // Allow connections on default port from any IPV4
-  instance.connections.allowDefaultPortFromAnyIpv4();
-
-  return instance;
 }
 
 
