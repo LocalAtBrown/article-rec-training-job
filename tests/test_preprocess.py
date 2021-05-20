@@ -190,7 +190,7 @@ def _test_filter_emailnewsletter(activity_df):
 
 
 def _test_filter_users(activity_df):
-    returning_user_df = filter_users(activity_df)
+    returning_user_df = filter_flyby_users(activity_df)
     assert len(returning_user_df.client_id.unique()) < len(activity_df.client_id.unique())
     assert (
         returning_user_df

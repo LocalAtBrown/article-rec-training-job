@@ -17,9 +17,9 @@ def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
     return filtered_df
 
 
-def filter_users(data_df: pd.DataFrame) -> pd.DataFrame:
+def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
-    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+    :param data_df: DataFrame of activities collected from Google Analytics using job/steps/fetch_data.py
         * Requisite fields: "session_date" (datetime.date), "client_id" (str),
             "event_action" (str), "event_category" (str)
     :return: data_df with flyby users removed
@@ -29,24 +29,38 @@ def filter_users(data_df: pd.DataFrame) -> pd.DataFrame:
     filtered_df = data_df[data_df.client_id.isin(valid_ids)]
     return filtered_df
 
+
+def filter_sparse_articles(data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str)
+    :return: data_df with sparse articles removed
+    """
+    unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
+    valid_articles = unique_df.groupby('external_id').filter(lambda x: len(x) > 1).external_id.unique()
+    filtered_df = filtered_df[filtered_df.external_id.isin(valid_articles)]
+    return filtered_df
+
+
 def filter_articles(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Google Analytics using job.py
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
-    :return: data_df with flyby users removed
+    :return: data_df with flyby users and sparse articles removed
     """
     filtered_df = data_df
     prev_len = 0
 
+    # Loop until convergence
     while len(filtered_df) != prev_len:
         prev_len = len(filtered_df)
-        unique_df = filtered_df.drop_duplicates(['client_id', 'external_id'])
-        valid_articles = unique_df.groupby('external_id').filter(lambda x: len(x) > 1).external_id.unique()
-        filtered_df = filtered_df[filtered_df.external_id.isin(valid_articles)]
-        filtered_df = filter_users(filtered_df)
+        filtered_df = filter_sparse_articles(filtered_df)
+        filtered_df = filter_flyby_users(filtered_df)
 
     return filtered_df
+
 
 def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     """
