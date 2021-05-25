@@ -17,6 +17,14 @@ DISPLAY_PROGRESS = config.get("DISPLAY_PROGRESS")
 
 
 def load_matrix(pageview_df, num_users, num_items):
+    """
+    #TODO: We should rewrite this without the iterrows and use it to load the df directly into sparse matrix format
+
+    :param pageview_df:
+    :param num_users:
+    :param num_items:
+    :return:
+    """
     t0 = time.time()
     counts = sparse.dok_matrix((num_users, num_items), dtype=float)
     total = 0.0
@@ -117,6 +125,14 @@ class ImplicitMF:
 
 
 def train_model(X: np.array, reg: float, n_components: int, epochs: int):
+    """
+    #TODO: If necessary, skip the numpy array conversion step, and load directly into sparse matrix.
+    :param X:
+    :param reg:
+    :param n_components:
+    :param epochs:
+    :return:
+    """
     X_log = np.log(1 + X)
     X_scaler = MinMaxScaler()
     X_scaled = X_scaler.fit_transform(X_log)

@@ -1,14 +1,65 @@
 import datetime
 import logging
-from itertools import product
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+from datetime import timezone
+from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
+
+
+def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
+    filtered_df = data_df[data_df.landing_page_path.apply(lambda x: 'emailnewsletter' not in x)]
+    return filtered_df
+
+
+def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    :param data_df: DataFrame of activities collected from Google Analytics using job/steps/fetch_data.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str),
+            "event_action" (str), "event_category" (str)
+    :return: data_df with flyby users removed
+    """
+    unique_df = data_df.drop_duplicates(['client_id', 'landing_page_path'])
+    valid_ids = unique_df.groupby('client_id').filter(lambda x: len(x) > 1).client_id.unique()
+    filtered_df = data_df[data_df.client_id.isin(valid_ids)]
+    return filtered_df
+
+
+def filter_sparse_articles(data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str)
+    :return: data_df with sparse articles removed
+    """
+    unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
+    valid_articles = unique_df.groupby('external_id').filter(lambda x: len(x) > 1).external_id.unique()
+    filtered_df = filtered_df[filtered_df.external_id.isin(valid_articles)]
+    return filtered_df
+
+
+def filter_articles(data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
+            "event_action" (str), "event_category" (str)
+    :return: data_df with flyby users and sparse articles removed
+    """
+    filtered_df = data_df
+    prev_len = 0
+
+    # Loop until convergence
+    while len(filtered_df) != prev_len:
+        prev_len = len(filtered_df)
+        filtered_df = filter_sparse_articles(filtered_df)
+        filtered_df = filter_flyby_users(filtered_df)
+
+    return filtered_df
 
 
 def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
@@ -16,9 +67,6 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     :param data_df: DataFrame of activities collected from Google Analytics using job.py
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
-    :param date_list:
-    :param external_id_col:
-    :param half_life:
     :return:
     """
     logging.info("Preprocessing: setting datatypes...")
