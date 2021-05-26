@@ -2,12 +2,13 @@ import logging
 import time
 from typing import List
 
+import numpy as np
 import pandas as pd
 
 from db.helpers import create_rec
 from job.steps.train_model import ImplicitMF
-from job.helpers import get_similarities, get_weights, get_orders
-from lib.config import config
+from job.helpers import get_similarities, get_weights, get_orders, upload_to_s3
+from lib.config import config, ROOT_DIR
 from lib.metrics import write_metric, Unit
 
 MAX_RECS = config.get("MAX_RECS")
@@ -21,6 +22,16 @@ def save_predictions(
     vector_similarities = get_similarities(model)
     vector_weights = get_weights(external_ids, article_df)
     vector_orders = get_orders(vector_similarities, vector_weights)
+
+    filepath = f"{ROOT_DIR}/tmp/vector_weights.npy"
+    np.save(filepath, vector_weights)
+    upload_to_s3(filepath)
+    filepath = f"{ROOT_DIR}/tmp/vector_similarities.npy"
+    np.save(filepath, vector_similarities)
+    upload_to_s3(filepath)
+    filepath = f"{ROOT_DIR}/tmp/vector_orders.npy"
+    np.save(filepath, vector_orders)
+    upload_to_s3(filepath)
 
     for source_index, ranked_recommendation_indices in enumerate(vector_orders):
         source_external_id = external_ids[source_index]

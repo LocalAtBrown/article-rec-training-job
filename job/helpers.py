@@ -1,5 +1,7 @@
 import time
 import logging
+
+import boto3
 import numpy as np
 import pandas as pd
 
@@ -8,6 +10,17 @@ from scipy.spatial import distance
 from typing import List
 
 from job.steps.train_model import ImplicitMF
+
+
+S3 = boto3.resource('s3')
+BUCKET_NAME = 'lnl-monitoring-artifacts'
+
+
+def upload_to_s3(filepath):
+    filename = filepath.split('/')[-1]
+    logging.info(f'Uploading {filename} to s3...')
+    S3.Object(BUCKET_NAME, f"article-rec-training-job/{filename}").put(Body=open(filepath, 'rb'))
+    logging.info(f'Successfully uploaded {filename} to s3')
 
 
 def get_similarities(model: ImplicitMF) -> np.array:
@@ -57,3 +70,6 @@ def get_orders(similarities: np.array, weights: np.array):
     similarities *= weights
     orders = similarities.argsort()[:, ::-1]
     return orders
+
+
+
