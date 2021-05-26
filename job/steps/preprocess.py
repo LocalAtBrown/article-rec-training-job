@@ -39,7 +39,7 @@ def filter_sparse_articles(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
     valid_articles = unique_df.groupby('external_id').filter(lambda x: len(x) > 1).external_id.unique()
-    filtered_df = filtered_df[filtered_df.external_id.isin(valid_articles)]
+    filtered_df = data_df[data_df.external_id.isin(valid_articles)]
     return filtered_df
 
 
