@@ -5,7 +5,7 @@ from typing import List
 import pandas as pd
 
 from db.helpers import create_rec
-from job.steps.train_model import ImplicitMF
+from job.steps.implicit_mf import ImplicitMF
 from job.helpers import get_similarities, get_weights, get_orders
 from lib.config import config
 from lib.metrics import write_metric, Unit

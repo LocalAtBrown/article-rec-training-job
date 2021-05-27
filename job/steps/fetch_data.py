@@ -74,7 +74,7 @@ def retry_s3_select(
     fields: List[str],
     transformer: Callable,
 ) -> pd.DataFrame:
-    path = "/downloads"
+    path = f"{ROOT_DIR}/downloads"
     if not os.path.isdir(path):
         os.makedirs(path)
     local_filename = f"{path}/tmp.json"
@@ -108,7 +108,7 @@ def fetch_data(
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        obj_keys = list_objects(BUCKET, prefix)
+        obj_keys = list_objects(BUCKET, prefix)[-16:]
         for object_key in obj_keys:
             df = retry_s3_select(object_key, fields, transformer)
             if df.size:
