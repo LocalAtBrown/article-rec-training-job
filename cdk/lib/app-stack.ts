@@ -51,8 +51,8 @@ export class AppStack extends cdk.Stack {
     const policy = new iam.Policy(this, `${id}S3AccessPolicy`, {
       statements: [
         new iam.PolicyStatement({
-          sid: `${id}S3ReadAccess`,
-          actions: ["s3:Get*", "s3:List*"],
+          sid: `${id}S3Access`,
+          actions: ["s3:Get*", "s3:List*", "s3:Put*"],
           resources: ["*"],
         }),
       ],

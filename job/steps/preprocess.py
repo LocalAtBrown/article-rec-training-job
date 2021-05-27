@@ -10,6 +10,7 @@ from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
+from lib.bucket import save_outputs
 
 
 def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
@@ -24,7 +25,10 @@ def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
             "event_action" (str), "event_category" (str)
     :return: data_df with flyby users removed
     """
-    unique_df = data_df.drop_duplicates(['client_id', 'landing_page_path'])
+    if 'external_id' in data_df.columns:
+        unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
+    else:
+        unique_df = data_df
     valid_ids = unique_df.groupby('client_id').filter(lambda x: len(x) > 1).client_id.unique()
     filtered_df = data_df[data_df.client_id.isin(valid_ids)]
     return filtered_df
@@ -62,6 +66,7 @@ def filter_articles(data_df: pd.DataFrame) -> pd.DataFrame:
     return filtered_df
 
 
+@save_outputs('filtered_df.csv')
 def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Google Analytics using job.py
@@ -75,9 +80,12 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     sorted_df = time_activities(clean_df)
     logging.info("Preprocessing: filtering activities...")
     filtered_df = filter_activities(sorted_df)
+    logging.info("Preprocessing: filtering flyby users and articles...")
+    filtered_df = filter_articles(filtered_df)
     return filtered_df
 
 
+@save_outputs('exp_time_df.csv')
 def model_preprocessing(
     prepared_df: pd.DataFrame,
     date_list: list = [],
@@ -286,7 +294,7 @@ def filter_activities(
         .client_id.unique()
     )
 
-    filtered_df = filtered_df[~filtered_df.duration.isna()]
+    filtered_df = filtered_df[filtered_df.duration.notna() & (filtered_df.duration > datetime.timedelta(0))]
     filtered_df = filtered_df[filtered_df.client_id.isin(valid_clients)]
     return filtered_df
 

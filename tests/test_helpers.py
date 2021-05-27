@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from scipy.sparse import csr_matrix
 
 from job.helpers import get_similarities, get_orders, get_weights
-from job.steps.train_model import ImplicitMF
+from job.steps.implicit_mf import ImplicitMF
 from db.mappings.base import tzaware_now
 
 
