@@ -9,7 +9,7 @@ from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
-from job.helpers import apply_decay
+from job.helpers import apply_decay, save_outputs
 
 
 def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
@@ -24,7 +24,8 @@ def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
             "event_action" (str), "event_category" (str)
     :return: data_df with flyby users removed
     """
-    unique_df = data_df.drop_duplicates(['client_id', 'landing_page_path'])
+    if 'external_id' in data_df.columns:
+        unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
     valid_ids = unique_df.groupby('client_id').filter(lambda x: len(x) > 1).client_id.unique()
     filtered_df = data_df[data_df.client_id.isin(valid_ids)]
     return filtered_df

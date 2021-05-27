@@ -1,9 +1,7 @@
 import datetime
 import logging
-import numpy as np
 import time
 
-from job.helpers import upload_to_s3
 from job.steps import (
     fetch_data,
     scrape_metadata,
@@ -15,7 +13,6 @@ from job.steps import (
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
 from sites.sites import Sites
-from lib.config import ROOT_DIR
 from lib.metrics import write_metric, Unit
 
 
@@ -53,10 +50,6 @@ def run():
         external_article_ids = formatted_df.columns
         external_article_ids = external_article_ids.astype("int32")
         external_user_ids = formatted_df.index
-
-        filepath = f"{ROOT_DIR}/tmp/model_item_vectors.npy"
-        np.save(filepath, model.item_vectors)
-        upload_to_s3(filepath)
 
         save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df
