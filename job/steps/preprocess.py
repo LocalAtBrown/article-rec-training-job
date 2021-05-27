@@ -27,6 +27,8 @@ def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     if 'external_id' in data_df.columns:
         unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
+    else:
+        unique_df = data_df
     valid_ids = unique_df.groupby('client_id').filter(lambda x: len(x) > 1).client_id.unique()
     filtered_df = data_df[data_df.client_id.isin(valid_ids)]
     return filtered_df
