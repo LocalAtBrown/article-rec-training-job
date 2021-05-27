@@ -7,7 +7,7 @@ from lib.bucket import save_outputs
 from scipy.spatial import distance
 from typing import List
 
-from job.steps.train_model import ImplicitMF
+from job.steps.implicit_mf import ImplicitMF
 
 
 @save_outputs("vector_similarities.npy")
