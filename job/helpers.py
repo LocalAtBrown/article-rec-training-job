@@ -34,7 +34,7 @@ def get_weights(
     date_delta = (
         datetime.now(timezone.utc) - publish_time_df.published_at
     ).dt.total_seconds() / (3600 * 60 * 24)
-    return apply_decay(weights, date_delta, half_life)
+    return np.array(apply_decay(weights, date_delta, half_life))
 
 
 def apply_decay(values: np.array, date_delta: int, half_life: float) -> np.array:
