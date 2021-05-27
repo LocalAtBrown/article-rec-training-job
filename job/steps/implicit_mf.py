@@ -6,8 +6,11 @@ from progressbar import ProgressBar
 from scipy import sparse as sparse
 from scipy.sparse.linalg import spsolve
 
-from job.steps.train_model import DISPLAY_PROGRESS
+from lib.config import config
 from lib.metrics import write_metric, Unit
+
+
+DISPLAY_PROGRESS = config.get("DISPLAY_PROGRESS")
 
 
 class ImplicitMF:

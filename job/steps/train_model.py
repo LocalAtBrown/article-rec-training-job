@@ -7,10 +7,7 @@ from scipy.sparse import csr_matrix
 from sklearn.preprocessing import MinMaxScaler
 
 from job.steps.implicit_mf import ImplicitMF
-from lib.config import config
 from lib.bucket import save_outputs
-
-DISPLAY_PROGRESS = config.get("DISPLAY_PROGRESS")
 
 
 def load_matrix(pageview_df, num_users, num_items):
