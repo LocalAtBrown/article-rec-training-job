@@ -1,28 +1,16 @@
-import time
-import logging
-
-import boto3
 import numpy as np
 import pandas as pd
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+
+from lib.bucket import save_outputs
 from scipy.spatial import distance
 from typing import List
 
 from job.steps.train_model import ImplicitMF
 
 
-S3 = boto3.resource('s3')
-BUCKET_NAME = 'lnl-monitoring-artifacts'
-
-
-def upload_to_s3(filepath):
-    filename = filepath.split('/')[-1]
-    logging.info(f'Uploading {filename} to s3...')
-    S3.Object(BUCKET_NAME, f"article-rec-training-job/{filename}").put(Body=open(filepath, 'rb'))
-    logging.info(f'Successfully uploaded {filename} to s3')
-
-
+@save_outputs("vector_similarities.npy")
 def get_similarities(model: ImplicitMF) -> np.array:
     vector_distances = distance.cdist(
         model.item_vectors, model.item_vectors, metric="cosine"
@@ -31,6 +19,7 @@ def get_similarities(model: ImplicitMF) -> np.array:
     return vector_similarities
 
 
+@save_outputs("vector_weights.npy")
 def get_weights(
     external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10
 ) -> np.array:
@@ -66,6 +55,7 @@ def apply_decay(values: np.array, date_delta: int, half_life: float) -> np.array
     return decayed_values
 
 
+@save_outputs("vector_orders.npy")
 def get_orders(similarities: np.array, weights: np.array):
     similarities *= weights
     orders = similarities.argsort()[:, ::-1]

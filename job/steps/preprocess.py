@@ -9,7 +9,8 @@ from itertools import product
 from progressbar import ProgressBar
 
 from lib.config import config, ROOT_DIR
-from job.helpers import apply_decay, save_outputs
+from job.helpers import apply_decay
+from lib.bucket import save_outputs
 
 
 def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
@@ -63,6 +64,7 @@ def filter_articles(data_df: pd.DataFrame) -> pd.DataFrame:
     return filtered_df
 
 
+@save_outputs('filtered_df.csv')
 def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Google Analytics using job.py
@@ -79,6 +81,7 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     return filtered_df
 
 
+@save_outputs('exp_time_df.csv')
 def model_preprocessing(
     prepared_df: pd.DataFrame,
     date_list: list = [],

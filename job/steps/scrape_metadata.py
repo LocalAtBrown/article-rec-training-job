@@ -15,13 +15,14 @@ from db.helpers import (
 )
 from sites.sites import Site
 from sites.helpers import BadArticleFormatError
-from lib.config import config
+from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 
 
 BACKFILL_ISO_DATE = "2021-03-05"
 
 
+@save_outputs('article_df.csv')
 def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.

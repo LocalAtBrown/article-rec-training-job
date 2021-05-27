@@ -10,6 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.sparse.linalg import spsolve
 
 from lib.config import config
+from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 
 
@@ -124,7 +125,8 @@ class ImplicitMF:
         return solve_vecs
 
 
-def train_model(X: np.array, reg: float, n_components: int, epochs: int):
+@save_outputs("model_item_vectors.npy")
+def train_model(X: np.array, reg: float, n_components: int, epochs: int) -> ImplicitMF:
     """
     #TODO: If necessary, skip the numpy array conversion step, and load directly into sparse matrix.
     :param X:
