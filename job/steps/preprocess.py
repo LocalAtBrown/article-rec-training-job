@@ -78,6 +78,8 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     sorted_df = time_activities(clean_df)
     logging.info("Preprocessing: filtering activities...")
     filtered_df = filter_activities(sorted_df)
+    logging.info("Preprocessing: filtering flyby users and articles...")
+    filtered_df = filter_articles(filtered_df)
     return filtered_df
 
 
@@ -290,7 +292,7 @@ def filter_activities(
         .client_id.unique()
     )
 
-    filtered_df = filtered_df[~filtered_df.duration.isna()]
+    filtered_df = filtered_df[filtered_df.duration.notna() & (filtered_df.duration > datetime.timedelta(0))]
     filtered_df = filtered_df[filtered_df.client_id.isin(valid_clients)]
     return filtered_df
 

@@ -34,8 +34,8 @@ def save_outputs(filename):
         def save_outputs_wrapper(*args, **kwargs):
             filepath = f"{ROOT_DIR}/tmp/{filename}"
             result = func(*args, **kwargs)
-            if type(result) == np.array:
-                np.save(filepath, result.item_vectors)
+            if type(result) == np.ndarray:
+                np.save(filepath, result)
                 upload_to_s3(filepath, bucket=ARTIFACT_BUCKET)
             elif type(result) == pd.DataFrame:
                 result.to_csv(filepath)
