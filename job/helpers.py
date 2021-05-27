@@ -16,7 +16,7 @@ def get_similarities(model: ImplicitMF) -> np.array:
         model.item_vectors, model.item_vectors, metric="cosine"
     )
     vector_similarities = 1 - vector_distances
-    return vector_similarities
+    return np.nan_to_num(vector_similarities)
 
 
 @save_outputs("vector_weights.npy")
