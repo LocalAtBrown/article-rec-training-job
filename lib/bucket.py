@@ -1,6 +1,7 @@
 import boto3
 import logging
 import numpy as np
+import os
 import pandas as pd
 
 from functools import wraps
@@ -12,6 +13,7 @@ from lib.config import ROOT_DIR
 RESOURCE = boto3.resource("s3")
 CLIENT = boto3.client("s3")
 ARTIFACT_BUCKET = 'lnl-monitoring-artifacts'
+os.makedirs(f"{ROOT_DIR}/tmp", exist_ok=True)
 
 
 def list_objects(bucket: str, prefix: str) -> List[str]:
