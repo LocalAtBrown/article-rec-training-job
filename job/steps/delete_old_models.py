@@ -16,7 +16,7 @@ def delete_old_models() -> None:
 
     BATCH_SIZE = 10
     logging.info(
-        f"found {len(model_ids)} models to delete, only deleting {BATCH_SIZE}..."
+        f"found {len(model_ids)} models to delete, deleting a max of {BATCH_SIZE}..."
     )
 
     # prevent a large deletion that may slow other queries
