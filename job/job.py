@@ -9,6 +9,7 @@ from job.steps import (
     save_defaults,
     train_model,
     save_predictions,
+    delete_old_models,
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
@@ -55,6 +56,8 @@ def run():
             model, model_id, external_article_ids, article_df
         )
         set_current_model(model_id, Type.ARTICLE.value)
+
+        delete_old_models.delete_old_models()
     except Exception:
         logging.exception("Job failed")
         status = "failure"
