@@ -9,6 +9,7 @@ from job.steps import (
     save_defaults,
     train_model,
     save_predictions,
+    evaluate_module,
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
@@ -54,6 +55,7 @@ def run():
         save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df
         )
+        evaluate_module.evaluate_module(days=1)
         set_current_model(model_id, Type.ARTICLE.value)
     except Exception:
         logging.exception("Job failed")
