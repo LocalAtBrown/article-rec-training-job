@@ -96,12 +96,13 @@ def retry_s3_select(
 
 
 def fetch_data(
+    experiment_dt: datetime.datetime,
     days: int = DAYS_OF_DATA,
     fields: List[str] = FIELDS,
     transformer: Callable = transform_raw_data,
 ) -> pd.DataFrame:
     start_ts = time.time()
-    dt = datetime.datetime.now()
+    dt = experiment_dt
     data_dfs = []
 
     for _ in range(days):

@@ -25,7 +25,8 @@ def run():
     try:
         model_id = create_model(type=Type.ARTICLE.value)
         logging.info(f"Created model with id {model_id}")
-        data_df = fetch_data.fetch_data()
+        EXPERIMENT_DT = datetime.datetime.now()
+        data_df = fetch_data.fetch_data(EXPERIMENT_DT)
         filtered_df = preprocess.filter_emailnewsletter(data_df)
         filtered_df = preprocess.filter_flyby_users(filtered_df)
 
@@ -41,7 +42,7 @@ def run():
         EXPERIMENT_DATE = datetime.date.today()
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
-            prepared_df, date_list=[EXPERIMENT_DATE], half_life=59.631698
+            prepared_df, date_list=[EXPERIMENT_DT.date()], half_life=59.631698
         )
         model = train_model.train_model(
             X=formatted_df, reg=2.319952, n_components=130, epochs=2
