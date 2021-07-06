@@ -3,7 +3,7 @@ import requests as req
 from retrying import retry
 
 
-class BadArticleFormatError(Exception):
+class ArticleScrapingError(Exception):
     pass
 
 
