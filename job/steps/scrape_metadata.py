@@ -14,7 +14,7 @@ from db.helpers import (
     create_rec,
 )
 from sites.sites import Site
-from sites.helpers import BadArticleFormatError
+from sites.helpers import ArticleScrapingError
 from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 
@@ -22,7 +22,7 @@ from lib.metrics import write_metric, Unit
 BACKFILL_ISO_DATE = "2021-03-05"
 
 
-@save_outputs('article_df.csv')
+@save_outputs("article_df.csv")
 def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
@@ -46,7 +46,7 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
         try:
             scrape_and_update_article(site=site, article=article)
             total_scraped += 1
-        except BadArticleFormatError:
+        except ArticleScrapingError:
             logging.exception(
                 f"Skipping article with external_id: {article.external_id}"
             )
@@ -58,7 +58,7 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
             scrape_and_create_article(site=site, path=path, external_id=external_id)
             found_external_ids.add(external_id)
             total_scraped += 1
-        except (BadArticleFormatError, IntegrityError):
+        except (ArticleScrapingError, IntegrityError):
             logging.exception(f"Skipping article with external_id: {external_id}")
             scraping_errors += 1
     articles = get_articles_by_external_ids(external_ids)
