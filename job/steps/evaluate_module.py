@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 
@@ -31,8 +32,10 @@ def evaluate_module(days=1):
     event_counts = get_event_counts(data_df)
     ctr_df = get_ctr_df(event_counts)
     dwell_time_df = get_dwell_time_df(data_df)
+    logging.info("Writing CTR metrics.")
     for row in ctr_df.itertuples():
         write_metric(f"CTR - {row.model_type}", row.ctr * 100, Unit.PERCENT)
+    logging.info("Writing dwell time metrics.")
     for row in dwell_time_df.itertuples():
         write_metric(f"Mean dwell time - {row.model_type}", row.mean_dwell_time, Unit.SECONDS)
 
@@ -61,7 +64,6 @@ def transform_evaluation_data(df: pd.DataFrame) -> pd.DataFrame:
         lambda x: x[0]["ampClientId"]
     )
     transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
-    transformed_df["etl_time"] = pd.to_datetime(df.etl_tstamp)
     transformed_df["session_date"] = transformed_df.activity_time.dt.date
     transformed_df["landing_page_path"] = df.page_urlpath
     transformed_df["event_name"] = df.event_name
