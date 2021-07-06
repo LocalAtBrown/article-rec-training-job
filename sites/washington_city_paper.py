@@ -9,9 +9,9 @@ from sites.helpers import safe_get, BadArticleFormatError
 
 
 DOMAIN = "washingtoncitypaper.com"
-# supported url formats:
-# 'washingtoncitypaper.com/v/s/washingtoncitypaper.com/article/289103/the-african-american-tea-ceremony/'
-# 'washingtoncitypaper.com/article/289103/the-african-american-tea-ceremony/'
+# supported url path formats:
+# '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
+# '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
