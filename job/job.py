@@ -52,9 +52,7 @@ def run():
         external_article_ids = external_article_ids.astype("int32")
         external_user_ids = formatted_df.index
 
-        save_predictions.save_predictions(
-            model, model_id, external_article_ids, article_df
-        )
+        save_predictions.save_predictions(model, model_id, external_article_ids, article_df)
         evaluate_module.evaluate_module(days=1)
         set_current_model(model_id, Type.ARTICLE.value)
     except Exception:
