@@ -1,10 +1,11 @@
 import logging
 import numpy as np
 import pandas as pd
+import pytz
 
 from datetime import datetime, timedelta
 from job.steps.fetch_data import fetch_data, FIELDS
-from job.steps.preprocess import fix_dtypes, time_activities, aggregate_time
+from job.steps.preprocess import fix_dtypes, time_activities, aggregate_time, filter_activities
 from job.steps.scrape_metadata import scrape_metadata
 from lib.metrics import write_metric, Unit
 from sites.sites import Sites
@@ -23,8 +24,11 @@ def evaluate_module(days=1):
     ]
     # Only capture the last
     data_df = fetch_data(fields=evaluation_fields, days=days + 1, transformer=transform_evaluation_data)
-    data_df = data_df[data_df.activity_time > datetime.now() - timedelta(days=days)]
-    article_df = scrape_metadata.scrape_metadata(
+    data_df = data_df.sort_values(by=['client_id', 'activity_time'])
+    data_df['last_click_source'] = data_df.groupby(['client_id'])['last_click_source'].ffill()
+    data_df['last_click_target'] = data_df.groupby(['client_id'])['last_click_target'].ffill()
+    data_df = data_df[data_df.activity_time > datetime.now().astimezone(pytz.utc) - timedelta(days=days)]
+    article_df = scrape_metadata(
         Sites.WCP, list(data_df.landing_page_path.unique())
     )
     data_df = data_df.join(article_df, on="landing_page_path")
@@ -34,10 +38,10 @@ def evaluate_module(days=1):
     dwell_time_df = get_dwell_time_df(data_df)
     logging.info("Writing CTR metrics.")
     for row in ctr_df.itertuples():
-        write_metric(f"CTR - {row.model_type}", row.ctr * 100, Unit.PERCENT)
+        write_metric(f"ctr_{row.model_type}", row.ctr * 100, Unit.PERCENT)
     logging.info("Writing dwell time metrics.")
     for row in dwell_time_df.itertuples():
-        write_metric(f"Mean dwell time - {row.model_type}", row.mean_dwell_time, Unit.SECONDS)
+        write_metric(f"mean_dwell_time_{row.model_type}", row.mean_dwell_time, Unit.SECONDS)
 
 
 def transform_evaluation_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -66,7 +70,7 @@ def transform_evaluation_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
     transformed_df["session_date"] = transformed_df.activity_time.dt.date
     transformed_df["landing_page_path"] = df.page_urlpath
-    transformed_df["event_name"] = df.event_name
+    transformed_df["event_name"] = df.event_name if "event_name" in df else np.nan
     transformed_df["event_action"] = df.apply(_extract_event_action, axis=1)
     transformed_df["model_id"] = df.apply(_extract_model_id, axis=1)
     transformed_df["model_type"] = df.apply(_extract_model_type, axis=1)
@@ -138,7 +142,7 @@ def get_event_counts(data_df):
 def get_ctr_df(event_counts):
     ctr_df = pd.DataFrame()
     for model_type in event_counts.model_type.unique():
-        if type(model_type) == float:
+        if type(model_type) == float or not model_type:
             continue
         total_seen, total_clicked, ctr = get_ctr(event_counts, model_type)
         ctr_df = ctr_df.append({
@@ -165,7 +169,7 @@ def get_ctr(event_counts, model_type=None):
     else:
         model_event_counts = event_counts
     total_seen = model_event_counts[model_event_counts.event_action == 'widget_seen'].client_id.sum()
-    total_clicked = model_event_counts[model_event_counts.event_action == 'widget_seen'].client_id.sum()
+    total_clicked = model_event_counts[model_event_counts.event_action == 'widget_click'].client_id.sum()
     ctr = total_clicked / total_seen
     return total_seen, total_clicked, ctr
 
@@ -175,7 +179,7 @@ def get_dwell_time_df(data_df):
     dwell_time_df = pd.DataFrame()
 
     for model_type in data_df.model_type.unique():
-        if type(model_type) == float:
+        if type(model_type) == float or not model_type:
             continue
 
         mean_dwell_time = get_mean_dwell_time(data_df, model_type=model_type)
@@ -193,20 +197,24 @@ def get_dwell_time_df(data_df):
 
 
 def get_mean_dwell_time(data_df, model_type=None):
+    clean_df = fix_dtypes(data_df)
+    filtered_df = filter_activities(data_df)
     if model_type is not None:
-        clicked_df = data_df[
-            (data_df.last_click_target == data_df.external_id) &
-            (data_df.last_click_source == model_type)
-            ]
+        clicked_df = filtered_df[
+            (filtered_df.last_click_target == filtered_df.external_id) &
+            (filtered_df.last_click_source == model_type)
+        ]
     else:
-        clicked_df = data_df
+        clicked_df = filtered_df
 
-    clean_df = fix_dtypes(clicked_df)
-    sorted_df = time_activities(clean_df)
+    sorted_df = time_activities(clicked_df)
     time_df = aggregate_time(sorted_df)
-    time_series = time_df.stack().reset_index()
-    # When index is reset, column name for aggregated time defaults to "0"
-    mean_dwell_time = time_series[0][time_series[0] > 0].mean()
+    if len(time_df) > 0:
+        time_series = time_df.stack().reset_index()
+        # When index is reset, column name for aggregated time defaults to "0"
+        mean_dwell_time = time_series[0][time_series[0] > 0].mean()
+    else:
+        mean_dwell_time = 0.0
     return mean_dwell_time
 
 
