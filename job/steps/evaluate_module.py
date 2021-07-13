@@ -154,7 +154,7 @@ def get_ctr_df(event_counts):
 
     total_seen, total_clicked, ctr = get_ctr(event_counts)
     ctr_df = ctr_df.append({
-        'model_type': model_type,
+        'model_type': 'overall',
         'total_clicked': total_clicked,
         'total_seen': total_seen,
         'ctr': ctr
