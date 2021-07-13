@@ -198,7 +198,8 @@ def get_dwell_time_df(data_df):
 
 def get_mean_dwell_time(data_df, model_type=None):
     clean_df = fix_dtypes(data_df)
-    filtered_df = filter_activities(data_df)
+    sorted_df = time_activities(clean_df)
+    filtered_df = filter_activities(sorted_df)
     if model_type is not None:
         clicked_df = filtered_df[
             (filtered_df.last_click_target == filtered_df.external_id) &
@@ -207,8 +208,7 @@ def get_mean_dwell_time(data_df, model_type=None):
     else:
         clicked_df = filtered_df
 
-    sorted_df = time_activities(clicked_df)
-    time_df = aggregate_time(sorted_df)
+    time_df = aggregate_time(clicked_df)
     if len(time_df) > 0:
         time_series = time_df.stack().reset_index()
         # When index is reset, column name for aggregated time defaults to "0"
