@@ -33,7 +33,7 @@ def scrape_published_at(page: Response, soup: BeautifulSoup) -> str:
     # example published_at: '2021-04-13T19:00:45+00:00'
     PROPERTY_TAG = "article:published_time"
     tag = soup.find("meta", property=PROPERTY_TAG)
-    return tag.get("content")
+    return tag.get("content") if tag is not None else None
 
 
 def scrape_path(page: Response, soup: BeautifulSoup) -> str:
