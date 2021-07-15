@@ -95,7 +95,7 @@ def retry_s3_select(
 
 
 def fetch_data(
-    experiment_dt: datetime.datetime,
+    experiment_dt: datetime.datetime = None,
     days: int = DAYS_OF_DATA,
     fields: List[str] = FIELDS,
     transformer: Callable = transform_raw_data,
