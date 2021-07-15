@@ -1,9 +1,10 @@
+from datetime import datetime, timedelta
 import logging
+
 import numpy as np
 import pandas as pd
 import pytz
 
-from datetime import datetime, timedelta
 from job.steps.fetch_data import fetch_data, FIELDS
 from job.steps.preprocess import fix_dtypes, time_activities, aggregate_time, filter_activities
 from job.steps.scrape_metadata import scrape_metadata
