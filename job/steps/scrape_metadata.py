@@ -47,9 +47,7 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
             scrape_and_update_article(site=site, article=article)
             total_scraped += 1
         except ArticleScrapingError:
-            logging.exception(
-                f"Skipping article with external_id: {article.external_id}"
-            )
+            logging.exception(f"Skipping article with external_id: {article.external_id}")
             scraping_errors += 1
     for path, external_id in zip(paths, external_ids):
         if external_id in found_external_ids or external_id is None:
@@ -102,6 +100,8 @@ def scrape_and_update_article(site: Site, article: Article) -> None:
     if metadata.get('published_at') is not None:
         logging.info(f"Updating article with external_id: {external_id}")
         update_article(article_id, **metadata)
+    else:
+        logging.warning(f"No publish date for article with external_id: {external_id}")
 
 
 def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
@@ -110,6 +110,8 @@ def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
     if article_data.get('published_at') is not None:
         logging.info(f"Creating article with external_id: {external_id}")
         create_article(**article_data)
+    else:
+        logging.warning(f"No publish date for article with external_id: {external_id}")
 
 
 def scrape_article_metadata(site: Site, path: str) -> dict:
