@@ -95,14 +95,13 @@ def retry_s3_select(
 
 
 def fetch_data(
+    experiment_dt: datetime.datetime,
     days: int = DAYS_OF_DATA,
     fields: List[str] = FIELDS,
-    today_dt: datetime = None,
     transformer: Callable = transform_raw_data,
 ) -> pd.DataFrame:
     start_ts = time.time()
-    dt = today_dt or datetime.datetime.now()
-
+    dt = experiment_dt or datetime.datetime.now()
     data_dfs = []
 
     path = "/downloads"

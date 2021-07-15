@@ -5,13 +5,13 @@ from requests.models import Response
 
 from bs4 import BeautifulSoup
 
-from sites.helpers import safe_get, BadArticleFormatError
+from sites.helpers import safe_get, ArticleScrapingError
 
 
 DOMAIN = "washingtoncitypaper.com"
-# supported url formats:
-# 'washingtoncitypaper.com/v/s/washingtoncitypaper.com/article/289103/the-african-american-tea-ceremony/'
-# 'washingtoncitypaper.com/article/289103/the-african-american-tea-ceremony/'
+# supported url path formats:
+# '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
+# '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
@@ -45,7 +45,12 @@ def scrape_path(page: Response, soup: BeautifulSoup) -> str:
 def scrape_article_metadata(path: str) -> dict:
     url = f"https://{DOMAIN}{path}"
     logging.info(f"Scraping metadata from: {url}")
-    page = safe_get(url)
+    try:
+        page = safe_get(url)
+    except Exception as e:
+        msg = f"Error fetching article: {url}"
+        logging.exception(msg)
+        raise ArticleScrapingError(msg) from e
     soup = BeautifulSoup(page.text, features="html.parser")
     metadata = {}
 
@@ -61,7 +66,7 @@ def scrape_article_metadata(path: str) -> dict:
         except Exception as e:
             msg = f"Error scraping {prop} for article: {url}"
             logging.exception(msg)
-            raise BadArticleFormatError(msg) from e
+            raise ArticleScrapingError(msg) from e
         metadata[prop] = val
 
     logging.info(f"Scraped metadata from: {url}")

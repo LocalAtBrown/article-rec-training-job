@@ -10,6 +10,7 @@ from job.steps import (
     train_model,
     save_predictions,
     evaluate_module,
+    delete_old_models
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
@@ -25,7 +26,8 @@ def run():
     try:
         model_id = create_model(type=Type.ARTICLE.value)
         logging.info(f"Created model with id {model_id}")
-        data_df = fetch_data.fetch_data()
+        EXPERIMENT_DT = datetime.datetime.now()
+        data_df = fetch_data.fetch_data(EXPERIMENT_DT)
         filtered_df = preprocess.filter_emailnewsletter(data_df)
         filtered_df = preprocess.filter_flyby_users(filtered_df)
 
@@ -41,7 +43,7 @@ def run():
         EXPERIMENT_DATE = datetime.date.today()
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
-            prepared_df, date_list=[EXPERIMENT_DATE], half_life=59.631698
+            prepared_df, date_list=[EXPERIMENT_DT.date()], half_life=59.631698
         )
         model = train_model.train_model(
             X=formatted_df, reg=2.319952, n_components=130, epochs=2
@@ -53,8 +55,10 @@ def run():
         external_user_ids = formatted_df.index
 
         save_predictions.save_predictions(model, model_id, external_article_ids, article_df)
-        evaluate_module.evaluate_module(days=1)
         set_current_model(model_id, Type.ARTICLE.value)
+
+        evaluate_module.evaluate_module(days=1)
+        delete_old_models.delete_old_models()
     except Exception:
         logging.exception("Job failed")
         status = "failure"
