@@ -101,7 +101,7 @@ def scrape_and_update_article(site: Site, article: Article) -> None:
         logging.info(f"Updating article with external_id: {external_id}")
         update_article(article_id, **metadata)
     else:
-        logging.warning(f"No publish date for article with external_id: {external_id}")
+        logging.warning(f"No publish date, skipping article with external_id: {external_id}")
 
 
 def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
@@ -111,7 +111,7 @@ def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
         logging.info(f"Creating article with external_id: {external_id}")
         create_article(**article_data)
     else:
-        logging.warning(f"No publish date for article with external_id: {external_id}")
+        logging.warning(f"No publish date, skipping article with external_id: {external_id}")
 
 
 def scrape_article_metadata(site: Site, path: str) -> dict:
