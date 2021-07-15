@@ -29,11 +29,11 @@ def evaluate_module(days=1):
         "contexts_io_localnewslab_model_1",
         "contexts_io_localnewslab_article_recommendation_1"
     ]
-    # Only capture the last
     data_df = fetch_data(fields=evaluation_fields, days=days + 1, transformer=transform_evaluation_data)
     data_df = data_df.sort_values(by=['client_id', 'activity_time'])
     data_df['last_click_source'] = data_df.groupby(['client_id'])['last_click_source'].ffill()
     data_df['last_click_target'] = data_df.groupby(['client_id'])['last_click_target'].ffill()
+    # Only capture the last 24 hours -- or last "days" days
     data_df = data_df[data_df.activity_time > datetime.now().astimezone(pytz.utc) - timedelta(days=days)]
     article_df = scrape_metadata(
         Sites.WCP, list(data_df.landing_page_path.unique())
@@ -43,12 +43,14 @@ def evaluate_module(days=1):
     event_counts = get_event_counts(data_df)
     ctr_df = get_ctr_df(event_counts)
     dwell_time_df = get_dwell_time_df(data_df)
+
     logging.info("Writing CTR metrics.")
     for row in ctr_df.itertuples():
-        write_metric(f"ctr_{row.model_type}", row.ctr * 100, Unit.PERCENT)
+        write_metric(f"ctr_{row.model_type}", row.ctr * 100, Unit.PERCENT, tags={'days': days})
+
     logging.info("Writing dwell time metrics.")
     for row in dwell_time_df.itertuples():
-        write_metric(f"mean_dwell_time_{row.model_type}", row.mean_dwell_time, Unit.SECONDS)
+        write_metric(f"mean_dwell_time_{row.model_type}", row.mean_dwell_time, Unit.SECONDS, tags={'days': days})
 
 
 def transform_evaluation_data(df: pd.DataFrame) -> pd.DataFrame:
