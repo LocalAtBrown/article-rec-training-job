@@ -18,6 +18,12 @@ def evaluate_module(days=1):
     :param days: number of days to evaluate module over
     """
 
+    # Schemas can be found here:
+    # https://github.com/LocalAtBrown/snowplow-analytics/tree/main/lib/5-iglu/static-registry/schemas/com.washingtoncitypaper
+    #   * recommendation_flow
+    # https://github.com/LocalAtBrown/snowplow-analytics/tree/main/lib/5-iglu/static-registry/schemas/io.localnewslab
+    #   * model
+    #   * article_recommendation
     evaluation_fields = FIELDS + [
         "unstruct_event_com_washingtoncitypaper_recommendation_flow_1",
         "contexts_io_localnewslab_model_1",
