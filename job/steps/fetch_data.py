@@ -1,15 +1,14 @@
-import random
-import json
 import datetime
 import logging
 import time
 import os
-from typing import List, Callable
+import subprocess
 
 import pandas as pd
 import boto3
 from botocore.exceptions import EventStreamError
 from retrying import retry
+from typing import List, Callable
 
 from lib.config import config, ROOT_DIR
 from lib.bucket import list_objects
@@ -96,24 +95,34 @@ def retry_s3_select(
 
 
 def fetch_data(
-    experiment_dt: datetime.datetime,
+    experiment_dt: datetime.datetime = None,
     days: int = DAYS_OF_DATA,
     fields: List[str] = FIELDS,
     transformer: Callable = transform_raw_data,
 ) -> pd.DataFrame:
     start_ts = time.time()
-    dt = experiment_dt
+    dt = experiment_dt or datetime.datetime.now()
     data_dfs = []
+
+    path = "/downloads"
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
     for _ in range(days):
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
+        args = f"aws s3 sync s3://{BUCKET}/{prefix} {path}".split(' ')
+        subprocess.call(args)
         obj_keys = list_objects(BUCKET, prefix)
         for object_key in obj_keys:
-            df = retry_s3_select(object_key, fields, transformer)
+            local_filename = f"{path}/{'/'.join(object_key.split('/')[-2:])}"
+            tmp_df = pd.read_json(local_filename, lines=True, compression='gzip')
+            common_fields = list(set(tmp_df.columns) & set(fields))
+            df = transformer(tmp_df[common_fields])
             if df.size:
                 data_dfs.append(df)
+            os.remove(local_filename)
 
         dt = dt - datetime.timedelta(days=1)
 
