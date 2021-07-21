@@ -1,3 +1,4 @@
+from typing import Optional
 import re
 import logging
 from urllib.parse import urlparse
@@ -42,18 +43,10 @@ def scrape_path(page: Response, soup: BeautifulSoup) -> str:
     return urlparse(page.url).path
 
 
-def scrape_article_metadata(path: str) -> dict:
-    url = f"https://{DOMAIN}{path}"
-    logging.info(f"Scraping metadata from: {url}")
-    try:
-        page = safe_get(url)
-    except Exception as e:
-        msg = f"Error fetching article: {url}"
-        logging.exception(msg)
-        raise ArticleScrapingError(msg) from e
-    soup = BeautifulSoup(page.text, features="html.parser")
-    metadata = {}
+def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
+    logging.info(f"Scraping metadata from url: {page.url}")
 
+    metadata = {}
     scraper_funcs = [
         ("title", scrape_title),
         ("published_at", scrape_published_at),
@@ -64,10 +57,42 @@ def scrape_article_metadata(path: str) -> dict:
         try:
             val = func(page, soup)
         except Exception as e:
-            msg = f"Error scraping {prop} for article: {url}"
+            msg = f"Error scraping {prop} for article url: {page.rl}"
             logging.exception(msg)
             raise ArticleScrapingError(msg) from e
         metadata[prop] = val
 
-    logging.info(f"Scraped metadata from: {url}")
     return metadata
+
+
+# TODO move all validation logic to separate file
+def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
+    return None
+
+
+def validate_article(path: str) -> (Response, BeautifulSoup, Optional[str]):
+    url = f"https://{DOMAIN}{path}"
+    logging.info(f"Validating article url: {url}")
+
+    try:
+        page = safe_get(url)
+    except Exception as e:
+        msg = f"Error fetching article url: {url}"
+        logging.exception(msg)
+        raise ArticleScrapingError(msg) from e
+    soup = BeautifulSoup(page.text, features="html.parser")
+
+    error_msg = None
+    validator_funcs = [
+        validate_not_excluded,
+    ]
+
+    for func in validator_funcs:
+        try:
+            error_msg = func(page, soup)
+        except Exception as e:
+            error_msg = e.message
+        if error_msg:
+            break
+
+    return page, soup, error_msg
