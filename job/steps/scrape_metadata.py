@@ -106,8 +106,6 @@ def scrape_and_update_article(site: Site, article: Article) -> None:
             f"Skipping article with external_id: {external_id}, got error {error_msg}"
         )
     metadata = scrape_article_metadata(site, page, soup)
-    if not metadata:
-        logging.warning("")
     if metadata.get("published_at") is not None:
         logging.info(f"Updating article with external_id: {external_id}")
         update_article(article_id, **metadata)
