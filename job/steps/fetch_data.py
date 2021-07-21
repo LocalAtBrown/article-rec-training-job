@@ -3,6 +3,7 @@ import logging
 import time
 import os
 import subprocess
+import shutil
 
 import pandas as pd
 import boto3
@@ -103,26 +104,29 @@ def fetch_data(
     start_ts = time.time()
     dt = experiment_dt or datetime.datetime.now()
     data_dfs = []
-
     path = "/downloads"
-    if not os.path.isdir(path):
-        os.makedirs(path)
 
     for _ in range(days):
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        args = f"aws s3 sync s3://{BUCKET}/{prefix} {path}".split(' ')
+        args = f"aws s3 sync s3://{BUCKET}/{prefix} {path}".split(" ")
         subprocess.call(args)
-        obj_keys = list_objects(BUCKET, prefix)
-        for object_key in obj_keys:
-            local_filename = f"{path}/{'/'.join(object_key.split('/')[-2:])}"
-            tmp_df = pd.read_json(local_filename, lines=True, compression='gzip')
-            common_fields = list(set(tmp_df.columns) & set(fields))
-            df = transformer(tmp_df[common_fields])
-            if df.size:
-                data_dfs.append(df)
-            os.remove(local_filename)
+
+        for full_path, _, files in os.walk(path):
+
+            for filename in files:
+                file_path = os.path.join(full_path, filename)
+                tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
+                common_fields = list(set(tmp_df.columns) & set(fields))
+                df = transformer(tmp_df[common_fields])
+                if df.size:
+                    data_dfs.append(df)
+
+        shutil.rmtree(path)
 
         dt = dt - datetime.timedelta(days=1)
 
