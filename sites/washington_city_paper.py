@@ -57,7 +57,7 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
         try:
             val = func(page, soup)
         except Exception as e:
-            msg = f"Error scraping {prop} for article url: {page.rl}"
+            msg = f"Error scraping {prop} for article url: {page.url}"
             logging.exception(msg)
             raise ArticleScrapingError(msg) from e
         metadata[prop] = val
