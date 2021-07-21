@@ -67,7 +67,16 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
 
 # TODO move all validation logic to separate file
 def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
-    return None
+    error_msg = None
+    primary = soup.find(id="primary")
+    classes = {
+        value for element in primary.find_all(class_=True) for value in element["class"]
+    }
+
+    if "tag-exclude" in classes:
+        error_msg = "Article has exclude tag"
+
+    return error_msg
 
 
 def validate_article(path: str) -> (Response, BeautifulSoup, Optional[str]):
