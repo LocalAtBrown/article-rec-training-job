@@ -1,10 +1,12 @@
 import time
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from peewee import IntegrityError
+from requests.models import Response
+from bs4 import BeautifulSoup
 
 from db.mappings.article import Article
 from db.helpers import (
@@ -47,7 +49,9 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
             scrape_and_update_article(site=site, article=article)
             total_scraped += 1
         except ArticleScrapingError:
-            logging.exception(f"Skipping article with external_id: {article.external_id}")
+            logging.exception(
+                f"Skipping article with external_id: {article.external_id}"
+            )
             scraping_errors += 1
     for path, external_id in zip(paths, external_ids):
         if external_id in found_external_ids or external_id is None:
@@ -96,26 +100,44 @@ def scrape_and_update_article(site: Site, article: Article) -> None:
     article_id = article.id
     external_id = article.external_id
     path = article.path
-    metadata = scrape_article_metadata(site, path)
-    if metadata.get('published_at') is not None:
+    page, soup, error_msg = validate_article(site, path)
+    if error_msg:
+        logging.warning(
+            f"Skipping article with external_id: {external_id}, got error {error_msg}"
+        )
+    metadata = scrape_article_metadata(site, page, soup)
+    if metadata.get("published_at") is not None:
         logging.info(f"Updating article with external_id: {external_id}")
         update_article(article_id, **metadata)
     else:
-        logging.warning(f"No publish date, skipping article with external_id: {external_id}")
+        logging.warning(
+            f"No publish date, skipping article with external_id: {external_id}"
+        )
 
 
 def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
-    metadata = scrape_article_metadata(site, path)
+    page, soup, error_msg = validate_article(site, path)
+    if error_msg:
+        logging.warning(
+            f"Skipping article with external_id: {external_id}, got error {error_msg}"
+        )
+    metadata = scrape_article_metadata(site, page, soup)
     article_data = {**metadata, "external_id": external_id}
-    if article_data.get('published_at') is not None:
+    if article_data.get("published_at") is not None:
         logging.info(f"Creating article with external_id: {external_id}")
         create_article(**article_data)
     else:
-        logging.warning(f"No publish date, skipping article with external_id: {external_id}")
+        logging.warning(
+            f"No publish date, skipping article with external_id: {external_id}"
+        )
 
 
-def scrape_article_metadata(site: Site, path: str) -> dict:
-    return site.scrape_article_metadata(path)
+def validate_article(site: Site, path: str) -> (Response, BeautifulSoup, Optional[str]):
+    return site.validate_article(path)
+
+
+def scrape_article_metadata(site: Site, page: Response, soup: BeautifulSoup) -> dict:
+    return site.scrape_article_metadata(page, soup)
 
 
 def extract_external_id(site: Site, path: str) -> int:
