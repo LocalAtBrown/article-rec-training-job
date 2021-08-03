@@ -57,16 +57,19 @@ Then visit the corresponding logs using the links in the [Monitoring](https://gi
 - [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/DevArticleRecTrainingJob-DevArticleRecTrainingJobTaskDefinitionDevArticleRecTrainingJobTaskContainerLogGroup9A13F6F1-5dyoUd3VPezx)
 - [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/ArticleRecTrainingJob-ArticleRecTrainingJobTaskDefinitionArticleRecTrainingJobTaskContainerLogGroup2D7DFB71-xD2hRJTbp6vc)
 
-### Dashboards
+### System Dashboards
 - [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-article-rec-training-job;start=PT24H)
 - [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-training-job;start=PT24H)
 
+### Rec Evaluation Dashboards
+- [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-evaluations;start=PT168H)
+
 ## Pipeline Components
-Data pulled in from the S3 bucket (as defined in `env.json`) goes through several preprocessing steps before being trained on. The key steps of the job pipeline are defined in the `job/steps` folder. Output predictions are saved to the RDS database (see [Other Repositories](https://github.com/LocalAtBrown/article-rec-training-job#other-repositories)). 
+Data pulled in from the S3 bucket (as defined in `env.json`) goes through several preprocessing steps before being trained on. The key steps of the job pipeline are defined in the `job/steps` folder. Output predictions are saved to the RDS database (see [Other Repositories](https://github.com/LocalAtBrown/article-rec-training-job#other-repositories)).
 
 ## Other Repositories
 * [`infrastructure`](https://github.com/LocalAtBrown/article-rec-api): The database used to store recommendations is defined here.
 * [`article-rec-api`](https://github.com/LocalAtBrown/article-rec-api): Calls to the API created by this repository return article recommendations and model versions saved by the training pipeline. The API is used to surface recommendations on the front-end.
 * [`article-rec-offline-dashboard`](https://github.com/LocalAtBrown/article-rec-offline-dashboard): The training job can be monitored using the notebook in this repository, which employs a similar preprocessing pipeline.
-* [`snowplow-analytics`](https://github.com/LocalAtBrown/snowplow-analytics): The analytics pipeline used to collect user clickstream data into the `GA_DATA_BUCKET` is defined in this repository. 
+* [`snowplow-analytics`](https://github.com/LocalAtBrown/snowplow-analytics): The analytics pipeline used to collect user clickstream data into the `GA_DATA_BUCKET` is defined in this repository.
 * [`article-recommendations`](https://github.com/LocalAtBrown/article-recommendations): The recommendations are displayed on WordPress [NewsPack](https://newspack.pub/) sites using the PHP widget defined in this repositiory.
