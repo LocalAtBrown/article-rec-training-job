@@ -40,6 +40,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     - event_category (conversions, newsletter sign-ups TK)
     - event_action (conversions, newsletter sign-ups TK)
     """
+    df = df.dropna(subset=["contexts_dev_amp_snowplow_amp_id_1"])
     transformed_df = pd.DataFrame()
     transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(
         lambda x: x[0]["ampClientId"]
