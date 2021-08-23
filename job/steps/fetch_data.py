@@ -123,7 +123,14 @@ def fetch_data(
                 file_path = os.path.join(full_path, filename)
                 tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
                 common_fields = list(set(tmp_df.columns) & set(fields))
-                df = transformer(tmp_df[common_fields])
+                try:
+                    df = transformer(tmp_df[common_fields])
+                except TypeError:
+                    logging.exception(
+                        f"Unexpected format. Can't transform data for {prefix}"
+                    )
+                    break
+
                 if df.size:
                     data_dfs.append(df)
 
