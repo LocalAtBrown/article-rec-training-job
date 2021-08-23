@@ -69,6 +69,11 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
 def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
     error_msg = None
     primary = soup.find(id="primary")
+
+    if not primary:
+        # non-article page
+        return error_msg
+
     classes = {
         value for element in primary.find_all(class_=True) for value in element["class"]
     }
