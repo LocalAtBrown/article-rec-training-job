@@ -129,7 +129,7 @@ def fetch_data(
                     logging.exception(
                         f"Unexpected format. Can't transform data for {prefix}"
                     )
-                    break
+                    continue
 
                 if df.size:
                     data_dfs.append(df)
