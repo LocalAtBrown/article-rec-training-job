@@ -19,7 +19,7 @@ Job that runs every two hours to create a new batch of article recommendations, 
 Environment parameters are defined in `env.json`
 
 ## Local Usage
-1. Build the container
+1. Build container from the Dockerfile
 ```
 kar build
 ```
@@ -35,12 +35,12 @@ kar run bash
 ```
 
 ## Running Tests
-1. Build the container
+1. Build container from the Dockerfile
 ```
 kar build
 ```
 
-2. Run the tests
+2. Run unit tests
 ```
 kar test
 ```

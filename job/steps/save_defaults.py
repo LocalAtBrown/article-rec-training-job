@@ -10,7 +10,9 @@ from lib.metrics import write_metric, Unit
 MAX_RECS = config.get("MAX_RECS")
 
 
+# TODO: consider changing default to content similarity calculation
 def calculate_default_recs(prepared_df: pd.DataFrame) -> pd.Series:
+    # TODO consider changing this to a larger time span (1 day of data is ~100k)
     TOTAL_INTERACTIONS = 5000
     timed_interactions = prepared_df[~prepared_df.duration.isna()]
     recent_interactions = timed_interactions.nlargest(
