@@ -4,8 +4,7 @@ REPOSITORY=article-rec-training-job
 DOCKER_OPTS=$(cat <<END_HEREDOC
     -v $HOME/.aws/credentials:/root/.aws/credentials:ro \
     -v $(pwd):/app \
-    -e STAGE=local \
-    -it $REPOSITORY
+    -e STAGE=local
 END_HEREDOC
 )
 
@@ -24,5 +23,11 @@ task-build() {
 #@run
 #+Run docker container.
 task-run() {
-    docker run $DOCKER_OPTS "$@"
+    docker run $DOCKER_OPTS -it $REPOSITORY "$@"
+}
+
+#@test
+#+Run tests.
+task-test() {
+    docker run $DOCKER_OPTS $REPOSITORY py.test tests
 }
