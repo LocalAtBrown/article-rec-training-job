@@ -24,6 +24,7 @@ def evaluate_module(days=1):
     # https://github.com/LocalAtBrown/snowplow-analytics/tree/main/lib/5-iglu/static-registry/schemas/io.localnewslab
     #   * model
     #   * article_recommendation
+    logging.info("Running evaluation...")
     evaluation_fields = FIELDS + [
         "unstruct_event_com_washingtoncitypaper_recommendation_flow_1",
         "contexts_io_localnewslab_model_1",
