@@ -21,7 +21,7 @@ from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 
 
-BACKFILL_ISO_DATE = "2021-03-05"
+BACKFILL_ISO_DATE = "2021-09-07"
 
 
 @save_outputs("article_df.csv")
@@ -103,8 +103,9 @@ def scrape_and_update_article(site: Site, article: Article) -> None:
     page, soup, error_msg = validate_article(site, path)
     if error_msg:
         logging.warning(
-            f"Skipping article with external_id: {external_id}, got error {error_msg}"
+            f"Deleting article with external_id: {external_id}, got error '{error_msg}'"
         )
+        delete_articles([external_id])
     metadata = scrape_article_metadata(site, page, soup)
     if metadata.get("published_at") is not None:
         logging.info(f"Updating article with external_id: {external_id}")
