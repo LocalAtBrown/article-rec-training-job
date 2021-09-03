@@ -43,14 +43,11 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
     articles = get_articles_by_external_ids(external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
-    valid_external_ids = []
 
     for article in refresh_articles:
         try:
-            valid_article = scrape_and_update_article(site=site, article=article)
-            if valid_article:
-                total_scraped += 1
-                valid_external_ids.append(article.external_id)
+            scrape_and_update_article(site=site, article=article)
+            total_scraped += 1
         except ArticleScrapingError:
             logging.exception(
                 f"Skipping article with external_id: {article.external_id}"
@@ -60,13 +57,9 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
         if external_id in found_external_ids or external_id is None:
             continue
         try:
-            valid_article = scrape_and_create_article(
-                site=site, path=path, external_id=external_id
-            )
-            if valid_article:
-                found_external_ids.add(external_id)
-                valid_external_ids.append(external_id)
-                total_scraped += 1
+            scrape_and_create_article(site=site, path=path, external_id=external_id)
+            found_external_ids.add(external_id)
+            total_scraped += 1
         except (ArticleScrapingError, IntegrityError):
             logging.exception(f"Skipping article with external_id: {external_id}")
             scraping_errors += 1
@@ -103,7 +96,7 @@ def should_refresh(article: Article) -> bool:
     return False
 
 
-def scrape_and_update_article(site: Site, article: Article) -> bool:
+def scrape_and_update_article(site: Site, article: Article) -> None:
     article_id = article.id
     external_id = article.external_id
     path = article.path
@@ -112,37 +105,31 @@ def scrape_and_update_article(site: Site, article: Article) -> bool:
         logging.warning(
             f"Skipping article with external_id: {external_id}, got error {error_msg}"
         )
-        return False
     metadata = scrape_article_metadata(site, page, soup)
     if metadata.get("published_at") is not None:
         logging.info(f"Updating article with external_id: {external_id}")
         update_article(article_id, **metadata)
-        return True
     else:
         logging.warning(
             f"No publish date, skipping article with external_id: {external_id}"
         )
-        return False
 
 
-def scrape_and_create_article(site: Site, external_id: int, path: str) -> bool:
+def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
     page, soup, error_msg = validate_article(site, path)
     if error_msg:
         logging.warning(
             f"Skipping article with external_id: {external_id}, got error {error_msg}"
         )
-        return False
     metadata = scrape_article_metadata(site, page, soup)
     article_data = {**metadata, "external_id": external_id}
     if article_data.get("published_at") is not None:
         logging.info(f"Creating article with external_id: {external_id}")
         create_article(**article_data)
-        return True
     else:
         logging.warning(
             f"No publish date, skipping article with external_id: {external_id}"
         )
-        return False
 
 
 def validate_article(site: Site, path: str) -> (Response, BeautifulSoup, Optional[str]):
