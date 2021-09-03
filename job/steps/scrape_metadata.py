@@ -13,13 +13,12 @@ from db.helpers import (
     create_article,
     update_article,
     get_articles_by_external_ids,
-    create_rec,
 )
 from sites.sites import Site
 from sites.helpers import ArticleScrapingError
 from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
-
+from db.helpers import delete_articles
 
 BACKFILL_ISO_DATE = "2021-09-07"
 

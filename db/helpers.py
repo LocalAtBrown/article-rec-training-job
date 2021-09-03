@@ -1,6 +1,5 @@
 import logging
 
-from datetime import datetime
 from peewee import Expression
 from typing import List
 
