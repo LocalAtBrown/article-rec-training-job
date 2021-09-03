@@ -120,8 +120,9 @@ def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
     page, soup, error_msg = validate_article(site, path)
     if error_msg:
         logging.warning(
-            f"Skipping article with external_id: {external_id}, got error {error_msg}"
+            f"Skipping article with external_id: {external_id}, got error '{error_msg}'"
         )
+        return
     metadata = scrape_article_metadata(site, page, soup)
     article_data = {**metadata, "external_id": external_id}
     if article_data.get("published_at") is not None:
