@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 import logging
 
 from db.mappings.model import Model, Status
+from db.helpers import delete_models
 
 
 def delete_old_models() -> None:
@@ -24,6 +25,6 @@ def delete_old_models() -> None:
         model_ids = model_ids[:BATCH_SIZE]
 
     # associated recommendations will also be deleted
-    dq = Model.delete().where(Model.id.in_(model_ids))
-    dq.execute()
+    delete_models(model_ids)
+
     logging.info(f"deleted model_ids: {model_ids}")

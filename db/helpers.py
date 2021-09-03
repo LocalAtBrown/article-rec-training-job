@@ -53,6 +53,19 @@ def _update_resources(
     q.execute()
 
 
+def delete_articles(external_ids: List[int]) -> None:
+    _delete_resources(Article, Article.external_id.in_(external_ids))
+
+
+def delete_models(model_ids: List[int]) -> None:
+    _delete_resources(Model, Model.id.in_(model_ids))
+
+
+def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> None:
+    dq = mapping_class.delete().where(conditions)
+    dq.execute()
+
+
 # If an exception occurs, the current transaction/savepoint will be rolled back.
 # Otherwise the statements will be committed at the end.
 @db.atomic()
