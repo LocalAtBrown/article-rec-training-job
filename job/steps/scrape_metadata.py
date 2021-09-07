@@ -20,7 +20,7 @@ from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 from db.helpers import delete_articles
 
-BACKFILL_ISO_DATE = "2021-09-07"
+BACKFILL_ISO_DATE = "2021-09-08"
 
 
 @save_outputs("article_df.csv")
