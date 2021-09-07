@@ -1,3 +1,4 @@
+from datetime import datetime
 from random import randint
 
 from tests.factories.base import BaseFactory
@@ -9,6 +10,5 @@ class ArticleFactory(BaseFactory):
 
     @classmethod
     def make_defaults(cls):
-        return {
-            "external_id": str(randint(1000, 9000)),
-        }
+        now = datetime.now()
+        return {"external_id": str(randint(1000, 9000)), "published_at": str(now)}
