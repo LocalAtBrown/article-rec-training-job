@@ -11,21 +11,26 @@ from db.mappings.base import db_proxy
 
 
 def create_model(**params: dict) -> int:
-    return _create_resource(Model, **params)
+    return create_resource(Model, **params)
 
 
 def create_article(**params: dict) -> int:
-    return _create_resource(Article, **params)
+    return create_resource(Article, **params)
 
 
 def create_rec(**params: dict) -> int:
-    return _create_resource(Rec, **params)
+    return create_resource(Rec, **params)
 
 
-def _create_resource(mapping_class: BaseMapping, **params: dict) -> int:
+def create_resource(mapping_class: BaseMapping, **params: dict) -> int:
     resource = mapping_class(**params)
     resource.save()
     return resource.id
+
+
+def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
+    instance = mapping_class.get(mapping_class.id == _id)
+    return instance.to_dict()
 
 
 def get_articles_by_external_ids(external_ids: List[int]) -> List[dict]:

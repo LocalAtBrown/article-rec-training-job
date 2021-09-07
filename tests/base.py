@@ -1,10 +1,8 @@
 import functools
+from unittest import TestCase
 
-import tornado.testing
-from tornado.concurrent import Future
 from peewee import SqliteDatabase
 
-from app import Application
 from db.mappings import database
 from db.mappings.model import Model
 from db.mappings.article import Article
@@ -19,16 +17,7 @@ def recreate_tables(db):
     db.create_tables(MAPPINGS)
 
 
-class BaseTest(tornado.testing.AsyncHTTPTestCase):
-    def get_app(self):
-        return Application()
-
-    def stub_future(self, result=None):
-        future = Future()
-        future.set_result(result)
-
-        return future
-
+class BaseTest(TestCase):
     def setUp(self):
         assert isinstance(database, SqliteDatabase), "database must be sqlite for tests"
         recreate_tables(database)

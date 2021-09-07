@@ -20,7 +20,7 @@ def dummy_scrape(site: Site, page: None, soup: None) -> dict:
     }
 
 
-class TestScrapeMetadata(TestCase):
+class TestScrapeMetadata(BaseTest):
     def setUp(self) -> None:
         self.site = Sites.WCP
         self.paths = [
