@@ -7,7 +7,7 @@ from db.mappings.base import BaseMapping, tzaware_now
 from db.mappings.model import Model, Type, Status
 from db.mappings.article import Article
 from db.mappings.recommendation import Rec
-from lib.db import db
+from db.mappings.base import db_proxy
 
 
 def create_model(**params: dict) -> int:
@@ -67,7 +67,7 @@ def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> Non
 
 # If an exception occurs, the current transaction/savepoint will be rolled back.
 # Otherwise the statements will be committed at the end.
-@db.atomic()
+@db_proxy.atomic()
 def set_current_model(current_model_id: int, model_type: Type) -> None:
     current_model_query = (Model.type == model_type) & (
         Model.status == Status.CURRENT.value
