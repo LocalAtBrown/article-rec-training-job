@@ -10,8 +10,6 @@ from tests.factories.article import ArticleFactory
 
 
 VALID_RES = (None, None, None)
-
-
 INVALID_RES = (None, None, "Test invalid message")
 
 
