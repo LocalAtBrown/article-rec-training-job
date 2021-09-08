@@ -1,8 +1,10 @@
 name: run unit tests
 
 on:
+  # push:
+  #   branches: [ 'main' ]
   push:
-    branches: [ 'main' ]
+    branches: [ '*' ]
   pull_request:
     branches: [ '*' ]
 
