@@ -5,6 +5,7 @@ import pandas as pd
 
 from job.steps.save_defaults import calculate_default_recs
 from job.steps.preprocess import common_preprocessing
+from tests.base import BaseTest
 
 
 def generate_row(client_id, external_id, delta_secs=0):
@@ -18,7 +19,7 @@ def generate_row(client_id, external_id, delta_secs=0):
     }
 
 
-class TestSaveDefaults(unittest.TestCase):
+class TestSaveDefaults(BaseTest):
     def test_calculate_default_recs(self) -> None:
         basit = "client.a"
         kai = "client.b"
