@@ -1,6 +1,5 @@
 import logging
 
-from datetime import datetime
 from peewee import Expression
 from typing import List
 
@@ -8,25 +7,30 @@ from db.mappings.base import BaseMapping, tzaware_now
 from db.mappings.model import Model, Type, Status
 from db.mappings.article import Article
 from db.mappings.recommendation import Rec
-from lib.db import db
+from db.mappings.base import db_proxy
 
 
 def create_model(**params: dict) -> int:
-    return _create_resource(Model, **params)
+    return create_resource(Model, **params)
 
 
 def create_article(**params: dict) -> int:
-    return _create_resource(Article, **params)
+    return create_resource(Article, **params)
 
 
 def create_rec(**params: dict) -> int:
-    return _create_resource(Rec, **params)
+    return create_resource(Rec, **params)
 
 
-def _create_resource(mapping_class: BaseMapping, **params: dict) -> int:
+def create_resource(mapping_class: BaseMapping, **params: dict) -> int:
     resource = mapping_class(**params)
     resource.save()
     return resource.id
+
+
+def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
+    instance = mapping_class.get(mapping_class.id == _id)
+    return instance.to_dict()
 
 
 def get_articles_by_external_ids(external_ids: List[int]) -> List[dict]:
@@ -53,9 +57,22 @@ def _update_resources(
     q.execute()
 
 
+def delete_articles(external_ids: List[int]) -> None:
+    _delete_resources(Article, Article.external_id.in_(external_ids))
+
+
+def delete_models(model_ids: List[int]) -> None:
+    _delete_resources(Model, Model.id.in_(model_ids))
+
+
+def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> None:
+    dq = mapping_class.delete().where(conditions)
+    dq.execute()
+
+
 # If an exception occurs, the current transaction/savepoint will be rolled back.
 # Otherwise the statements will be committed at the end.
-@db.atomic()
+@db_proxy.atomic()
 def set_current_model(current_model_id: int, model_type: Type) -> None:
     current_model_query = (Model.type == model_type) & (
         Model.status == Status.CURRENT.value

@@ -13,15 +13,14 @@ from db.helpers import (
     create_article,
     update_article,
     get_articles_by_external_ids,
-    create_rec,
 )
 from sites.sites import Site
 from sites.helpers import ArticleScrapingError
 from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
+from db.helpers import delete_articles
 
-
-BACKFILL_ISO_DATE = "2021-03-05"
+BACKFILL_ISO_DATE = "2021-09-08"
 
 
 @save_outputs("article_df.csv")
@@ -103,8 +102,9 @@ def scrape_and_update_article(site: Site, article: Article) -> None:
     page, soup, error_msg = validate_article(site, path)
     if error_msg:
         logging.warning(
-            f"Skipping article with external_id: {external_id}, got error {error_msg}"
+            f"Deleting article with external_id: {external_id}, got error '{error_msg}'"
         )
+        delete_articles([external_id])
     metadata = scrape_article_metadata(site, page, soup)
     if metadata.get("published_at") is not None:
         logging.info(f"Updating article with external_id: {external_id}")
@@ -119,8 +119,9 @@ def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
     page, soup, error_msg = validate_article(site, path)
     if error_msg:
         logging.warning(
-            f"Skipping article with external_id: {external_id}, got error {error_msg}"
+            f"Skipping article with external_id: {external_id}, got error '{error_msg}'"
         )
+        return
     metadata = scrape_article_metadata(site, page, soup)
     article_data = {**metadata, "external_id": external_id}
     if article_data.get("published_at") is not None:
