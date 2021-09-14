@@ -10,7 +10,6 @@ from typing import List
 from job.steps.implicit_mf import ImplicitMF
 
 
-@save_outputs("vector_similarities.npy")
 def get_similarities(model: ImplicitMF) -> np.array:
     vector_distances = distance.cdist(
         model.item_vectors, model.item_vectors, metric="cosine"
@@ -19,7 +18,6 @@ def get_similarities(model: ImplicitMF) -> np.array:
     return np.nan_to_num(vector_similarities)
 
 
-@save_outputs("vector_weights.npy")
 def get_weights(
     external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10
 ) -> np.array:
@@ -55,11 +53,7 @@ def apply_decay(values: np.array, date_delta: int, half_life: float) -> np.array
     return decayed_values
 
 
-@save_outputs("vector_orders.npy")
 def get_orders(similarities: np.array, weights: np.array):
     similarities *= weights
     orders = similarities.argsort()[:, ::-1]
     return orders
-
-
-

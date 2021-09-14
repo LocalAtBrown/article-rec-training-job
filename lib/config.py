@@ -1,8 +1,11 @@
 import os
 import json
 from pathlib import Path
+import logging
+from typing import Any
 
 import boto3
+from botocore.exceptions import NoCredentialsError
 
 STAGE = os.environ["STAGE"]
 REGION = os.getenv("REGION", "us-east-1")
@@ -15,7 +18,7 @@ class Config:
     def __init__(self):
         self._config = self.load_env()
 
-    def get_secret(self, secret_key):
+    def get_secret(self, secret_key: str) -> Any:
         res = CLIENT.get_parameter(Name=secret_key, WithDecryption=True)
         val = res["Parameter"]["Value"]
         try:
@@ -25,14 +28,14 @@ class Config:
             pass
         return val
 
-    def is_secret(self, val):
+    def is_secret(self, val: str) -> bool:
         if not isinstance(val, str):
             return False
 
         if val.startswith("/prod") or val.startswith("/dev"):
             return True
 
-    def get(self, var_name):
+    def get(self, var_name: str) -> Any:
         try:
             val = self._config[var_name]
         except KeyError:
@@ -64,7 +67,13 @@ class Config:
 
         for var_name, val in stage_env.items():
             if self.is_secret(val):
-                val = self.get_secret(val)
+                try:
+                    val = self.get_secret(val)
+                except NoCredentialsError:
+                    # alright if github action test workflow does not have aws credentials
+                    logging.warning(
+                        f"AWS credentials missing. Can't fetch secret: '{val}'"
+                    )
 
             config[var_name] = val
 
