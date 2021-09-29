@@ -92,17 +92,17 @@ def should_refresh(article: Article) -> bool:
     return False
 
 
-def scrape_article(site: Site, article: Article) -> Optional[Article]:
+def scrape_article(site: Site, article: Article) -> Article:
     """
     Given a Site and Article object, validate the article and return associated metadata.
-    If an error is found, return None
+    If an error is found, raises ArticleScrapingError
     """
     external_id = article.external_id
     path = article.path
     page, soup, error_msg = validate_article(site, path)
     if error_msg:
         logging.warning(f"Error while validating article {external_id}: '{error_msg}'")
-        return None
+        raise ArticleScrapingError(error_msg)
     metadata = scrape_article_metadata(site, page, soup)
     for key, value in metadata.items():
         if key in Article._meta.fields.keys():
