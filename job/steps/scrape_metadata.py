@@ -1,7 +1,9 @@
 import time
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional
+from typing import List, Tuple, Optional
+
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 from peewee import IntegrityError
@@ -19,11 +21,12 @@ from sites.helpers import ArticleScrapingError
 from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 from db.helpers import delete_articles
+from db.mappings.base import db_proxy
 
 BACKFILL_ISO_DATE = "2021-09-08"
 
 
-def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
+def scrape_metadata(site: Site, paths: List[str]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
@@ -42,15 +45,10 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
 
-    for article in refresh_articles:
-        try:
-            scrape_and_update_article(site=site, article=article)
-            total_scraped += 1
-        except ArticleScrapingError:
-            logging.exception(
-                f"Skipping article with external_id: {article.external_id}"
-            )
-            scraping_errors += 1
+    n_scraped, n_error = scrape_and_update_articles(site, refresh_articles)
+    total_scraped += n_scraped
+    scraping_errors += n_error
+
     for path, external_id in zip(paths, external_ids):
         if external_id in found_external_ids or external_id is None:
             continue
@@ -94,24 +92,61 @@ def should_refresh(article: Article) -> bool:
     return False
 
 
-def scrape_and_update_article(site: Site, article: Article) -> None:
-    article_id = article.id
+def scrape_article(site: Site, article: Article) -> Optional[Article]:
+    """
+    Given a Site and Article object, validate the article and return associated metadata.
+    If an error is found, return None
+    """
     external_id = article.external_id
     path = article.path
     page, soup, error_msg = validate_article(site, path)
     if error_msg:
-        logging.warning(
-            f"Deleting article with external_id: {external_id}, got error '{error_msg}'"
-        )
-        delete_articles([external_id])
+        logging.warning(f"Error while validating article {external_id}: '{error_msg}'")
+        return None
     metadata = scrape_article_metadata(site, page, soup)
-    if metadata.get("published_at") is not None:
-        logging.info(f"Updating article with external_id: {external_id}")
-        update_article(article_id, **metadata)
-    else:
+    for key, value in metadata.items():
+        if key in Article._meta.fields.keys():
+            setattr(article, key, value)
+    return article
+
+
+def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int, int]:
+    logging.info(f"Preparing to refresh {len(articles)} records")
+    futures_list = []
+    results = []
+
+    with ThreadPoolExecutor(max_workers=13) as executor:
+        for article in articles:
+            future = executor.submit(scrape_article, site, article=article)
+            futures_list.append(future)
+        for future in futures_list:
+            try:
+                result = future.result(timeout=60)
+                results.append(result)
+            except ArticleScrapingError:
+                results.append(None)
+
+    validated = [a for a in results if a is not None]
+    logging.info(f"Successfully scraped {len(validated)} records")
+
+    validated_external_ids = {a.external_id for a in validated}
+    bad_external_ids = [
+        a.external_id for a in articles if a.external_id not in validated_external_ids
+    ]
+    for external_id in bad_external_ids:
         logging.warning(
-            f"No publish date, skipping article with external_id: {external_id}"
+            f"Deleting article external_id: {external_id} due to scraping error"
         )
+    delete_articles(bad_external_ids)
+
+    to_update = [a for a in validated if a.published_at is not None]
+    logging.info(f"New publish date for {len(to_update)} records")
+    RESERVED_FIELDS = {"id", "created_at", "updated_at"}
+    fields = list(Article._meta.fields.keys() - RESERVED_FIELDS)
+    logging.info(f"Bulk updating {len(to_update)} records")
+    with db_proxy.atomic():
+        Article.bulk_update(to_update, fields, batch_size=50)
+    return len(validated), len(results) - len(validated)
 
 
 def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
@@ -132,7 +167,9 @@ def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
         )
 
 
-def validate_article(site: Site, path: str) -> (Response, BeautifulSoup, Optional[str]):
+def validate_article(
+    site: Site, path: str
+) -> Tuple[Response, BeautifulSoup, Optional[str]]:
     return site.validate_article(path)
 
 
