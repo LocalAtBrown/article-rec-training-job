@@ -111,10 +111,20 @@ def scrape_article(site: Site, article: Article) -> Optional[Article]:
 
 
 def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int, int]:
+    """
+    Given a site and a list of article objects that need to be updated,
+    scrape them and then submit the updated article objects to the database
+    if they have a "published_at" field
+
+    Return a tuple (# successful scrapes, # errors)
+    """
+
     logging.info(f"Preparing to refresh {len(articles)} records")
+
+    # Use a concurrent thread pool to do the web scraping, this
+    # dramatically increases the speed that we can scrape the articles
     futures_list = []
     results = []
-
     with ThreadPoolExecutor(max_workers=13) as executor:
         for article in articles:
             future = executor.submit(scrape_article, site, article=article)
@@ -124,12 +134,14 @@ def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int
                 result = future.result(timeout=60)
                 results.append(result)
             except ArticleScrapingError:
-                results.append(None)
+                # The exception is logged in the validate_article method
+                pass
 
-    validated = [a for a in results if a is not None]
-    logging.info(f"Successfully scraped {len(validated)} records")
+    logging.info(f"Successfully scraped {len(results)} records")
 
-    validated_external_ids = {a.external_id for a in validated}
+    # Delete any articles from the DB that had a scraping error
+    # These are the external_ids that are not in the result set
+    validated_external_ids = {a.external_id for a in results}
     bad_external_ids = [
         a.external_id for a in articles if a.external_id not in validated_external_ids
     ]
@@ -139,14 +151,19 @@ def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int
         )
     delete_articles(bad_external_ids)
 
-    to_update = [a for a in validated if a.published_at is not None]
+    # Filter for articles that have a published_at date
+    to_update = [a for a in results if a.published_at is not None]
     logging.info(f"New publish date for {len(to_update)} records")
+
+    # Use the peewee bulk update method. Update every field that isn't
+    # in the RESERVED_FIELDS list
     RESERVED_FIELDS = {"id", "created_at", "updated_at"}
     fields = list(Article._meta.fields.keys() - RESERVED_FIELDS)
     logging.info(f"Bulk updating {len(to_update)} records")
     with db_proxy.atomic():
         Article.bulk_update(to_update, fields, batch_size=50)
-    return len(validated), len(results) - len(validated)
+
+    return len(results), len(articles) - len(results)
 
 
 def scrape_and_create_article(site: Site, external_id: int, path: str) -> None:
