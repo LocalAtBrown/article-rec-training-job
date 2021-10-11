@@ -51,30 +51,26 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
             continue
         external_ids[external_id] = path
 
-    articles = get_articles_by_external_ids(list(external_ids.keys()))
+    articles = get_articles_by_external_ids(external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
 
-    for article in refresh_articles:
-        try:
-            scrape_and_update_article(site=site, article=article)
-            total_scraped += 1
-        except ArticleScrapingError:
-            logging.exception(
-                f"Skipping article with external_id: {article.external_id}"
-            )
-            scraping_errors += 1
-    for path, external_id in zip(paths, external_ids):
-        if external_id in found_external_ids or external_id is None:
-            continue
-        try:
-            scrape_and_create_article(site=site, path=path, external_id=external_id)
-            found_external_ids.add(external_id)
-            total_scraped += 1
-        except (ArticleScrapingError, IntegrityError):
-            logging.exception(f"Skipping article with external_id: {external_id}")
-            scraping_errors += 1
+    n_scraped, n_error = scrape_and_update_articles(site, refresh_articles)
+    total_scraped += n_scraped
+    scraping_errors += n_error
+
+    new_articles = [
+        Article(path=external_ids[ext_id], external_id=ext_id)
+        for ext_id in external_ids
+        if ext_id not in found_external_ids
+    ]
+
+    n_scraped, n_error = scrape_and_create_articles(site, new_articles)
+    total_scraped += n_scraped
+    scraping_errors += n_error
+
     articles = get_articles_by_external_ids(external_ids)
+
     write_metric("article_scraping_total", total_scraped)
     write_metric("article_scraping_errors", scraping_errors)
     latency = time.time() - start_ts
