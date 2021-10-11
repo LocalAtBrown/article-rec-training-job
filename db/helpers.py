@@ -9,6 +9,8 @@ from db.mappings.article import Article
 from db.mappings.recommendation import Rec
 from db.mappings.base import db_proxy
 
+from sites.sites import Site
+
 
 def create_model(**params: dict) -> int:
     return create_resource(Model, **params)
@@ -33,8 +35,10 @@ def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
     return instance.to_dict()
 
 
-def get_articles_by_external_ids(external_ids: Iterable[int]) -> List[dict]:
-    res = Article.select().where(Article.external_id.in_(list(external_ids)))
+def get_articles_by_external_ids(site: Site, external_ids: Iterable[int]) -> List[dict]:
+    res = Article.select().where(
+        (Article.site == site.name) & Article.external_id.in_(list(external_ids))
+    )
     if res:
         return [r for r in res]
     else:
