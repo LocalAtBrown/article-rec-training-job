@@ -37,8 +37,21 @@ def scrape_metadata(site: Site, paths: List[int]) -> pd.DataFrame:
     total_scraped = 0
     scraping_errors = 0
 
-    external_ids = [extract_external_id(site, path) for path in paths]
-    articles = get_articles_by_external_ids(external_ids)
+    # Input list of paths is not guaranteed to uniquely map to external IDs
+    # Eg, https://washingtoncitypaper.com/v/s/washingtoncitypaper.com/article/534999/redeye-night-market-celebrates-aa
+    # vs https://washingtoncitypaper.com/article/534999/redeye-night-market-celebrates-aapi-resilience-through-food-and-drink/
+    external_ids = {}
+    for path in paths:
+        external_id = extract_external_id(site, path)
+        if external_id is None:
+            logging.warning(f"Failed to extract external id from path {path}")
+            continue
+        if external_id in external_ids:
+            logging.warning(f"Skipping duplicate external ID {external_id} from {path}")
+            continue
+        external_ids[external_id] = path
+
+    articles = get_articles_by_external_ids(list(external_ids.keys()))
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
 
