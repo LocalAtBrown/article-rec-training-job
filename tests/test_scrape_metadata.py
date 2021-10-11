@@ -65,6 +65,21 @@ class TestScrapeMetadata(BaseTest):
         article_df = scrape_metadata(self.site, self.paths)
         assert len(article_df) == 0
 
+    @patch("job.steps.scrape_metadata.validate_article", return_value=INVALID_RES)
+    @patch(
+        "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
+    )
+    @patch("job.steps.scrape_metadata.should_refresh", return_value=True)
+    def test_scrape_metadata__existing_invalid_recs(
+        self, mock_refresh, mock_scrape, mock_validate
+    ) -> None:
+        for path in self.paths:
+            existing_id = self.site.extract_external_id(path)
+            article = ArticleFactory.create(external_id=existing_id)
+
+        article_df = scrape_metadata(self.site, self.paths)
+        assert len(article_df) == 0
+
     @patch("job.steps.scrape_metadata.validate_article", return_value=VALID_RES)
     @patch(
         "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
