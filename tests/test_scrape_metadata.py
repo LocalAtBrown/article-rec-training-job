@@ -79,3 +79,20 @@ class TestScrapeMetadata(BaseTest):
 
         article_df = scrape_metadata(self.site, self.paths)
         assert len(article_df) == 0
+
+    @patch("job.steps.scrape_metadata.validate_article", return_value=VALID_RES)
+    @patch(
+        "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
+    )
+    @patch("job.steps.scrape_metadata.should_refresh", return_value=True)
+    def test_scrape_metadata__duplicate_paths(
+        self, mock_refresh, mock_scrape, mock_validate
+    ) -> None:
+        # Unique path string that maps to a duplicate external ID
+        # Should be ignored (and not trigger an error)
+        self.paths.append(
+            "/v/s/article/530410/how-to-do-the-last-days-of-summer-right-in-d-c/"
+        )
+
+        article_df = scrape_metadata(self.site, self.paths)
+        assert len(article_df) == 3

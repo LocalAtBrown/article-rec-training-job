@@ -1,7 +1,7 @@
 import logging
 
 from peewee import Expression
-from typing import List
+from typing import List, Iterable
 
 from db.mappings.base import BaseMapping, tzaware_now
 from db.mappings.model import Model, Type, Status
@@ -33,8 +33,8 @@ def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
     return instance.to_dict()
 
 
-def get_articles_by_external_ids(external_ids: List[int]) -> List[dict]:
-    res = Article.select().where(Article.external_id.in_(external_ids))
+def get_articles_by_external_ids(external_ids: Iterable[int]) -> List[dict]:
+    res = Article.select().where(Article.external_id.in_(list(external_ids)))
     if res:
         return [r for r in res]
     else:
