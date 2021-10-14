@@ -78,7 +78,7 @@ class TestScrapeMetadata(BaseTest):
     ) -> None:
         for path in self.paths:
             existing_id = self.site.extract_external_id(path)
-            article = ArticleFactory.create(external_id=existing_id)
+            article = ArticleFactory.create(site=self.site, external_id=existing_id)
 
         article_df = scrape_metadata(self.site, self.paths)
         assert len(article_df) == 0
