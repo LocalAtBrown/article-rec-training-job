@@ -18,7 +18,7 @@ from lib.metrics import write_metric, Unit
 from job.steps.preprocess import preprocess_day
 
 DAYS_OF_DATA = config.get("DAYS_OF_DATA")
-BUCKET = config.get("GA_DATA_BUCKET")
+SITE = config.site()
 FIELDS = [
     "collector_tstamp",
     "page_urlpath",
@@ -72,7 +72,7 @@ def retry_s3_select(
     if not os.path.isdir(path):
         os.makedirs(path)
     local_filename = f"{path}/tmp.json"
-    event_stream = s3_select(BUCKET, object_key, fields)
+    event_stream = s3_select(SITE.s3_bucket, object_key, fields)
 
     try:
         event_stream_to_file(event_stream, local_filename)
@@ -107,7 +107,7 @@ def fetch_data(
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        args = f"aws s3 sync s3://{BUCKET}/{prefix} {path}".split(" ")
+        args = f"aws s3 sync s3://{SITE.s3_bucket}/{prefix} {path}".split(" ")
         subprocess.call(args)
 
         dfs_for_day = []

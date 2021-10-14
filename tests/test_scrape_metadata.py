@@ -4,7 +4,8 @@ from unittest.mock import patch
 from typing import Optional
 
 from job.steps.scrape_metadata import scrape_metadata
-from sites.sites import Site, Sites
+from sites.site import Site
+from sites.sites import Sites
 from tests.base import BaseTest
 from tests.factories.article import ArticleFactory
 

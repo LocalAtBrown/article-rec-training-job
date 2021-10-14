@@ -14,8 +14,11 @@ from job.steps import (
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
-from sites.sites import Sites
+from lib.config import config
 from lib.metrics import write_metric, Unit
+from sites.sites import Sites
+
+SITE = config.site()
 
 
 def run():
@@ -29,10 +32,10 @@ def run():
         EXPERIMENT_DT = datetime.datetime.now()
 
         data_df = fetch_data.fetch_data(EXPERIMENT_DT)
-        data_df = preprocess.extract_external_ids(Sites.WCP, data_df)
+        data_df = preprocess.extract_external_ids(SITE, data_df)
 
         article_df = scrape_metadata.scrape_metadata(
-            Sites.WCP, list(data_df.external_id.unique())
+            SITE, list(data_df.external_id.unique())
         )
 
         data_df = data_df.join(
@@ -64,7 +67,8 @@ def run():
         )
         set_current_model(model_id, Type.ARTICLE.value)
 
-        evaluate_module.evaluate_module(days=1)
+        if SITE == Sites.WCP:
+            evaluate_module.evaluate_module(days=1)
         delete_old_models.delete_old_models()
     except Exception:
         logging.exception("Job failed")
