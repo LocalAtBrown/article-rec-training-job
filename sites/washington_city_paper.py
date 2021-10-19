@@ -10,6 +10,7 @@ from sites.helpers import safe_get, ArticleScrapingError
 
 
 DOMAIN = "washingtoncitypaper.com"
+NAME = "washington-city-paper"
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'

@@ -19,6 +19,7 @@ def dummy_scrape(site: Site, page: None, soup: None) -> dict:
         "published_at": str(now),
         "title": "Test Title",
         "path": "/article/123456/test-path",
+        "site": site,
     }
 
 
@@ -39,6 +40,7 @@ class TestScrapeMetadata(BaseTest):
     def test_scrape_metadata__new_valid_recs(self, mock_scrape, mock_validate) -> None:
         article_df = scrape_metadata(self.site, self.paths)
         assert len(article_df) == 3
+        assert (article_df["site"] == self.site.name).all()
 
     @patch("job.steps.scrape_metadata.validate_article", return_value=VALID_RES)
     @patch(
@@ -50,10 +52,11 @@ class TestScrapeMetadata(BaseTest):
     ) -> None:
         for path in self.paths:
             existing_id = self.site.extract_external_id(path)
-            article = ArticleFactory.create(external_id=existing_id)
+            article = ArticleFactory.create(site=self.site, external_id=existing_id)
 
         article_df = scrape_metadata(self.site, self.paths)
         assert len(article_df) == 3
+        assert (article_df["site"] == self.site.name).all()
 
     @patch("job.steps.scrape_metadata.validate_article", return_value=INVALID_RES)
     @patch(
@@ -75,7 +78,7 @@ class TestScrapeMetadata(BaseTest):
     ) -> None:
         for path in self.paths:
             existing_id = self.site.extract_external_id(path)
-            article = ArticleFactory.create(external_id=existing_id)
+            article = ArticleFactory.create(site=self.site, external_id=existing_id)
 
         article_df = scrape_metadata(self.site, self.paths)
         assert len(article_df) == 0

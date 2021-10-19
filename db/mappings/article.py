@@ -12,4 +12,5 @@ class Article(BaseMapping):
     external_id = IntegerField(null=False)
     title = TextField(null=False, default="")
     path = TextField(null=False, default="")
+    site = TextField(null=False)
     published_at = DateTimeTZField(null=True)

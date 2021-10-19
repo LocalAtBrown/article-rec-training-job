@@ -10,8 +10,6 @@ from bs4 import BeautifulSoup
 
 from db.mappings.article import Article
 from db.helpers import (
-    create_article,
-    update_article,
     get_articles_by_external_ids,
 )
 from sites.sites import Site
@@ -52,7 +50,7 @@ def scrape_metadata(site: Site, paths: List[str]) -> pd.DataFrame:
             continue
         external_ids[external_id] = path
 
-    articles = get_articles_by_external_ids(external_ids)
+    articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
 
@@ -70,7 +68,7 @@ def scrape_metadata(site: Site, paths: List[str]) -> pd.DataFrame:
     total_scraped += n_scraped
     scraping_errors += n_error
 
-    articles = get_articles_by_external_ids(external_ids)
+    articles = get_articles_by_external_ids(site, external_ids)
 
     write_metric("article_scraping_total", total_scraped)
     write_metric("article_scraping_errors", scraping_errors)
@@ -81,6 +79,7 @@ def scrape_metadata(site: Site, paths: List[str]) -> pd.DataFrame:
         "external_id": [a.external_id for a in articles],
         "published_at": [a.published_at for a in articles],
         "landing_page_path": [a.path for a in articles],
+        "site": [a.site for a in articles],
     }
     article_df = pd.DataFrame(df_data).set_index("landing_page_path")
     return article_df
@@ -119,6 +118,8 @@ def scrape_article(site: Site, article: Article) -> Article:
     for key, value in metadata.items():
         if key in Article._meta.fields.keys():
             setattr(article, key, value)
+
+    article.site = site.name
     return article
 
 
