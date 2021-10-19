@@ -233,10 +233,10 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     Note this method drops singleton rows (eg, pageviews that lasted for less than a heartbeat)
 
     :param activity_df: Cleaned DataFrame of activities
-        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str), "activity_time" (datetime.datetime)
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "landing_page_path" (str), "activity_time" (datetime.datetime)
 
     :return: DataFrame of activities with associated dwell times
-        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "landing_page_path" (str)
     """
     sorted_df = activity_df.copy().sort_values(by=["client_id", "activity_time"])
     sorted_df["activity_time"] = pd.to_datetime(sorted_df["activity_time"])
