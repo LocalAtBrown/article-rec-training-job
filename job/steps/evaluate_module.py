@@ -6,7 +6,13 @@ import pandas as pd
 import pytz
 
 from job.steps.fetch_data import fetch_data, FIELDS
-from job.steps.preprocess import fix_dtypes, time_activities, aggregate_time, filter_activities
+from job.steps.preprocess import (
+    fix_dtypes,
+    time_activities,
+    aggregate_time,
+    filter_activities,
+    extract_external_ids,
+)
 from job.steps.scrape_metadata import scrape_metadata
 from lib.metrics import write_metric, Unit
 from sites.sites import Sites
@@ -39,7 +45,21 @@ def evaluate_module(days=1):
     article_df = scrape_metadata(
         Sites.WCP, list(data_df.landing_page_path.unique())
     )
-    data_df = data_df.join(article_df, on="landing_page_path")
+    data_df = data_df.sort_values(by=["client_id", "activity_time"])
+    data_df["last_click_source"] = data_df.groupby(["client_id"])[
+        "last_click_source"
+    ].ffill()
+    data_df["last_click_target"] = data_df.groupby(["client_id"])[
+        "last_click_target"
+    ].ffill()
+    # Only capture the last 24 hours -- or last "days" days
+    data_df = data_df[
+        data_df.activity_time
+        > datetime.now().astimezone(pytz.utc) - timedelta(days=days)
+    ]
+    data_df = extract_external_ids(Sites.WCP, data_df)
+    article_df = scrape_metadata(Sites.WCP, list(data_df.external_id.unique()))
+    data_df = data_df.join(article_df, on="external_id", lsuffix="_original")
 
     event_counts = get_event_counts(data_df)
     ctr_df = get_ctr_df(event_counts)
