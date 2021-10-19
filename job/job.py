@@ -43,7 +43,7 @@ def run():
 
         article_df = article_df.reset_index()
 
-        save_defaults.save_defaults(prepared_df, article_df)
+        save_defaults.save_defaults(filtered_df, article_df)
 
         EXPERIMENT_DATE = datetime.date.today()
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
