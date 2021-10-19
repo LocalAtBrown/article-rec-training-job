@@ -230,8 +230,8 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     sorted_df["duration"] = sorted_df["activity_time"].diff(-1) * -1
 
     # Drop the last activity from each client-landing_page_path pair
-    # Number each row within the client_id, and only keep the odd number rows
-    sorted_df['flag'] = sorted_df.groupby('client_id').cumcount() + 1
+    # Number each row within the (client_id, path) pairs, and only keep the odd number rows
+    sorted_df['flag'] = sorted_df.groupby(['client_id', 'landing_page_path']).cumcount() + 1
     sorted_df = sorted_df.loc[sorted_df['flag'] % 2 == 1]
 
     # The last row has a duration of NA, remove it
