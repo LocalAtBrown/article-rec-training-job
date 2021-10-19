@@ -11,6 +11,23 @@ from progressbar import ProgressBar
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 from lib.bucket import save_outputs
+from sites.sites import Site
+
+
+def extract_external_id(site: Site, data_row: pd.Series) -> int:
+    return int(site.extract_external_id(data_row["landing_page_path"]))
+
+
+def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    :param data_df: DataFrame of activities collected from Snowplow.
+        * Requisite fields: "landing_page_path" (str)
+    :return: data_df with "external_id" column added
+    """
+    data_df["external_id"] = data_df.apply(
+        lambda x: extract_external_id(site, x), axis=1
+    )
+    return data_df
 
 
 def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:

@@ -28,6 +28,8 @@ def run():
         logging.info(f"Created model with id {model_id}")
         EXPERIMENT_DT = datetime.datetime.now()
         data_df = fetch_data.fetch_data(EXPERIMENT_DT)
+        data_df = preprocess.extract_external_ids(Sites.WCP, data_df)
+
         filtered_df = preprocess.filter_emailnewsletter(data_df)
         filtered_df = preprocess.filter_flyby_users(filtered_df)
 
