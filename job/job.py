@@ -34,9 +34,11 @@ def run():
         filtered_df = preprocess.filter_flyby_users(filtered_df)
 
         article_df = scrape_metadata.scrape_metadata(
-            Sites.WCP, list(filtered_df.landing_page_path.unique())
+            Sites.WCP, list(filtered_df.external_id.unique())
         )
-        filtered_df = filtered_df.join(article_df, on="landing_page_path")
+        filtered_df = filtered_df.join(
+            article_df, on="external_id", lsuffix="_original"
+        )
         filtered_df = preprocess.filter_articles(filtered_df)
 
         prepared_df = preprocess.common_preprocessing(filtered_df)
