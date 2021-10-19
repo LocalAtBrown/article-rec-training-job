@@ -15,7 +15,7 @@ from sites.sites import Site
 
 
 def extract_external_id(site: Site, data_row: pd.Series) -> int:
-    return int(site.extract_external_id(data_row["landing_page_path"]))
+    return site.extract_external_id(data_row["landing_page_path"])
 
 
 def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
@@ -27,6 +27,11 @@ def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
     data_df["external_id"] = data_df.apply(
         lambda x: extract_external_id(site, x), axis=1
     )
+
+    # drop non-article pages (ie vertical pages like "/news" and "/coronavirus")
+    data_df = data_df.dropna(subset=["external_id"])
+
+    data_df["external_id"] = data_df["external_id"].apply(np.int32)
     return data_df
 
 
