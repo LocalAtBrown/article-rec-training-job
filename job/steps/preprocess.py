@@ -32,42 +32,50 @@ def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
 
 def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
     filtered_df = data_df[data_df.landing_page_path.notna()]
-    filtered_df = filtered_df[filtered_df.landing_page_path.apply(lambda x: 'emailnewsletter' not in x)]
+    filtered_df = filtered_df[
+        filtered_df.landing_page_path.apply(lambda x: "emailnewsletter" not in x)
+    ]
     return filtered_df
 
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
-    :param data_df: DataFrame of activities collected from Google Analytics using job/steps/fetch_data.py
+    :param data_df: DataFrame of activities collected from Snowplow.
         * Requisite fields: "session_date" (datetime.date), "client_id" (str),
             "event_action" (str), "event_category" (str)
     :return: data_df with flyby users removed
     """
-    if 'external_id' in data_df.columns:
-        unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
+    if "external_id" in data_df.columns:
+        unique_df = data_df.drop_duplicates(["client_id", "external_id"])
     else:
         unique_df = data_df
-    valid_ids = unique_df.groupby('client_id').filter(lambda x: len(x) > 1).client_id.unique()
+    valid_ids = (
+        unique_df.groupby("client_id").filter(lambda x: len(x) > 1).client_id.unique()
+    )
     filtered_df = data_df[data_df.client_id.isin(valid_ids)]
     return filtered_df
 
 
 def filter_sparse_articles(data_df: pd.DataFrame) -> pd.DataFrame:
     """
-    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+    :param data_df: DataFrame of activities collected from Snowplow
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
     :return: data_df with sparse articles removed
     """
-    unique_df = data_df.drop_duplicates(['client_id', 'external_id'])
-    valid_articles = unique_df.groupby('external_id').filter(lambda x: len(x) > 1).external_id.unique()
+    unique_df = data_df.drop_duplicates(["client_id", "external_id"])
+    valid_articles = (
+        unique_df.groupby("external_id")
+        .filter(lambda x: len(x) > 1)
+        .external_id.unique()
+    )
     filtered_df = data_df[data_df.external_id.isin(valid_articles)]
     return filtered_df
 
 
 def filter_articles(data_df: pd.DataFrame) -> pd.DataFrame:
     """
-    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+    :param data_df: DataFrame of activities collected from Snowplow
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
     :return: data_df with flyby users and sparse articles removed
@@ -86,7 +94,7 @@ def filter_articles(data_df: pd.DataFrame) -> pd.DataFrame:
 
 def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     """
-    :param data_df: DataFrame of activities collected from Google Analytics using job.py
+    :param data_df: DataFrame of activities collected from Snowplow
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
     :return:
@@ -109,9 +117,9 @@ def model_preprocessing(
     half_life: float = 10.0,
 ) -> pd.DataFrame:
     """
-    Format clickstream Google Analytics data into user-item matrix for training.
+    Format clickstream Snowplow data into user-item matrix for training.
 
-    :param prepared_df: DataFrame of activities collected from Google Analytics using job.py
+    :param prepared_df: DataFrame of activities collected from Snowplow using job.py
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str), "duration" (timedelta)
     :param date_list: List of datetimes to forcefully include in all aggregates
@@ -135,11 +143,11 @@ def _add_dummies(
     external_id_col: str = "external_id",
 ):
     """
-    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+    :param activity_df: DataFrame of Snowplow activities with associated dwell times
     :param date_list: List of dates to forcefully include in all aggregates
     :param external_id_col: Name of column being used to denote articles
 
-    :return: DataFrame of Google Analytics with dummy rows for each user and date of interest included
+    :return: DataFrame of Snowplow activities with dummy rows for each user and date of interest included
     """
     filtered_df = activity_df.copy()
     filtered_df = filtered_df.rename(columns={external_id_col: "external_id"})
@@ -179,9 +187,9 @@ def _add_dummies(
 
 def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Cleans event and datetime columns of DataFrame of collected Google Analytics activities
+    Cleans event and datetime columns of DataFrame of collected Snowplow activities
 
-    :param activity_df: DataFrame of activities collected from Google Analytics using job.py
+    :param activity_df: DataFrame of activities collected from Snowplow using job.py
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "event_action" (str), "event_category" (str)
 
@@ -282,11 +290,11 @@ def filter_activities(
     """
     Filters out activities that are longer than a predetermined time
 
-    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+    :param activity_df: DataFrame of Snowplow activities with associated dwell times
         * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
     :param max_duration: Pre-determined optimal activity duration threshold (in minutes)
     :param min_dwell_time: Pre-determined optimal dwell_time threshold (in minutes)
-    :return: DataFrame of Google Analytics activities with invalid dwell times replaced by NaN values.
+    :return: DataFrame of Snowplow activities with invalid dwell times replaced by NaN values.
         * Requisite fields: "duration", "session_date", "client_id", "external_id"
     """
 
@@ -310,7 +318,9 @@ def filter_activities(
         .client_id.unique()
     )
 
-    filtered_df = filtered_df[filtered_df.duration.notna() & (filtered_df.duration > datetime.timedelta(0))]
+    filtered_df = filtered_df[
+        filtered_df.duration.notna() & (filtered_df.duration > datetime.timedelta(0))
+    ]
     filtered_df = filtered_df[filtered_df.client_id.isin(valid_clients)]
     return filtered_df
 
@@ -325,7 +335,7 @@ def aggregate_conversion_times(
     """
     Aggregates activities into minimum time to conversion on interactions with each article.
 
-    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+    :param activity_df: DataFrame of Snowplow activities with associated dwell times
         * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str),
             "activity_time" (optional datetime.datetime)
     :param date_list: List of datetimes to forcefully include in all aggregates
@@ -365,7 +375,7 @@ def aggregate_time(
     """
     Aggregates activities into daily per-article total dwell time.
 
-    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+    :param activity_df: DataFrame of Snowplow activities with associated dwell times
         * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
     :param date_list: List of dates to forcefully include in all aggregates
     :return: DataFrame of aggregated per day dwell time with one row for each user at each date of interest,
@@ -402,7 +412,7 @@ def aggregate_pageviews(
     """
     Aggregates activities into daily per-article total dwell time.
 
-    :param activity_df: DataFrame of Google Analytics activities with associated dwell times
+    :param activity_df: DataFrame of Snowplow activities with associated dwell times
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str)
     :param date_list: List of dates to forcefully include in all aggregates
     :return: DataFrame of aggregated pageviews with one row for each user at each date of interest,
