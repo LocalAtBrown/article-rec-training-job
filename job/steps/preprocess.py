@@ -46,6 +46,7 @@ def minmax_activities(data_df: pd.DataFrame) -> pd.DataFrame:
     )
     return pd.concat([first_df, last_df]).drop_duplicates()
 
+
 def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
     filtered_df = data_df[data_df.landing_page_path.notna()]
     filtered_df = filtered_df[
@@ -226,7 +227,10 @@ def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
 
 def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Compute and add dwell times to activity DataFrame. 
+    Compute and add dwell times to activity DataFrame.
+    Assumes that there are at most 2 rows per client_id, landing_page_path group
+    (eg, you ran minmax_activities first)
+    Note this method drops singleton rows (eg, pageviews that lasted for less than a heartbeat)
 
     :param activity_df: Cleaned DataFrame of activities
         * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str), "activity_time" (datetime.datetime)
@@ -240,10 +244,11 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     # Compute dwell time for each activity (diff with row before and flip the sign)
     sorted_df["duration"] = sorted_df["activity_time"].diff(-1) * -1
 
-    # Drop the last activity from each client-landing_page_path pair
-    # Number each row within the (client_id, path) pairs, and only keep the odd number rows
-    sorted_df['flag'] = sorted_df.groupby(['client_id', 'landing_page_path']).cumcount(ascending=False)
-    sorted_df = sorted_df.loc[sorted_df['flag'] > 0]
+    # Drop the last activity from each client-landing_page_path group
+    sorted_df["flag"] = sorted_df.groupby(["client_id", "landing_page_path"]).cumcount(
+        ascending=False
+    )
+    sorted_df = sorted_df.loc[sorted_df["flag"] > 0]
 
     # The last row has a duration of NA, remove it
     sorted_df = sorted_df[~sorted_df.duration.isna()]
