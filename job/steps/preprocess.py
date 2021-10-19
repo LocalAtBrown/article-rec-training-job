@@ -35,18 +35,6 @@ def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
     return data_df
 
 
-def minmax_activities(data_df: pd.DataFrame) -> pd.DataFrame:
-    # only keep the first and last event for each client pageview
-    data_df = data_df.sort_values(by="activity_time")
-    first_df = data_df.drop_duplicates(
-        subset=["client_id", "landing_page_path"], keep="first"
-    )
-    last_df = data_df.drop_duplicates(
-        subset=["client_id", "landing_page_path"], keep="last"
-    )
-    return pd.concat([first_df, last_df]).drop_duplicates()
-
-
 def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
     filtered_df = data_df[data_df.landing_page_path.notna()]
     filtered_df = filtered_df[
@@ -238,22 +226,29 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     :return: DataFrame of activities with associated dwell times
         * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "landing_page_path" (str)
     """
-    sorted_df = activity_df.copy().sort_values(by=["client_id", "activity_time"])
-    sorted_df["activity_time"] = pd.to_datetime(sorted_df["activity_time"])
+    sorted_df = activity_df.sort_values(by=["client_id", "activity_time"])
+    compare_columns = ["client_id", "landing_page_path"]
+    # Assign a group ID to each group "session"
+    # A group "session" is defined as a consecutive run of client_id, landing_page_path pairs
+    sorted_df["group"] = (
+        (sorted_df[compare_columns] != sorted_df[compare_columns].shift(1))
+        .any(axis=1)
+        .cumsum()
+    )
+    # Now, take the first and last rows from each session
+    last_df = sorted_df.drop_duplicates(["group"], keep="last")
+    first_df = sorted_df.drop_duplicates(["group"], keep="first")
+    df = (
+        pd.concat([first_df, last_df])
+        .drop_duplicates()
+        .sort_values(by=["group", "activity_time"])
+    )
 
     # Compute dwell time for each activity (diff with row before and flip the sign)
-    sorted_df["duration"] = sorted_df["activity_time"].diff(-1) * -1
+    df["duration"] = df["activity_time"].diff(-1) * -1
 
-    # Drop the last activity from each client-landing_page_path group
-    sorted_df["flag"] = sorted_df.groupby(["client_id", "landing_page_path"]).cumcount(
-        ascending=False
-    )
-    sorted_df = sorted_df.loc[sorted_df["flag"] > 0]
-
-    # The last row has a duration of NA, remove it
-    sorted_df = sorted_df[~sorted_df.duration.isna()]
-
-    return sorted_df
+    # Remove the last row of each group
+    return df[df.groupby("group").cumcount(ascending=False) > 0]
 
 
 def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
