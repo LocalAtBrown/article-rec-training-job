@@ -215,9 +215,8 @@ def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
 
 def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Compute and add dwell times to activity DataFrame.
-    Assumes that there are at most 2 rows per client_id, landing_page_path group
-    (eg, you ran minmax_activities first)
+    Compute dwell times from df of heartbeat page_ping activities
+    Returns one row per page_view event, with dwell time attached.
     Note this method drops singleton rows (eg, pageviews that lasted for less than a heartbeat)
 
     :param activity_df: Cleaned DataFrame of activities
