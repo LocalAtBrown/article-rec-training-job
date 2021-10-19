@@ -57,16 +57,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["event_action"] = "impression"
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
 
-    # only keep the first and last event for each client pageview
-    transformed_df = transformed_df.sort_values(by="activity_time")
-    first_df = transformed_df.drop_duplicates(
-        subset=["client_id", "landing_page_path"], keep="first"
-    )
-    last_df = transformed_df.drop_duplicates(
-        subset=["client_id", "landing_page_path"], keep="last"
-    )
-
-    return pd.concat([first_df, last_df]).drop_duplicates()
+    return transformed_df 
 
 
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -139,6 +130,7 @@ def fetch_data(
         dt = dt - datetime.timedelta(days=1)
 
     data_df = pd.concat(data_dfs)
+    
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)

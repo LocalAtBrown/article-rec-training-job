@@ -31,6 +31,8 @@ def run():
         data_df = preprocess.extract_external_ids(Sites.WCP, data_df)
 
         filtered_df = preprocess.filter_emailnewsletter(data_df)
+        preprocess.time_activities(filtered_df).to_csv("preprocess.tsv", sep="\t")
+        exit()
         filtered_df = preprocess.filter_flyby_users(filtered_df)
 
         article_df = scrape_metadata.scrape_metadata(
