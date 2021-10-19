@@ -70,7 +70,7 @@ def scrape_metadata(site: Site, external_ids: List[int]) -> pd.DataFrame:
         "landing_page_path": [a.path for a in articles],
         "site": [a.site for a in articles],
     }
-    article_df = pd.DataFrame(df_data)
+    article_df = pd.DataFrame(df_data).set_index("external_id")
     return article_df
 
 
