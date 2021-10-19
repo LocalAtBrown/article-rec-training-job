@@ -31,20 +31,18 @@ def run():
         data_df = preprocess.extract_external_ids(Sites.WCP, data_df)
 
         filtered_df = preprocess.filter_emailnewsletter(data_df)
-        preprocess.time_activities(filtered_df).to_csv("preprocess.tsv", sep="\t")
-        exit()
-        filtered_df = preprocess.filter_flyby_users(filtered_df)
+        time_df = preprocess.time_activities(filtered_df)
 
         article_df = scrape_metadata.scrape_metadata(
-            Sites.WCP, list(filtered_df.external_id.unique())
+            Sites.WCP, list(time_df.external_id.unique())
         )
-        filtered_df = filtered_df.join(
+        filtered_df = time_df.join(
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
         filtered_df = preprocess.filter_articles(filtered_df)
-        prepared_df = preprocess.common_preprocessing(filtered_df)
 
         article_df = article_df.reset_index()
+
         save_defaults.save_defaults(prepared_df, article_df)
 
         EXPERIMENT_DATE = datetime.date.today()
