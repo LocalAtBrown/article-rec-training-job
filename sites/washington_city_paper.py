@@ -85,8 +85,8 @@ def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
     return error_msg
 
 
-def validate_article(path: str) -> (Response, BeautifulSoup, Optional[str]):
-    url = f"https://{DOMAIN}{path}"
+def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str]):
+    url = f"https://{DOMAIN}/article/{external_id}"
     logging.info(f"Validating article url: {url}")
 
     try:
