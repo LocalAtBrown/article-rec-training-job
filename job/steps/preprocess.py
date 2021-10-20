@@ -14,6 +14,18 @@ from lib.bucket import save_outputs
 from sites.sites import Site
 
 
+def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Preprocess a day's worth of raw Snowplow data
+
+    :param df: Raw dataFrame of activities collected from Snowplow for one day
+    :return: df with initial preprocessing steps completed
+    """
+    df = filter_emailnewsletter(df)
+    df = time_activities(df)
+    return df
+
+
 def extract_external_id(site: Site, data_row: pd.Series) -> int:
     return site.extract_external_id(data_row["landing_page_path"])
 
@@ -215,26 +227,34 @@ def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
 
 def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Compute and add dwell times to activity DataFrame
+    Compute dwell times from df of heartbeat page_ping activities
+    Returns one row per page_view event, with dwell time attached.
+    Note this method drops singleton rows (eg, pageviews that lasted for less than a heartbeat)
 
     :param activity_df: Cleaned DataFrame of activities
-        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str), "activity_time" (datetime.datetime)
+        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "landing_page_path" (str), "activity_time" (datetime.datetime)
 
     :return: DataFrame of activities with associated dwell times
-        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
+        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "landing_page_path" (str)
     """
-    sorted_df = activity_df.copy().sort_values(by=["client_id", "activity_time"])
-    sorted_df["activity_time"] = pd.to_datetime(sorted_df["activity_time"])
+    sorted_df = activity_df.sort_values(by=["client_id", "activity_time"])
+    compare_columns = ["client_id", "landing_page_path"]
+    # Assign a group ID to each group "session"
+    # A group "session" is defined as a consecutive run of client_id, landing_page_path pairs
+    sorted_df["group"] = (
+        (sorted_df[compare_columns] != sorted_df[compare_columns].shift(1))
+        .any(axis=1)
+        .cumsum()
+    )
+
+    # Now, take the first and last rows from each session
+    minmax_df = sorted_df.groupby("group", as_index=False).nth([0, -1]).copy()
 
     # Compute dwell time for each activity (diff with row before and flip the sign)
-    sorted_df["duration"] = sorted_df["activity_time"].diff(-1) * -1
+    minmax_df["duration"] = minmax_df["activity_time"].diff(-1) * -1
 
-    # Drop the last activity from each client
-    client_bounds = ~sorted_df["client_id"].eq(sorted_df["client_id"].shift(-1))
-    sorted_df.loc[client_bounds, "duration"] = np.nan
-    sorted_df = sorted_df[~sorted_df.duration.isna()]
-
-    return sorted_df
+    # Remove the last row of each group
+    return minmax_df[minmax_df.groupby("group").cumcount(ascending=False) > 0]
 
 
 def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:

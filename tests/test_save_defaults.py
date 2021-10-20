@@ -12,6 +12,7 @@ def generate_row(client_id, external_id, delta_secs=0):
     return {
         "client_id": client_id,
         "external_id": external_id,
+        "landing_page_path": external_id,
         "event_category": "snowplow_amp_page_ping",
         "event_action": "impression",
         "session_date": datetime.now().date(),
