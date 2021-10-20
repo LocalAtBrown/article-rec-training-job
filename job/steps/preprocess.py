@@ -248,7 +248,7 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Now, take the first and last rows from each session
-    minmax_df = sorted_df.groupby("group", as_index=False).nth([0, -1])
+    minmax_df = sorted_df.groupby("group", as_index=False).nth([0, -1]).copy()
 
     # Compute dwell time for each activity (diff with row before and flip the sign)
     minmax_df["duration"] = minmax_df["activity_time"].diff(-1) * -1
