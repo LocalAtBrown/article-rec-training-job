@@ -26,10 +26,10 @@ def dummy_scrape(site: Site, page: None, soup: None) -> dict:
 class TestScrapeMetadata(BaseTest):
     def setUp(self) -> None:
         self.site = Sites.WCP
-        self.paths = [
-            "/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/",
-            "/article/530313/douglass-community-land-trust-sw-affordable-housing/",
-            "/article/530410/how-to-do-the-last-days-of-summer-right-in-d-c/",
+        self.external_ids = [
+            "521676",
+            "530313",
+            "530410",
         ]
         super().setUp()
 
@@ -38,7 +38,7 @@ class TestScrapeMetadata(BaseTest):
         "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
     )
     def test_scrape_metadata__new_valid_recs(self, mock_scrape, mock_validate) -> None:
-        article_df = scrape_metadata(self.site, self.paths)
+        article_df = scrape_metadata(self.site, self.external_ids)
         assert len(article_df) == 3
         assert (article_df["site"] == self.site.name).all()
 
@@ -50,11 +50,10 @@ class TestScrapeMetadata(BaseTest):
     def test_scrape_metadata__existing_valid_recs(
         self, mock_refresh, mock_scrape, mock_validate
     ) -> None:
-        for path in self.paths:
-            existing_id = self.site.extract_external_id(path)
-            article = ArticleFactory.create(site=self.site, external_id=existing_id)
+        for external_id in self.external_ids:
+            article = ArticleFactory.create(site=self.site, external_id=external_id)
 
-        article_df = scrape_metadata(self.site, self.paths)
+        article_df = scrape_metadata(self.site, self.external_ids)
         assert len(article_df) == 3
         assert (article_df["site"] == self.site.name).all()
 
@@ -65,7 +64,7 @@ class TestScrapeMetadata(BaseTest):
     def test_scrape_metadata__new_invalid_recs(
         self, mock_scrape, mock_validate
     ) -> None:
-        article_df = scrape_metadata(self.site, self.paths)
+        article_df = scrape_metadata(self.site, self.external_ids)
         assert len(article_df) == 0
 
     @patch("job.steps.scrape_metadata.validate_article", return_value=INVALID_RES)
@@ -76,11 +75,10 @@ class TestScrapeMetadata(BaseTest):
     def test_scrape_metadata__existing_invalid_recs(
         self, mock_refresh, mock_scrape, mock_validate
     ) -> None:
-        for path in self.paths:
-            existing_id = self.site.extract_external_id(path)
-            article = ArticleFactory.create(site=self.site, external_id=existing_id)
+        for external_id in self.external_ids:
+            article = ArticleFactory.create(site=self.site, external_id=external_id)
 
-        article_df = scrape_metadata(self.site, self.paths)
+        article_df = scrape_metadata(self.site, self.external_ids)
         assert len(article_df) == 0
 
     @patch("job.steps.scrape_metadata.validate_article", return_value=VALID_RES)
@@ -88,14 +86,12 @@ class TestScrapeMetadata(BaseTest):
         "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
     )
     @patch("job.steps.scrape_metadata.should_refresh", return_value=True)
-    def test_scrape_metadata__duplicate_paths(
+    def test_scrape_metadata__external_ids(
         self, mock_refresh, mock_scrape, mock_validate
     ) -> None:
         # Unique path string that maps to a duplicate external ID
         # Should be ignored (and not trigger an error)
-        self.paths.append(
-            "/v/s/article/530410/how-to-do-the-last-days-of-summer-right-in-d-c/"
-        )
+        self.external_ids.append("530410")
 
-        article_df = scrape_metadata(self.site, self.paths)
+        article_df = scrape_metadata(self.site, self.external_ids)
         assert len(article_df) == 3

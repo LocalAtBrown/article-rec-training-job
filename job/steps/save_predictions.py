@@ -38,7 +38,7 @@ def save_predictions(
             matching_articles = article_df[
                 article_df["external_id"] == recommended_external_id
             ]
-            recommended_article_id = matching_articles["article_id"][0]
+            recommended_article_id = matching_articles["article_id"].tolist()[0]
             # for distance, smaller values are more highly correlated
             # for score, higher values are more highly correlated
             score = vector_similarities[source_index][recommendation_index]

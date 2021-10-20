@@ -45,7 +45,7 @@ def save_defaults(prepared_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
     logging.info("Saving default recs to db...")
     for external_id, score in zip(top_times_per_view.index, top_scores):
         matching_articles = article_df[article_df["external_id"] == external_id]
-        article_id = matching_articles["article_id"][0]
+        article_id = matching_articles["article_id"].tolist()[0]
         rec_id = create_rec(
             source_entity_id="default",
             model_id=model_id,

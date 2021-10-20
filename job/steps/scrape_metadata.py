@@ -5,6 +5,7 @@ from typing import List, Tuple, Optional
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
+import numpy as np
 from requests.models import Response
 from bs4 import BeautifulSoup
 
@@ -22,33 +23,21 @@ from db.mappings.base import db_proxy
 BACKFILL_ISO_DATE = "2021-09-08"
 
 
-def scrape_metadata(site: Site, paths: List[str]) -> pd.DataFrame:
+def scrape_metadata(site: Site, external_ids: List[int]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
     :param site: Site object enabling retrieval of external ID
-    :param paths: Paths on corresponding news website for which to retrieve IDs
+    :param external_ids: Article id's from external news site
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
-        * Requisite fields: "article_id" (str), "external_id" (str), "landing_page_path" (str)
+        * Requisite fields: "article_id" (str), "external_id" (str)
     """
     start_ts = time.time()
     total_scraped = 0
     scraping_errors = 0
 
-    # Input list of paths is not guaranteed to uniquely map to external IDs
-    # Eg, https://washingtoncitypaper.com/v/s/washingtoncitypaper.com/article/534999/redeye-night-market-celebrates-aa
-    # vs https://washingtoncitypaper.com/article/534999/redeye-night-market-celebrates-aapi-resilience-through-food-and-drink/
-    external_ids = {}
-    for path in paths:
-        external_id = extract_external_id(site, path)
-        if external_id is None:
-            logging.warning(f"Failed to extract external id from path {path}")
-            continue
-        if external_id in external_ids:
-            logging.warning(f"Skipping duplicate external ID {external_id} from {path}")
-            continue
-        external_ids[external_id] = path
+    external_ids = set(external_ids)
 
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
@@ -59,7 +48,7 @@ def scrape_metadata(site: Site, paths: List[str]) -> pd.DataFrame:
     scraping_errors += n_error
 
     new_articles = [
-        Article(path=external_ids[ext_id], external_id=ext_id)
+        Article(external_id=ext_id)
         for ext_id in external_ids
         if ext_id not in found_external_ids
     ]
@@ -81,7 +70,7 @@ def scrape_metadata(site: Site, paths: List[str]) -> pd.DataFrame:
         "landing_page_path": [a.path for a in articles],
         "site": [a.site for a in articles],
     }
-    article_df = pd.DataFrame(df_data).set_index("landing_page_path")
+    article_df = pd.DataFrame(df_data).set_index("external_id")
     return article_df
 
 
@@ -109,8 +98,7 @@ def scrape_article(site: Site, article: Article) -> Article:
     Return updated Article object. If an error is found, raises ArticleScrapingError
     """
     external_id = article.external_id
-    path = article.path
-    page, soup, error_msg = validate_article(site, path)
+    page, soup, error_msg = validate_article(site, external_id)
     if error_msg:
         logging.warning(f"Error while validating article {external_id}: '{error_msg}'")
         raise ArticleScrapingError(error_msg)
@@ -228,7 +216,3 @@ def validate_article(
 
 def scrape_article_metadata(site: Site, page: Response, soup: BeautifulSoup) -> dict:
     return site.scrape_article_metadata(page, soup)
-
-
-def extract_external_id(site: Site, path: str) -> int:
-    return site.extract_external_id(path)
