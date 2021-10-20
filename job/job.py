@@ -37,7 +37,7 @@ def run():
             Sites.WCP, list(filtered_df.external_id.unique())
         )
         filtered_df = filtered_df.join(
-            article_df, on="external_id", lsuffix="_original"
+            article_df, on="external_id", lsuffix="_original", how="inner"
         )
         filtered_df = preprocess.filter_articles(filtered_df)
         prepared_df = preprocess.common_preprocessing(filtered_df)
