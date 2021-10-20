@@ -42,6 +42,7 @@ def run():
         filtered_df = preprocess.filter_articles(filtered_df)
         prepared_df = preprocess.common_preprocessing(filtered_df)
 
+        logging.info(f"Training data filtered down to {len(prepared_df)} rows")
         article_df = article_df.reset_index()
         save_defaults.save_defaults(prepared_df, article_df)
 
