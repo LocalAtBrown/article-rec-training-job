@@ -27,28 +27,27 @@ def run():
         model_id = create_model(type=Type.ARTICLE.value)
         logging.info(f"Created model with id {model_id}")
         EXPERIMENT_DT = datetime.datetime.now()
+
         data_df = fetch_data.fetch_data(EXPERIMENT_DT)
         data_df = preprocess.extract_external_ids(Sites.WCP, data_df)
 
-        filtered_df = preprocess.filter_emailnewsletter(data_df)
-        time_df = preprocess.time_activities(filtered_df)
-
         article_df = scrape_metadata.scrape_metadata(
-            Sites.WCP, list(time_df.external_id.unique())
+            Sites.WCP, list(data_df.external_id.unique())
         )
-        filtered_df = time_df.join(
+
+        data_df = data_df.join(
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
-        filtered_df = preprocess.filter_articles(filtered_df)
+
+        data_df = preprocess.filter_articles(data_df)
 
         article_df = article_df.reset_index()
-
-        save_defaults.save_defaults(filtered_df, article_df)
+        save_defaults.save_defaults(data_df, article_df)
 
         EXPERIMENT_DATE = datetime.date.today()
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
-            prepared_df, date_list=[EXPERIMENT_DT.date()], half_life=59.631698
+            data_df, date_list=[EXPERIMENT_DT.date()], half_life=59.631698
         )
         model = train_model.train_model(
             X=formatted_df, reg=2.319952, n_components=130, epochs=2

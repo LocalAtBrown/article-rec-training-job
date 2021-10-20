@@ -15,6 +15,8 @@ from lib.config import config, ROOT_DIR
 from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
+from job.steps.preprocess import preprocess_day
+
 DAYS_OF_DATA = config.get("DAYS_OF_DATA")
 BUCKET = config.get("GA_DATA_BUCKET")
 FIELDS = [
@@ -57,7 +59,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["event_action"] = "impression"
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
 
-    return transformed_df 
+    return transformed_df
 
 
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -108,6 +110,8 @@ def fetch_data(
         args = f"aws s3 sync s3://{BUCKET}/{prefix} {path}".split(" ")
         subprocess.call(args)
 
+        dfs_for_day = []
+
         for full_path, _, files in os.walk(path):
 
             for filename in files:
@@ -123,14 +127,17 @@ def fetch_data(
                     continue
 
                 if df.size:
-                    data_dfs.append(df)
+                    dfs_for_day.append(df)
+
+        day_df = preprocess_day(pd.concat(dfs_for_day))
+        data_dfs.append(day_df)
 
         shutil.rmtree(path)
 
         dt = dt - datetime.timedelta(days=1)
 
     data_df = pd.concat(data_dfs)
-    
+
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)

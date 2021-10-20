@@ -14,6 +14,18 @@ from lib.bucket import save_outputs
 from sites.sites import Site
 
 
+def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Preprocess a day's worth of raw Snowplow data
+
+    :param df: Raw dataFrame of activities collected from Snowplow for one day
+    :return: df with initial preprocessing steps completed
+    """
+    df = filter_emailnewsletter(df)
+    df = time_activities(df)
+    return df
+
+
 def extract_external_id(site: Site, data_row: pd.Series) -> int:
     return site.extract_external_id(data_row["landing_page_path"])
 
@@ -234,20 +246,15 @@ def time_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
         .any(axis=1)
         .cumsum()
     )
+
     # Now, take the first and last rows from each session
-    last_df = sorted_df.drop_duplicates(["group"], keep="last")
-    first_df = sorted_df.drop_duplicates(["group"], keep="first")
-    df = (
-        pd.concat([first_df, last_df])
-        .drop_duplicates()
-        .sort_values(by=["group", "activity_time"])
-    )
+    minmax_df = sorted_df.groupby("group", as_index=False).nth([0, -1])
 
     # Compute dwell time for each activity (diff with row before and flip the sign)
-    df["duration"] = df["activity_time"].diff(-1) * -1
+    minmax_df["duration"] = minmax_df["activity_time"].diff(-1) * -1
 
     # Remove the last row of each group
-    return df[df.groupby("group").cumcount(ascending=False) > 0]
+    return minmax_df[minmax_df.groupby("group").cumcount(ascending=False) > 0]
 
 
 def label_activities(activity_df: pd.DataFrame) -> pd.DataFrame:
