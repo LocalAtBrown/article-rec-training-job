@@ -22,9 +22,12 @@ def get_weights(
     external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10
 ) -> np.array:
     weights = np.ones(len(external_ids))
-    publish_time_df = article_df[["external_id", "published_at"]].copy()
-    publish_time_df = publish_time_df[publish_time_df["external_id"].isin(external_ids)]
-
+    publish_time_df = (
+        article_df[["external_id", "published_at"]]
+        .drop_duplicates("external_id")
+        .set_index("external_id")
+        .loc[external_ids]
+    )
     publish_time_df["published_at"] = pd.to_datetime(publish_time_df.published_at)
     date_delta = (
         datetime.now(timezone.utc) - publish_time_df.published_at
