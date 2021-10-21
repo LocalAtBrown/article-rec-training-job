@@ -129,8 +129,9 @@ def fetch_data(
                 if df.size:
                     dfs_for_day.append(df)
 
-        day_df = preprocess_day(pd.concat(dfs_for_day))
-        data_dfs.append(day_df)
+        if dfs_for_day:
+            day_df = preprocess_day(pd.concat(dfs_for_day))
+            data_dfs.append(day_df)
 
         shutil.rmtree(path)
 
