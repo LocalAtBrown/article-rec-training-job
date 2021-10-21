@@ -11,7 +11,7 @@ from progressbar import ProgressBar
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 from lib.bucket import save_outputs
-from sites.sites import Site
+from sites.site import Site
 
 
 def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
