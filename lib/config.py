@@ -10,7 +10,6 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 
 STAGE = os.environ["STAGE"]
-SITE = os.environ.get("SITE")
 REGION = os.getenv("REGION", "us-east-1")
 ROOT_DIR = str(Path(__file__).parent.parent.resolve())
 INPUT_FILEPATH = f"{ROOT_DIR}/env.json"
@@ -45,9 +44,13 @@ class Config:
             raise TypeError(f"Variable {var_name} not found in config")
 
         return val
-    
+
     def site(self) -> Site:
-        return self._config["SITE"]
+        sitename = os.getenv("SITE", self.get("DEFAULT_SITE"))
+        site = Sites.mapping.get(sitename)
+        if site is None:
+            raise Exception(f"Could not find site {sitename} in sites.py")
+        return site
 
     def load_env(self):
         """
@@ -82,13 +85,6 @@ class Config:
                     )
 
             config[var_name] = val
-
-        sitename = SITE or config['DEFAULT_SITE']
-        site = Sites.mapping.get(sitename)
-        if site is None:
-            raise Exception(f"Could not find site {sitename} in sites.py")
-        logging.info(f"Using site {sitename}")
-        config['SITE'] = site
 
         return config
 

@@ -6,19 +6,22 @@ const DEFAULT_MEM = 8192;
 export const partners: Array<Organization> = [
   {
     orgName: "washington-city-paper",
+    pascalName: "WashingtonCityPaper",
     cpu: DEFAULT_CPU,
     memoryLimitMiB: DEFAULT_MEM,
     enabled: true,
   },
   {
     orgName: "philadelphia-inquirer",
+    pascalName: "PhiladelphiaInquirer",
     cpu: DEFAULT_CPU,
     memoryLimitMiB: DEFAULT_MEM,
     enabled: false,
   },
   {
     orgName: "texas-tribune",
-    cpu: DEFAULT_CPU,
+    pascalName: "TexasTribune",
+    shorthand: "texas-tribune",
     memoryLimitMiB: DEFAULT_MEM,
     enabled: false,
   },

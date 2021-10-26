@@ -27,8 +27,7 @@ function getCron(stage: helpers.STAGE, index: number) {
   // In prod, run the job once every 2 hours.
   // Offset the jobs evenly across 1 hour.
   // Cron makes it really hard to do more complicated scheduling than that
-  let interval = Math.floor(60 / n)
-  let offset = interval * index 
+  let offset = Math.floor(60 / n) * index
 
   return {
     minute: `${offset}`,
@@ -94,8 +93,8 @@ export class AppStack extends cdk.Stack {
 
     // find more cpu and memory options for fargate here:
     // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
-    let cpu = props.site.cpu
-    let memoryLimitMiB = props.site.memoryLimitMiB
+    const cpu = props.site.cpu
+    const memoryLimitMiB = props.site.memoryLimitMiB
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, {
       taskRole,

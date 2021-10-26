@@ -19,12 +19,14 @@ export enum STAGE {
 /**
  * @description Organization interface
  * @param {string} orgName hyphenated snake case organization name
+ * @param {string} pascalName pascal case organization name
  * @param {number} cpu mCPUs for the training job
  * @param {number} memoryLimitMiB max memory for the training job
  * @param {boolean} enabled is the job enabled?
  */
 export interface Organization {
-  orgName: string
+  orgName: string,
+  pascalName: string,
   cpu: number,
   memoryLimitMiB: number,
   enabled: boolean,

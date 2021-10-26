@@ -3,7 +3,7 @@ import 'source-map-support/register';
 import * as cdk from '@aws-cdk/core';
 import { AppStack } from "../lib/app-stack";
 import { PipelineStack } from "../lib/pipeline-stack";
-import { STAGE, Organization, Status } from "../lib/helpers";
+import { STAGE, Organization } from "../lib/helpers";
 import { partners } from "../lib/partners";
 
 const app = new cdk.App();
@@ -30,15 +30,14 @@ function getAppStackId(
 }
 
 
-let i = 0;
-for (const partner of partners.filter(p => p.enabled)) {
-  for (const stage of [STAGE.PRODUCTION, STAGE.DEVELOPMENT]) {
+// Create a new app stack for every enabled partner and STAGE combination
+for (const stage of [STAGE.PRODUCTION, STAGE.DEVELOPMENT]) {
+  for (const [i, partner] of partners.filter(p => p.enabled).entries()) {
     new AppStack(app, getAppStackId(partner, stage, appStackName), {
       env,
       site: partner,
       stage: stage,
       index: i,
     });
-    i++;
   }
 }
