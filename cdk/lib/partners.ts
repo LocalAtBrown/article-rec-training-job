@@ -21,7 +21,7 @@ export const partners: Array<Organization> = [
   {
     orgName: "texas-tribune",
     pascalName: "TexasTribune",
-    shorthand: "texas-tribune",
+    cpu: DEFAULT_CPU,
     memoryLimitMiB: DEFAULT_MEM,
     enabled: false,
   },

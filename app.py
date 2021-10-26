@@ -8,6 +8,4 @@ if __name__ == "__main__":
     log_level = config.get("LOG_LEVEL")
     logging.getLogger().setLevel(logging.getLevelName(log_level))
 
-    site = config.site()
-
-    job.run(site)
+    job.run()

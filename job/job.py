@@ -15,12 +15,14 @@ from job.steps import (
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
-from sites.site import Site
+from lib.config import config
 from sites.sites import Sites
 
 
-def run(site: Site):
+def run():
     logging.info("Running job...")
+
+    site = config.site()
     logging.info(f"Using site {site.name}")
 
     start_ts = time.time()
@@ -66,7 +68,7 @@ def run(site: Site):
         set_current_model(model_id, Type.ARTICLE.value)
 
         if site == Sites.WCP:
-            evaluate_module.evaluate_module(days=1)
+            evaluate_module.evaluate_module(site, days=1)
         delete_old_models.delete_old_models()
     except Exception:
         logging.exception("Job failed")
