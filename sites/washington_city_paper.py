@@ -10,10 +10,8 @@ from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
 
 
-
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
-S3_BUCKET = "lnl-snowplow-washington-city-paper"
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
@@ -115,4 +113,5 @@ def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str
 
     return page, soup, error_msg
 
-WCP_SITE = Site(NAME, S3_BUCKET, extract_external_id, scrape_article_metadata, validate_article)
+
+WCP_SITE = Site(NAME, extract_external_id, scrape_article_metadata, validate_article)

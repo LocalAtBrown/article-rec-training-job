@@ -16,6 +16,7 @@ from lib.bucket import list_objects
 from lib.metrics import write_metric, Unit
 
 from job.steps.preprocess import preprocess_day
+from sites.site import get_bucket_name
 
 DAYS_OF_DATA = config.get("DAYS_OF_DATA")
 SITE = config.site()
@@ -72,7 +73,7 @@ def retry_s3_select(
     if not os.path.isdir(path):
         os.makedirs(path)
     local_filename = f"{path}/tmp.json"
-    event_stream = s3_select(SITE.s3_bucket, object_key, fields)
+    event_stream = s3_select(get_bucket_name(SITE), object_key, fields)
 
     try:
         event_stream_to_file(event_stream, local_filename)
@@ -107,7 +108,7 @@ def fetch_data(
         month = pad_date(dt.month)
         day = pad_date(dt.day)
         prefix = f"enriched/good/{dt.year}/{month}/{day}"
-        args = f"aws s3 sync s3://{SITE.s3_bucket}/{prefix} {path}".split(" ")
+        args = f"aws s3 sync s3://{get_bucket_name(SITE)}/{prefix} {path}".split(" ")
         subprocess.call(args)
 
         dfs_for_day = []
