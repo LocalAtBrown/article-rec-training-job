@@ -10,7 +10,7 @@ import { makeCDKDeployProject } from "./helpers";
 // https://docs.aws.amazon.com/cdk/api/latest/docs/aws-codestarconnections-readme.html
 
 export interface PipelineStackProps extends cdk.StackProps {
-  readonly appStackName: string;
+  readonly appStackNames: Array<string>;
   // TODO: revisit simplifying this structure to optimize for the usual usecase..
   // i.e. just specifying repoName
   readonly repo: {
@@ -25,6 +25,14 @@ export class PipelineStack extends cdk.Stack {
     super(scope, id, props);
 
     const sourceOutput = new codepipeline.Artifact();
+
+    const deployActions = props.appStackNames.map(
+      name => new codepipeline_actions.CodeBuildAction({
+          actionName: "CDKDeploy",
+          project: makeCDKDeployProject(this, name),
+          input: sourceOutput,
+        })
+    )
 
     new codepipeline.Pipeline(this, "Pipeline", {
       crossAccountKeys: false,
@@ -50,13 +58,7 @@ export class PipelineStack extends cdk.Stack {
         },
         {
           stageName: "Deploy",
-          actions: [
-            new codepipeline_actions.CodeBuildAction({
-              actionName: "CDKDeploy",
-              project: makeCDKDeployProject(this, props.appStackName),
-              input: sourceOutput,
-            }),
-          ],
+          actions: deployActions,
         },
       ],
     });

@@ -9,31 +9,33 @@ import { partners } from "../lib/partners";
 const app = new cdk.App();
 const env = { account: "348955818350", region: "us-east-1" };
 const repoName = "article-rec-training-job";
-const appStackName = "ArticleRecTrainingJob";
+const baseAppStackName = "ArticleRecTrainingJob";
 
-new PipelineStack(app, `${appStackName}Pipeline`, {
-  ...env,
-  repo: { name: repoName },
-  appStackName: appStackName,
-});
+
 
 function getAppStackId(
     partner: Organization, 
     stage: STAGE, 
-    baseName: string,
 ) {
     let prefix = ''
     if (stage == STAGE.DEVELOPMENT) {
         prefix = 'Dev'
     }
-    return prefix + partner.pascalName + baseName
+    return prefix + partner.pascalName + baseAppStackName
 }
 
+const activePartners = partners.filter(p => p.enabled)
+
+new PipelineStack(app, `${baseAppStackName}Pipeline`, {
+  ...env,
+  repo: { name: repoName },
+  appStackNames: activePartners.map(p => getAppStackId(p, STAGE.PRODUCTION)),
+});
 
 // Create a new app stack for every enabled partner and STAGE combination
 for (const stage of [STAGE.PRODUCTION, STAGE.DEVELOPMENT]) {
-  for (const [i, partner] of partners.filter(p => p.enabled).entries()) {
-    new AppStack(app, getAppStackId(partner, stage, appStackName), {
+  for (const [i, partner] of activePartners.entries()) {
+    new AppStack(app, getAppStackId(partner, stage), {
       env,
       site: partner,
       stage: stage,
