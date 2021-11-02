@@ -18,11 +18,12 @@ from lib.metrics import write_metric, Unit
 from sites.sites import Sites
 
 
-def evaluate_module(days=1):
+def evaluate_module(site, days=1):
     """
     Evaluate module over the last "days" days.
     :param days: number of days to evaluate module over
     """
+    assert site == Sites.WCP
 
     # Schemas can be found here:
     # https://github.com/LocalAtBrown/snowplow-analytics/tree/main/lib/5-iglu/static-registry/schemas/com.washingtoncitypaper
@@ -37,7 +38,10 @@ def evaluate_module(days=1):
         "contexts_io_localnewslab_article_recommendation_1",
     ]
     data_df = fetch_data(
-        fields=evaluation_fields, days=days + 1, transformer=transform_evaluation_data
+        site,
+        fields=evaluation_fields,
+        days=days + 1,
+        transformer=transform_evaluation_data,
     )
     data_df = data_df.sort_values(by=["client_id", "activity_time"])
     data_df["last_click_source"] = data_df.groupby(["client_id"])[

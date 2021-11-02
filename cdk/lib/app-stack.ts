@@ -3,12 +3,36 @@ import * as ecs from "@aws-cdk/aws-ecs";
 import * as ec2 from "@aws-cdk/aws-ec2";
 import * as iam from "@aws-cdk/aws-iam";
 import * as helpers from "./helpers";
+import { partners } from "./partners";
 import { Schedule } from "@aws-cdk/aws-events";
 import { ScheduledFargateTask } from "@aws-cdk/aws-ecs-patterns";
 
 // TODO this needs to be propagated to the tags
 export interface AppStackProps extends cdk.StackProps {
   stage: helpers.STAGE;
+  site: helpers.Organization;
+  index: number;
+}
+
+function getCron(stage: helpers.STAGE, index: number) {
+  let n = partners.filter(f => f.enabled).length
+  if (stage == helpers.STAGE.DEVELOPMENT) {
+    // Development job runs once per day
+    // Offset each development job by 1 hour. 
+    return {
+      hour: `${index % 24}`,
+      minute: '0',
+    }
+  }
+  // In prod, run the job once every 2 hours.
+  // Offset the jobs evenly across 1 hour.
+  // Cron makes it really hard to do more complicated scheduling than that
+  let offset = Math.floor(60 / n) * index
+
+  return {
+    minute: `${offset}`,
+    hour: '0,2,4,6,8,10,12,14,16,18,20,22',
+  }
 }
 
 export class AppStack extends cdk.Stack {
@@ -63,17 +87,14 @@ export class AppStack extends cdk.Stack {
     const vpc = helpers.getVPC(this, props.stage);
     const { cluster } = helpers.getECSCluster(this, props.stage, vpc);
 
-    const dbName = 'ArticleRecDB';
-    const secretName = `/${props.stage}/article-rec-training-job/db-password`;
-
     const image = ecs.ContainerImage.fromAsset("../", {
       extraHash: Date.now().toString(),
     });
 
     // find more cpu and memory options for fargate here:
     // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
-    const cpu = 2048;
-    const memoryLimitMiB = 8192;
+    const cpu = props.site.cpu
+    const memoryLimitMiB = props.site.memoryLimitMiB
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, `${id}TaskDefinition`, {
       taskRole,
@@ -88,6 +109,7 @@ export class AppStack extends cdk.Stack {
        environment: {
           STAGE: props.stage,
           REGION: props.env?.region || 'us-east-1',
+          SITE: props.site.orgName
         },
         cpu,
         memoryLimitMiB,
@@ -97,12 +119,10 @@ export class AppStack extends cdk.Stack {
         })
     });
 
-    const rate = props.stage == helpers.STAGE.PRODUCTION ? cdk.Duration.hours(2) : cdk.Duration.days(1);
-
     new ScheduledFargateTask(this, `${id}ScheduledFargateTask`, {
       // find more cron scheduling options here:
       // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-events.CronOptions.html
-      schedule: Schedule.rate(rate),
+      schedule: Schedule.cron(getCron(props.stage, props.index)),
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },

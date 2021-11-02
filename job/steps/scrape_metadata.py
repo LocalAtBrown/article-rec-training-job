@@ -13,7 +13,7 @@ from db.mappings.article import Article
 from db.helpers import (
     get_articles_by_external_ids,
 )
-from sites.sites import Site
+from sites.site import Site
 from sites.helpers import ArticleScrapingError
 from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit

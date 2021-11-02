@@ -9,7 +9,7 @@ from db.mappings.article import Article
 from db.mappings.recommendation import Rec
 from db.mappings.base import db_proxy
 
-from sites.sites import Site
+from sites.site import Site
 
 
 def create_model(**params: dict) -> int:

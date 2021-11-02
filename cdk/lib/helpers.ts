@@ -16,6 +16,23 @@ export enum STAGE {
 }
 
 
+/**
+ * @description Organization interface
+ * @param {string} orgName hyphenated snake case organization name
+ * @param {string} pascalName pascal case organization name
+ * @param {number} cpu vCPUs for the training job
+ * @param {number} memoryLimitMiB max memory for the training job
+ * @param {boolean} enabled is the job enabled?
+ */
+export interface Organization {
+  orgName: string,
+  pascalName: string,
+  cpu: number,
+  memoryLimitMiB: number,
+  enabled: boolean,
+}
+
+
 export function getVPC(scope: cdk.Construct, stage: STAGE) {
   const resourcePrefix = titleCase(stage);
   const vpcName = `infrastructure/${resourcePrefix}PublicVPC`;

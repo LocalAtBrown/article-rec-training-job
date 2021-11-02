@@ -7,6 +7,7 @@ from requests.models import Response
 from bs4 import BeautifulSoup
 
 from sites.helpers import safe_get, ArticleScrapingError
+from sites.site import Site
 
 
 DOMAIN = "washingtoncitypaper.com"
@@ -111,3 +112,6 @@ def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str
             break
 
     return page, soup, error_msg
+
+
+WCP_SITE = Site(NAME, extract_external_id, scrape_article_metadata, validate_article)

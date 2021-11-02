@@ -14,12 +14,17 @@ from job.steps import (
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
-from sites.sites import Sites
 from lib.metrics import write_metric, Unit
+from lib.config import config
+from sites.sites import Sites
 
 
 def run():
     logging.info("Running job...")
+
+    site = config.site()
+    logging.info(f"Using site {site.name}")
+
     start_ts = time.time()
     status = "success"
 
@@ -28,11 +33,11 @@ def run():
         logging.info(f"Created model with id {model_id}")
         EXPERIMENT_DT = datetime.datetime.now()
 
-        data_df = fetch_data.fetch_data(EXPERIMENT_DT)
-        data_df = preprocess.extract_external_ids(Sites.WCP, data_df)
+        data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
+        data_df = preprocess.extract_external_ids(site, data_df)
 
         article_df = scrape_metadata.scrape_metadata(
-            Sites.WCP, list(data_df.external_id.unique())
+            site, list(data_df.external_id.unique())
         )
 
         data_df = data_df.join(
@@ -45,7 +50,6 @@ def run():
         article_df = article_df.reset_index()
         save_defaults.save_defaults(data_df, article_df)
 
-        EXPERIMENT_DATE = datetime.date.today()
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
             data_df, date_list=[EXPERIMENT_DT.date()], half_life=59.631698
@@ -57,14 +61,14 @@ def run():
         # External IDs to map articles back to
         external_article_ids = formatted_df.columns
         external_article_ids = external_article_ids.astype("int32")
-        external_user_ids = formatted_df.index
 
         save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df
         )
         set_current_model(model_id, Type.ARTICLE.value)
 
-        evaluate_module.evaluate_module(days=1)
+        if site == Sites.WCP:
+            evaluate_module.evaluate_module(site, days=1)
         delete_old_models.delete_old_models()
     except Exception:
         logging.exception("Job failed")

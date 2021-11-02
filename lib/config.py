@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import logging
 from typing import Any
+from sites.sites import Sites
+from sites.site import Site
 
 import boto3
 from botocore.exceptions import NoCredentialsError
@@ -43,6 +45,13 @@ class Config:
 
         return val
 
+    def site(self) -> Site:
+        sitename = os.getenv("SITE", self.get("DEFAULT_SITE"))
+        site = Sites.mapping.get(sitename)
+        if site is None:
+            raise Exception(f"Could not find site {sitename} in sites.py")
+        return site
+
     def load_env(self):
         """
         Loads the following parameters from "env.json":
@@ -52,7 +61,7 @@ class Config:
         * `DB_PASSWORD` (str): path to the database password secret (_e.g. "/dev/database/password"_)
         * `DB_USER` (str): path to the database user secret (_e.g. "/dev/database/user"_)
         * `DB_HOST` (str): path to the database host screw (_e.g. "/dev/database/host"_)
-        * `GA_DATA_BUCKET` (str): bucket where analytics data is being stored (_e.g. "lnl-snowplow-washington-city-paper"_)
+        * `DEFAULT SITE` (str): default site name, override with environment variable SITE (_e.g. "washington-city-paper"_)
         * `SAVE_FIGURES` (boolean):  whether or not to output a figure at the filter users step (_e.g. false_)
         * `DISPLAY_PROGRESS` (boolean): whether or not to display training progress in logs (_e.g. false_)
         * `MAX_RECS` (int): How many recommendations to save to the database for each article (_e.g. 20_)
