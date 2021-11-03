@@ -9,7 +9,6 @@ from job.steps import (
     save_defaults,
     train_model,
     save_predictions,
-    evaluate_module,
     delete_old_models,
 )
 from db.mappings.model import Type
@@ -67,8 +66,6 @@ def run():
         )
         set_current_model(model_id, Type.ARTICLE.value)
 
-        if site == Sites.WCP:
-            evaluate_module.evaluate_module(site, days=1)
         delete_old_models.delete_old_models()
     except Exception:
         logging.exception("Job failed")
