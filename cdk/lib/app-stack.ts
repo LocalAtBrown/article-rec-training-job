@@ -12,6 +12,7 @@ export interface AppStackProps extends cdk.StackProps {
   stage: helpers.STAGE;
   site: helpers.Organization;
   index: number;
+  logPrefix: string;
 }
 
 function getCron(stage: helpers.STAGE, index: number) {
@@ -114,7 +115,7 @@ export class AppStack extends cdk.Stack {
         cpu,
         memoryLimitMiB,
         logging: ecs.LogDriver.awsLogs({
-          streamPrefix: id,
+          streamPrefix: props.logPrefix,
           logRetention: 30,
         })
     });

@@ -11,7 +11,15 @@ const env = { account: "348955818350", region: "us-east-1" };
 const repoName = "article-rec-training-job";
 const baseAppStackName = "ArticleRecTrainingJob";
 
-
+function getLoggingPrefix(
+  stage: STAGE,
+) {
+    let prefix = ''
+    if (stage == STAGE.DEVELOPMENT) {
+        prefix = 'Dev'
+    }
+    return prefix + baseAppStackName
+}
 
 function getAppStackId(
     partner: Organization, 
@@ -40,6 +48,7 @@ for (const stage of [STAGE.PRODUCTION, STAGE.DEVELOPMENT]) {
       site: partner,
       stage: stage,
       index: i,
+      logPrefix: getLoggingPrefix(stage),
     });
   }
 }
