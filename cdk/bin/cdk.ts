@@ -11,7 +11,7 @@ const env = { account: "348955818350", region: "us-east-1" };
 const repoName = "article-rec-training-job";
 const baseAppStackName = "ArticleRecTrainingJob";
 
-function getLoggingPrefix(
+function getLogGroup(
   stage: STAGE,
 ) {
     let prefix = ''
@@ -48,7 +48,7 @@ for (const stage of [STAGE.PRODUCTION, STAGE.DEVELOPMENT]) {
       site: partner,
       stage: stage,
       index: i,
-      logPrefix: getLoggingPrefix(stage),
+      logGroup: getLogGroup(stage),
     });
   }
 }
