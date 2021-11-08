@@ -116,9 +116,10 @@ export class AppStack extends cdk.Stack {
         cpu,
         memoryLimitMiB,
         logging: ecs.LogDriver.awsLogs({
-          logGroup: new LogGroup(scope, props.logGroup),
+          logGroup: new LogGroup(this, props.logGroup, {
+            retention: 30,
+          }),
           streamPrefix: id,
-          logRetention: 30,
         })
     });
 
