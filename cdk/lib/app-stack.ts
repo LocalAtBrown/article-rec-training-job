@@ -6,14 +6,14 @@ import * as helpers from "./helpers";
 import { partners } from "./partners";
 import { Schedule } from "@aws-cdk/aws-events";
 import { ScheduledFargateTask } from "@aws-cdk/aws-ecs-patterns";
-import { LogGroup } from "@aws-cdk/aws-logs";
+import { LogGroup, ILogGroup } from "@aws-cdk/aws-logs";
 
 // TODO this needs to be propagated to the tags
 export interface AppStackProps extends cdk.StackProps {
   stage: helpers.STAGE;
   site: helpers.Organization;
   index: number;
-  logGroup: string;
+  logGroup: ILogGroup;
 }
 
 function getCron(stage: helpers.STAGE, index: number) {
@@ -116,9 +116,7 @@ export class AppStack extends cdk.Stack {
         cpu,
         memoryLimitMiB,
         logging: ecs.LogDriver.awsLogs({
-          logGroup: new LogGroup(this, props.logGroup, {
-            retention: 30,
-          }),
+          logGroup: props.logGroup,
           streamPrefix: id,
         })
     });

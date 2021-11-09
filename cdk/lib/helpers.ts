@@ -9,10 +9,24 @@ import { Schedule } from "@aws-cdk/aws-events";
 import * as logs from "@aws-cdk/aws-logs";
 import { Secret } from "@aws-cdk/aws-secretsmanager";
 
+export const baseAppStackName = "ArticleRecTrainingJob";
 
 export enum STAGE {
   PRODUCTION = "prod",
   DEVELOPMENT = "dev",
+}
+
+export enum RESOURCE {
+  CENTRAL_RESOURCES_STACK = "CentralResourcesStack",
+  LOG_GROUP = "LogGroup"
+}
+
+export function getResourceName(stage: STAGE, resource: RESOURCE): string {
+  let prefix = ''
+  if (stage == STAGE.DEVELOPMENT) {
+    prefix = 'Dev'
+  }
+  return prefix + baseAppStackName + resource
 }
 
 
