@@ -21,7 +21,6 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     :param df: Raw dataFrame of activities collected from Snowplow for one day
     :return: df with initial preprocessing steps completed
     """
-    df = filter_emailnewsletter(df)
     df = time_activities(df)
     return df
 
@@ -47,12 +46,6 @@ def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
     return data_df
 
 
-def filter_emailnewsletter(data_df: pd.DataFrame) -> pd.DataFrame:
-    filtered_df = data_df[data_df.landing_page_path.notna()]
-    filtered_df = filtered_df[
-        filtered_df.landing_page_path.apply(lambda x: "emailnewsletter" not in x)
-    ]
-    return filtered_df
 
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:

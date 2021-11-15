@@ -205,18 +205,6 @@ def _test_time_decay(time_df):
     return exp_time_df
 
 
-def _test_filter_emailnewsletter(activity_df):
-    no_newsletter_df = filter_emailnewsletter(activity_df)
-    assert len(no_newsletter_df) < len(activity_df)
-    not_newsletters = sum(
-        activity_df.landing_page_path.apply(lambda x: "emailnewsletter" not in x)
-    )
-    assert len(no_newsletter_df) == not_newsletters
-    assert (
-        no_newsletter_df.landing_page_path.apply(lambda x: "emailnewsletter" not in x)
-    ).all()
-    return no_newsletter_df
-
 
 def _test_filter_users(activity_df):
     returning_user_df = filter_flyby_users(activity_df)
@@ -241,8 +229,7 @@ def _test_filter_articles(activity_df):
 
 
 def test_pipeline(activity_df):
-    no_newsletter_df = _test_filter_emailnewsletter(activity_df)
-    returning_user_df = _test_filter_users(no_newsletter_df)
+    returning_user_df = _test_filter_users(activity_df)
     top_article_df = _test_filter_articles(returning_user_df)
     clean_df = _test_fix_dtypes(top_article_df)
     sorted_df = _test_time_activities(clean_df)
