@@ -21,7 +21,6 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     :param df: Raw dataFrame of activities collected from Snowplow for one day
     :return: df with initial preprocessing steps completed
     """
-    df = filter_emailnewsletter(df)
     df = time_activities(df)
     return df
 
