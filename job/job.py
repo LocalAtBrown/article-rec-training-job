@@ -10,6 +10,7 @@ from job.steps import (
     train_model,
     save_predictions,
     delete_old_models,
+    warehouse,
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
@@ -42,6 +43,8 @@ def run():
         data_df = data_df.join(
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
+
+        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
