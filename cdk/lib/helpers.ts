@@ -149,11 +149,10 @@ export function makeBucket(
 
 export function makeCDKDeployProject(
   scope: cdk.Construct,
-  appStackName: string
+  appStackName: string,
+  role: iam.IRole
 ) {
 
-  const roleArn = cdk.Fn.importValue("CodeBuildCdkDeployRole-arn");
-  const role = iam.Role.fromRoleArn(scope, "CodeBuildCdkDeployRole", roleArn);
 
   return new codebuild.PipelineProject(scope, `${appStackName}CDKDeploy`, {
     role,

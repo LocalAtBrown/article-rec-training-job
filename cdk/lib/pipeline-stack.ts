@@ -1,5 +1,6 @@
 import * as cdk from "@aws-cdk/core";
 import * as codebuild from "@aws-cdk/aws-codebuild";
+import * as iam from "@aws-cdk/aws-iam";
 import * as codepipeline from "@aws-cdk/aws-codepipeline";
 import * as codepipeline_actions from "@aws-cdk/aws-codepipeline-actions";
 import { makeCDKDeployProject } from "./helpers";
@@ -26,10 +27,13 @@ export class PipelineStack extends cdk.Stack {
 
     const sourceOutput = new codepipeline.Artifact();
 
+    const roleArn = cdk.Fn.importValue("CodeBuildCdkDeployRole-arn");
+    const role = iam.Role.fromRoleArn(this, "CodeBuildCdkDeployRole", roleArn);
+
     const deployActions = props.appStackNames.map(
       name => new codepipeline_actions.CodeBuildAction({
-          actionName: "CDKDeploy",
-          project: makeCDKDeployProject(this, name),
+          actionName: "CDKDeploy" + name,
+          project: makeCDKDeployProject(this, name, role),
           input: sourceOutput,
         })
     )
