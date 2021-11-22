@@ -1,5 +1,5 @@
 -e file:.#egg=lib
-awscli==1.18.155
+awscli
 boto3
 peewee
 psycopg2-binary
@@ -12,3 +12,4 @@ pytest
 scipy
 progressbar2
 scikit-learn
+redshift-connector
