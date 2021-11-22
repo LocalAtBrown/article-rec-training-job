@@ -26,6 +26,31 @@ FIELDS = [
 ]
 s3 = boto3.client("s3")
 
+def transform_raw_data_TT(df: pd.DataFrame) -> pd.DataFrame:
+    """
+        requires a dataframe with the following fields:
+                - domain_userid
+                    - collector_tstamp
+                        - page_urlpath
+    returns a dataframe with the following fields:
+        - client_id
+            - session_date
+                - activity_time
+                    - landing_page_path
+                        - event_category (conversions, newsletter sign-ups TK)
+                            - event_action (conversions, newsletter sign-ups TK)
+    """
+    transformed_df = pd.DataFrame()
+    transformed_df["client_id"] = df['domain_userid']
+    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
+    transformed_df["session_date"] = pd.to_datetime(transformed_df.activity_time.dt.date)
+    transformed_df["landing_page_path"] = df.page_urlpath
+    transformed_df["event_category"] = "snowplow_amp_page_ping"
+    transformed_df["event_category"] = transformed_df["event_category"].astype("category")
+    transformed_df["event_action"] = "impression"
+    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
+
+    return transformed_df
 
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -95,13 +120,14 @@ def fetch_data(
     experiment_dt: datetime.datetime = None,
     days: int = DAYS_OF_DATA,
     fields: List[str] = FIELDS,
-    transformer: Callable = transform_raw_data,
+    transformer: Callable = transform_raw_data_TT,
 ) -> pd.DataFrame:
     start_ts = time.time()
     dt = experiment_dt or datetime.datetime.now()
     data_dfs = []
     path = "/downloads"
-
+    days = 1
+    fields = site.FIELDS
     for _ in range(days):
         if not os.path.isdir(path):
             os.makedirs(path)
@@ -115,13 +141,16 @@ def fetch_data(
         dfs_for_day = []
 
         for full_path, _, files in os.walk(path):
-
+             
             for filename in files:
                 file_path = os.path.join(full_path, filename)
                 tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
+                
                 common_fields = list(set(tmp_df.columns) & set(fields))
                 try:
                     df = transformer(tmp_df[common_fields])
+                    
+                    
                 except TypeError:
                     logging.exception(
                         f"Unexpected format. Can't transform data for {prefix}"
@@ -132,15 +161,15 @@ def fetch_data(
                     dfs_for_day.append(df)
 
         if dfs_for_day:
-            day_df = preprocess_day(pd.concat(dfs_for_day))
-            data_dfs.append(day_df)
+           day_df = preprocess_day(pd.concat(dfs_for_day))
+           data_dfs.append(day_df)
 
         shutil.rmtree(path)
 
         dt = dt - datetime.timedelta(days=1)
 
     data_df = pd.concat(data_dfs)
-
+    
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)
