@@ -29,8 +29,6 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
     df = df[["duration", "session_date", "client_id", "article_id", "site"]].copy()
     df = set_dwell_seconds(df)
 
-    import pdb
-
     conn = rc.connect(
         host=config.get("REDSHIFT_DB_HOST"),
         database=config.get("REDSHIFT_DB_NAME"),
