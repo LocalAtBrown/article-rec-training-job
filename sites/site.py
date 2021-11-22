@@ -4,6 +4,7 @@ Site = namedtuple(
     "Site",
     [
         "name",
+        "FIELDS",
         "extract_external_id",
         "scrape_article_metadata",
         "validate_article",

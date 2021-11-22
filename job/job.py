@@ -23,6 +23,7 @@ def run():
     logging.info("Running job...")
 
     site = config.site()
+    print(f"site name: {site.name}")
     logging.info(f"Using site {site.name}")
 
     start_ts = time.time()
@@ -34,7 +35,9 @@ def run():
         EXPERIMENT_DT = datetime.datetime.now()
 
         data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
-        data_df = preprocess.extract_external_ids(site, data_df)
+        print("df shape before external id: ", data_df.iloc[0:10].shape)
+        data_df = preprocess.extract_external_ids(site, data_df.iloc[0:10])
+        print("df shape after external id: ", data_df.shape)
 
         article_df = scrape_metadata.scrape_metadata(
             site, list(data_df.external_id.unique())
@@ -48,7 +51,6 @@ def run():
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
-
         article_df = article_df.reset_index()
         save_defaults.save_defaults(data_df, article_df, site.name)
 
@@ -73,5 +75,6 @@ def run():
         logging.exception("Job failed")
         status = "failure"
 
-    latency = time.time() - start_ts
-    write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
+
+#   latency = time.time() - start_ts
+#  write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})

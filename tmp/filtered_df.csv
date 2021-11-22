@@ -1,0 +1,8 @@
+,client_id,external_id,event_category,event_action,session_date,activity_time,duration
+0,client.a,123,snowplow_amp_page_ping,impression,2021-09-08 00:00:00.000000,2021-09-08 17:28:14.862763,0 days 00:02:00.000021
+1,client.a,123,snowplow_amp_page_ping,impression,2021-09-08 00:00:00.000000,2021-09-08 17:30:14.862784,0 days 00:00:00.000110
+7,client.a,456,snowplow_amp_page_ping,impression,2021-09-08 00:00:00.000000,2021-09-08 17:30:14.862894,0 days 00:00:30.000022
+2,client.b,123,snowplow_amp_page_ping,impression,2021-09-08 00:00:00.000000,2021-09-08 17:28:14.862801,0 days 00:02:00.000019
+3,client.b,123,snowplow_amp_page_ping,impression,2021-09-08 00:00:00.000000,2021-09-08 17:30:14.862820,0 days 00:00:00.000019
+4,client.b,456,snowplow_amp_page_ping,impression,2021-09-08 00:00:00.000000,2021-09-08 17:30:14.862839,0 days 00:00:30.000014
+5,client.b,456,snowplow_amp_page_ping,impression,2021-09-08 00:00:00.000000,2021-09-08 17:30:44.862853,0 days 00:00:30.000019
