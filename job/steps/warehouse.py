@@ -1,11 +1,13 @@
-import numpy as np
 import logging
-import pandas as pd
 import datetime
+import os
+
+import pandas as pd
+import numpy as np
+import redshift_connector as rc
+
 from sites.site import Site
 from lib.config import config
-import os
-import redshift_connector as rc
 
 
 def get_table(table):
