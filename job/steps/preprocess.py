@@ -7,12 +7,13 @@ import pandas as pd
 from datetime import timezone
 from itertools import product
 from progressbar import ProgressBar
-
+from typing import List, Tuple, Optional
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 from lib.bucket import save_outputs
 from sites.site import Site
-
+from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
 
 def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -24,26 +25,43 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     df = time_activities(df)
     return df
 
+#@lru_cache(maxsize=None)
+def extract_external_id(site: Site, path: str) -> int:
+    return site.extract_external_id(path)
 
-def extract_external_id(site: Site, data_row: pd.Series) -> int:
-    return site.extract_external_id(data_row["landing_page_path"])
 
-
-def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
+def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Snowplow.
         * Requisite fields: "landing_page_path" (str)
     :return: data_df with "external_id" column added
     """
-    data_df["external_id"] = data_df.apply(
-        lambda x: extract_external_id(site, x), axis=1
-    )
 
-    # drop non-article pages (ie vertical pages like "/news" and "/coronavirus")
-    data_df = data_df.dropna(subset=["external_id"])
+    #taking list of unique landing page paths because only one article will have one contentid no matter which user clicks on it
 
-    data_df["external_id"] = data_df["external_id"].apply(np.int32)
-    return data_df
+    
+    # running it parallely like done in the scrape_articles
+    futures_list = []
+    results = []
+    print(len(landing_page_paths))
+    with ThreadPoolExecutor() as executor:
+        for path in landing_page_paths:
+            future = executor.submit(extract_external_id, site, path=path)
+            futures_list.append(future)
+        for future in futures_list:
+            try:
+                result = future.result(timeout=60)
+                results.append(result)
+            except: 
+                pass
+
+    print(len(results))
+    df_data = {"landing_page_path":landing_page_paths, "external_id": results}
+    external_id_df = pd.DataFrame(df_data)
+    external_id_df = external_id_df.dropna(subset=["external_id"])
+    external_id_df["external_id"] = external_id_df["external_id"].apply(np.int32)
+
+    return external_id_df
 
 
 

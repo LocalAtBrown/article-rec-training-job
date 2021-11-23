@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
-
+import pandas as pd
 
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
@@ -19,8 +19,31 @@ FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
 
 # /2021/09/10/texas-abortion-law-ban-enforcement/
 
-#PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
-#PATH_PROG = re.compile(PATH_PATTERN)
+def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
+    """
+        requires a dataframe with the following fields:
+                - domain_userid
+                    - collector_tstamp
+                        - page_urlpath
+    returns a dataframe with the following fields:
+        - client_id
+            - session_date
+                - activity_time
+                    - landing_page_path
+                        - event_category (conversions, newsletter sign-ups TK)
+                            - event_action (conversions, newsletter sign-ups TK)
+    """
+    transformed_df = pd.DataFrame()
+    transformed_df["client_id"] = df['domain_userid']
+    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
+    transformed_df["session_date"] = pd.to_datetime(transformed_df.activity_time.dt.date)
+    transformed_df["landing_page_path"] = df.page_urlpath
+    transformed_df["event_category"] = "snowplow_amp_page_ping"
+    transformed_df["event_category"] = transformed_df["event_category"].astype("category")
+    transformed_df["event_action"] = "impression"
+    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
+
+    return transformed_df
 
 
 def extract_external_id(path: str) -> int:
@@ -45,19 +68,19 @@ def extract_external_id(path: str) -> int:
     else:
         None
 
-def scrape_title(page: Response, soup: BeautifulSoup) -> str:
-    api_info = page.json()
+def scrape_title(res: Response) -> str:
+    api_info = res.json()
     headers = api_info['headline']
     return headers
 
 
-def scrape_published_at(page: Response, soup: BeautifulSoup) -> str:
+def scrape_published_at(res: Response) -> str:
     # example published_at: '2021-11-12T12:45:35-06:00'
-    api_info=page.json()
+    api_info=res.json()
     pub_date = api_info['pub_date']
     return pub_date
 
-def scrape_path(page: Response, soup: BeautifulSoup) -> str:
+def scrape_path(page: Response) -> str:
     # there are times when older articles redirect to an alternate path, for ex:
     # https://washingtoncitypaper.com/food/article/20830693/awardwinning-chef-michel-richard-dies-at-age-68
     return urlparse(page.url).path
@@ -75,7 +98,7 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
 
     for prop, func in scraper_funcs:
         try:
-            val = func(page, soup)
+            val = func(page)
         except Exception as e:
             msg = f"Error scraping {prop} for article url: {page.url}"
             logging.exception(msg)
@@ -85,27 +108,12 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
     return metadata
 
 
-# TODO move all validation logic to separate file
-def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
-    error_msg = None
-    primary = soup.find(id="primary")
-
-    if not primary:
-        # non-article page
-        return error_msg
-
-    classes = {
-        value for element in primary.find_all(class_=True) for value in element["class"]
-    }
-
-    if "tag-exclude" in classes:
-        error_msg = "Article has exclude tag"
-
-    return error_msg
 
 
 def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str]):
-   # url = f"https://{DOMAIN}/article/{external_id}"
+    external_id = int(external_id)
+    # hitting the api with 38319.0 is failing but hitting with 38319 is working
+
     url =f"https://{DOMAIN}/api/v2/articles/{external_id}"
     logging.info(f"Validating article url: {url}")
 
@@ -117,20 +125,11 @@ def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str
         raise ArticleScrapingError(msg) from e
     #soup = BeautifulSoup(page.text, features="html.parser")
 
-    error_msg = None
-    #validator_funcs = [
-    #    validate_not_excluded,
-    #]
+    #error_msg = None
+    
+    #reason I am still sending three return values to match the return values in WCP. the scrape metadata expects three values to unpack in the function call
 
-    #for func in validator_funcs:
-     #   try:
-      #      error_msg = func(page, soup)
-       # except Exception as e:
-        #    error_msg = e.message
-        #if error_msg:
-         #   break
-
-    return page, None, error_msg
+    return page, None, None
 
 
-TT_SITE = Site(NAME, FIELDS, extract_external_id, scrape_article_metadata, validate_article)
+TT_SITE = Site(NAME, FIELDS, transform_data_google_tag_manager, extract_external_id, scrape_article_metadata, validate_article)
