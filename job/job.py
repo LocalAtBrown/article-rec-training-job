@@ -35,10 +35,12 @@ def run():
         EXPERIMENT_DT = datetime.datetime.now()
 
         data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
-        print("df shape before external id: ", data_df.iloc[0:10].shape)
-        data_df = preprocess.extract_external_ids(site, data_df.iloc[0:10])
-        print("df shape after external id: ", data_df.shape)
+        external_id_df = preprocess.extract_external_ids(
+            site, list(data_df["landing_page_path"].unique())
+        )
 
+        data_df = data_df.merge(external_id_df, on="landing_page_path", how="left")
+        data_df = data_df.dropna(subset=["external_id"])
         article_df = scrape_metadata.scrape_metadata(
             site, list(data_df.external_id.unique())
         )
