@@ -3,6 +3,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pdb
 
 from datetime import timezone
 from itertools import product
@@ -26,7 +27,7 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 #@lru_cache(maxsize=None)
-def extract_external_id(site: Site, path: str) -> int:
+def extract_external_id(site: Site, path: str):
     return site.extract_external_id(path)
 
 
@@ -53,13 +54,12 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
                 result = future.result(timeout=60)
                 results.append(result)
             except: 
+                results.append(None)
                 pass
-
-    print(len(results))
+    
     df_data = {"landing_page_path":landing_page_paths, "external_id": results}
     external_id_df = pd.DataFrame(df_data)
     external_id_df = external_id_df.dropna(subset=["external_id"])
-    external_id_df["external_id"] = external_id_df["external_id"].apply(np.int32)
 
     return external_id_df
 
