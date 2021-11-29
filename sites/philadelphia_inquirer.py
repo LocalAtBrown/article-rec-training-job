@@ -7,7 +7,7 @@ import requests
 import pandas as pd
 import pdb
 
-from sites.helpers import ArticleFetchError, ArticleScrapingError
+from sites.helpers import ArticleFetchError
 from sites.site import Site
 
 
@@ -95,8 +95,8 @@ def get_path(res:dict) -> str:
     path = res["canonical_url"]
     return path 
 
-def parse_article_metadata(page: Response, _) -> dict:
-    logging.info(f"Parsing metadata from url: {page['canonical_url']}")
+def parse_article_metadata(page: Response, external_id: str) -> dict:
+    logging.info(f"Parsing metadata from id: {external_id}")
 
     metadata = {}
     scraper_funcs = [
@@ -110,14 +110,14 @@ def parse_article_metadata(page: Response, _) -> dict:
         try:
             val = func(res)
         except Exception as e:
-            msg = f"Error scraping {prop} for article url: {page.url}"
+            msg = f"Error parsing {prop} for article id: {external_id}"
             logging.exception(msg)
-            raise ArticleScrapingError(msg) from e
+            raise ArticleFetchError(msg) from e
         metadata[prop] = val
 
     return metadata
 
-def validate_article(external_id: str) -> (Response, Optional[str], Optional[str]):
+def validate_article(external_id: str) -> (Response, str, Optional[str]):
 
     params = {
         "_id": external_id,
@@ -133,9 +133,9 @@ def validate_article(external_id: str) -> (Response, Optional[str], Optional[str
     except Exception as e:
         msg = f"Error fetching article url: {url}"
         logging.exception(msg)
-        raise ArticleScrapingError(msg) from e
+        raise ArticleFetchError(msg) from e
 
-    return res, None, None
+    return res, external_id, None
 
 
 PI_SITE = Site(NAME, FIELDS, transform_data_google_tag_manager, extract_external_id, parse_article_metadata, validate_article)

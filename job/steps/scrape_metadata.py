@@ -214,5 +214,5 @@ def validate_article(
     return site.validate_article(path)
 
 
-def scrape_article_metadata(site: Site, page: Response, soup: BeautifulSoup) -> dict:
+def scrape_article_metadata(site: Site, page: Response, soup) -> dict:
     return site.scrape_article_metadata(page, soup)
