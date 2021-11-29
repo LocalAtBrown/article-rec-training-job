@@ -8,7 +8,7 @@ import pdb
 from datetime import timezone
 from itertools import product
 from progressbar import ProgressBar
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 from lib.bucket import save_outputs
@@ -27,7 +27,7 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 #@lru_cache(maxsize=None)
-def extract_external_id(site: Site, path: str):
+def extract_external_id(site: Site, path: str) -> Union[str, int]:
     return site.extract_external_id(path)
 
 
@@ -44,20 +44,22 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     # running it parallely like done in the scrape_articles
     futures_list = []
     results = []
-    print(len(landing_page_paths))
+    good_paths = []
+    
     with ThreadPoolExecutor() as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
-            futures_list.append(future)
-        for future in futures_list:
+            futures_list.append((path, future))
+
+        for (path, future) in futures_list:
             try:
                 result = future.result(timeout=60)
                 results.append(result)
+                good_paths.append(path)
             except: 
-                results.append(None)
                 pass
     
-    df_data = {"landing_page_path":landing_page_paths, "external_id": results}
+    df_data = {"landing_page_path":good_paths, "external_id": results}
     external_id_df = pd.DataFrame(df_data)
     external_id_df = external_id_df.dropna(subset=["external_id"])
 
