@@ -26,8 +26,8 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def extract_external_id(site: Site, data_row: pd.Series) -> str:
-    return site.extract_external_id(data_row["landing_page_path"])
+def extract_external_id(site: Site, path: str) -> str:
+    return site.extract_external_id(path)
 
 
 def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFrame:
