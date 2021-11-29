@@ -19,10 +19,10 @@ PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
 
-def extract_external_id(path: str) -> int:
+def extract_external_id(path: str) -> str:
     result = PATH_PROG.match(path)
     if result:
-        return int(result.groups()[2])
+        return result.groups()[2]
     else:
         return None
 

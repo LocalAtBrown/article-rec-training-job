@@ -23,7 +23,7 @@ from db.mappings.base import db_proxy
 BACKFILL_ISO_DATE = "2021-09-08"
 
 
-def scrape_metadata(site: Site, external_ids: List[int]) -> pd.DataFrame:
+def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 

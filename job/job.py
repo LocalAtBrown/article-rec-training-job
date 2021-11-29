@@ -62,7 +62,6 @@ def run():
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
         # External IDs to map articles back to
         external_article_ids = formatted_df.columns
-        external_article_ids = external_article_ids.astype("int32")
 
         save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df
