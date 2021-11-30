@@ -69,8 +69,9 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
         "published_at": [a.published_at for a in articles],
         "landing_page_path": [a.path for a in articles],
         "site": [a.site for a in articles],
-    }
+    }  
     article_df = pd.DataFrame(df_data).set_index("external_id")
+    article_df.index = article_df.index.astype('object')
     return article_df
 
 

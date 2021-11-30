@@ -61,7 +61,6 @@ def fetch_data(
     dt = experiment_dt or datetime.datetime.now()
     data_dfs = []
     path = "/downloads"
-    days = 1
     fields = site.fields
     for _ in range(days):
         if not os.path.isdir(path):
