@@ -38,7 +38,6 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     total_scraped = 0
     scraping_errors = 0
 
-    pdb.set_trace()
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}

@@ -1,12 +1,13 @@
 from typing import Optional
-import re
 from retrying import retry
 import logging
 from urllib.parse import urlparse
 from requests.models import Response
+from datetime import datetime
 import requests
 import pandas as pd
 import pdb
+import re
 
 from lib.config import config
 from sites.helpers import ArticleFetchError
@@ -88,24 +89,36 @@ def extract_external_id(path: str) -> Optional[str]:
 
     return None
 
+def get_date(res_val:dict) -> str:
+    res_val = datetime.strptime(res_val["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
+    return res_val
+
+def get_url(res_val:dict) -> str:
+    return res_val["canonical_url"] 
+
+def get_headline(res_val:dict) -> str:
+    res_val = res_val["headlines"]
+    if "meta_title" in res_val:
+        return res_val["meta_title"]
+
+    return res_val["basic"]
+
 def parse_article_metadata(page: Response, external_id: str) -> dict:
     logging.info(f"Parsing metadata from id: {external_id}")
 
     metadata = {}
     parse_keys = [
-        ("title", "meta_title"),
-        ("published_at", "publish_date"), # example published_at: '2021-11-17T00:44:12.319Z'
-        ("path", "canonical_url")
+        ("title", get_headline),
+        ("published_at", get_date), # example published_at: '2021-11-17T00:44:12.319Z'
+        ("path", get_url)
     ]
-    try:
-        res = page.json()
-    except Exception as e:
-        msg = f"Error parsing json response for article id: {external_id}"
-        raise ArticleFetchError(msg) from e
+    
+    res = page.json()
 
-    for prop, key in parse_keys:
+    for prop, func in parse_keys:
+        val = None
         try:
-            val = res[key] 
+            val = func(res)
         except Exception as e:
             msg = f"Error parsing {prop} for article id: {external_id}"
             logging.exception(msg)
@@ -114,13 +127,38 @@ def parse_article_metadata(page: Response, external_id: str) -> dict:
 
     return metadata
 
+def validate_not_excluded(res: Response) -> Optional[str]:
+    
+    try:
+        res = res.json()
+    except Exception as e:
+        return e
+
+    if "headlines" not in res or ("headlines" in res and "basic" not in res["headlines"]):
+        return "Article missing headline"
+
+    if "canonical_url" not in res:
+        return "Article canonical URL missing"
+
+    if "publish_date" not in res:
+        return "Article publish date missing"
+    
+    if "publish_date" in res:
+        try: 
+            datetime.strptime(res["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
+        except Exception as e:
+            return e
+
+    return None 
+
+
 def validate_article(external_id: str) -> (Response, str, Optional[str]):
 
     params = {
         "_id": external_id,
         "website": PI_ARC_API_SITE,
         "published": "true",
-        "included_fields": "meta_title,publish_date,_id,canonical_url"
+        "included_fields": "headlines,publish_date,_id,canonical_url"
     }
 
     logging.info(f"Validating article url: {external_id}")
@@ -132,7 +170,20 @@ def validate_article(external_id: str) -> (Response, str, Optional[str]):
         logging.exception(msg)
         raise ArticleFetchError(msg) from e
 
-    return res, external_id, None
+    error_msg = None
+    validator_funcs = [
+        validate_not_excluded,
+    ]
+
+    for func in validator_funcs:
+        try:
+            error_msg = func(res)
+        except Exception as e:
+            error_msg = e.message
+        if error_msg:
+            break
+
+    return res, external_id, error_msg
 
 
 PI_SITE = Site(NAME, FIELDS, transform_data_google_tag_manager, extract_external_id, parse_article_metadata, validate_article)
