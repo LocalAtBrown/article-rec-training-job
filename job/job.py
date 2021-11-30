@@ -17,6 +17,7 @@ from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.sites import Sites
+import pandas as pd
 
 
 def run():
@@ -38,9 +39,8 @@ def run():
         external_id_df = preprocess.extract_external_ids(
             site, list(data_df["landing_page_path"].unique())
         )
+        data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
 
-        data_df = data_df.merge(external_id_df, on="landing_page_path", how="left")
-        data_df = data_df.dropna(subset=["external_id"])
         article_df = scrape_metadata.scrape_metadata(
             site, list(data_df.external_id.unique())
         )
@@ -77,6 +77,5 @@ def run():
         logging.exception("Job failed")
         status = "failure"
 
-
-#   latency = time.time() - start_ts
-#  write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
+    latency = time.time() - start_ts
+    write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})

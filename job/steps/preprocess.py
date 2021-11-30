@@ -12,7 +12,6 @@ from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 from lib.bucket import save_outputs
 from sites.site import Site
-from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -43,7 +42,6 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     # running it parallely like done in the scrape_articles
     futures_list = []
     results = []
-    print(len(landing_page_paths))
     with ThreadPoolExecutor() as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
@@ -55,7 +53,6 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
             except:
                 pass
 
-    print(len(results))
     df_data = {"landing_page_path": landing_page_paths, "external_id": results}
     external_id_df = pd.DataFrame(df_data)
     external_id_df = external_id_df.dropna(subset=["external_id"])
