@@ -19,7 +19,7 @@ from lib.config import config
 from job.helpers import get_site
 
 import pdb
-
+from db.mappings.base import db_proxy
 
 def run():
     logging.info("Running job...")
@@ -44,6 +44,9 @@ def run():
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="left")
         data_df = data_df.dropna(subset=["external_id"])
 
+        db_proxy.close() 
+        db_proxy.connect()
+
         article_df = scrape_metadata.scrape_metadata(
             site, data_df["external_id"].unique().tolist()
         )
@@ -52,11 +55,16 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
         article_df = article_df.reset_index()
+
+        db_proxy.close() 
+        db_proxy.connect()
+
+        pdb.set_trace()
         save_defaults.save_defaults(data_df, article_df)
 
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
