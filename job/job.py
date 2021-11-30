@@ -18,7 +18,6 @@ from lib.metrics import write_metric, Unit
 from lib.config import config
 from job.helpers import get_site
 
-import pdb
 from db.mappings.base import db_proxy
 
 def run():
@@ -64,7 +63,6 @@ def run():
         db_proxy.close() 
         db_proxy.connect()
 
-        pdb.set_trace()
         save_defaults.save_defaults(data_df, article_df)
 
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration

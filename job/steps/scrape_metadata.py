@@ -4,7 +4,6 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Tuple, Optional, Sequence, Union
 from concurrent.futures import ThreadPoolExecutor
 
-import pdb
 import pandas as pd
 import numpy as np
 from requests.models import Response
