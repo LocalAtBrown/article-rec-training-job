@@ -18,7 +18,7 @@ FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
 
 PI_ARC_API_URL = "https://api.pmn.arcpublishing.com/content/v4"
 # Note I've removed this key from the commit
-ARC_KEY = "Bearer JV0CS7703QB4F9E1KTMNR68R6T14IPD5TbDdr50LU38BzZnQxw+PkvJ9h17vma3vbLUxYScS"
+ARC_KEY = j
 PI_ARC_API_HEADER = {"Authorization": ARC_KEY}
 PI_ARC_API_SITE = "philly-media-network"
 TIMEOUT_SECONDS = 30
