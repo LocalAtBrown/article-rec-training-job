@@ -26,7 +26,6 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     df = time_activities(df)
     return df
 
-#@lru_cache(maxsize=None)
 def extract_external_id(site: Site, path: str) -> Union[str, int]:
     return site.extract_external_id(path)
 
@@ -37,7 +36,6 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
         * Requisite fields: "landing_page_path" (str)
     :return: data_df with "external_id" column added
     """
-
     #taking list of unique landing page paths because only one article will have one contentid no matter which user clicks on it
 
     
@@ -64,8 +62,6 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     external_id_df = external_id_df.dropna(subset=["external_id"])
 
     return external_id_df
-
-
 
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:

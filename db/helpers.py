@@ -1,7 +1,7 @@
 import logging
 
 from peewee import Expression
-from typing import List, Iterable, Union
+from typing import List, Iterable
 
 from db.mappings.base import BaseMapping, tzaware_now
 from db.mappings.model import Model, Type, Status
@@ -16,7 +16,7 @@ def create_model(**params: dict) -> int:
     return create_resource(Model, **params)
 
 
-def create_article(**params: dict) -> Union[str, int]:
+def create_article(**params: dict) -> int:
     return create_resource(Article, **params)
 
 
@@ -24,18 +24,18 @@ def create_rec(**params: dict) -> int:
     return create_resource(Rec, **params)
 
 
-def create_resource(mapping_class: BaseMapping, **params: dict) -> Union[str, int]:
+def create_resource(mapping_class: BaseMapping, **params: dict) -> int:
     resource = mapping_class(**params)
     resource.save()
     return resource.id
 
 
-def get_resource(mapping_class: BaseMapping, _id: Union[str, int]) -> dict:
+def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
     instance = mapping_class.get(mapping_class.id == _id)
     return instance.to_dict()
 
 
-def get_articles_by_external_ids(site: Site, external_ids: Iterable[Union[int, str]]) -> List[dict]:
+def get_articles_by_external_ids(site: Site, external_ids: Iterable[str]) -> List[dict]:
     res = Article.select().where(
         (Article.site == site.name) & Article.external_id.in_(list(external_ids))
     )
@@ -61,7 +61,7 @@ def _update_resources(
     q.execute()
 
 
-def delete_articles(external_ids: List[Union[int, str]]) -> None:
+def delete_articles(external_ids: List[str]) -> None:
     _delete_resources(Article, Article.external_id.in_(external_ids))
 
 

@@ -10,6 +10,7 @@ from job.steps import (
     train_model,
     save_predictions,
     delete_old_models,
+    warehouse,
 )
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
@@ -48,6 +49,9 @@ def run():
         data_df = data_df.join(
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
+
+        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
         article_df = article_df.reset_index()
@@ -63,7 +67,6 @@ def run():
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
         # External IDs to map articles back to
         external_article_ids = formatted_df.columns
-        external_article_ids = external_article_ids.astype("int32")
 
         save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df

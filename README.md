@@ -75,6 +75,7 @@ Each log group contains separate log streams for each client
 
 ### Misc Documentation
 * [Monitoring Guide](https://www.notion.so/article-rec-backend-monitoring-30915f77759c4350b1b8588582c9ea04)
+* [Redshift Migration Guide](https://www.notion.so/Redshift-Guide-21526b210bc3425cb80c2146f3b9e7e0)
 
 ### Related Repositories
 * [`infrastructure`](https://github.com/LocalAtBrown/article-rec-api): The database and ECS clusters are created here.

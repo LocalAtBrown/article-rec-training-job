@@ -53,10 +53,10 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
 
     return transformed_df
 
-def extract_external_id(path: str) -> int:
+def extract_external_id(path: str) -> str:
     result = PATH_PROG.match(path)
     if result:
-        return int(result.groups()[2])
+        return result.groups()[2]
     else:
         return None
 
