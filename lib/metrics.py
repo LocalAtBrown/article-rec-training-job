@@ -4,12 +4,10 @@ import logging
 import boto3
 
 from lib.config import config, STAGE, REGION
-from job.helpers import get_site
 
 
 client = boto3.client("cloudwatch", REGION)
 SERVICE = config.get("SERVICE")
-SITE = get_site(config.get("SITE_NAME"))
 
 
 class Unit:
@@ -50,7 +48,7 @@ def write_metric(
     if STAGE == "local":
         logging.info(f"Skipping metric write for name:{name} value:{value}")
         return
-    default_tags = {"stage": STAGE, "site": SITE.name}
+    default_tags = {"stage": STAGE, "site": config.get("SITE_NAME")}
     if tags:
         default_tags.update(tags)
     formatted_tags = [{"Name": k, "Value": str(v)} for k, v in default_tags.items()]

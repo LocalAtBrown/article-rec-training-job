@@ -16,7 +16,7 @@ from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
-from helpers import get_site
+from job.helpers import get_site
 
 import pdb
 
@@ -42,9 +42,9 @@ def run():
         )
 
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="left")
-        data_df = data_df.dropna(subset=["external_id"]) 
+        data_df = data_df.dropna(subset=["external_id"])
 
-        pdb.set_trace()  
+        pdb.set_trace()
         # stop
         article_df = scrape_metadata.scrape_metadata(
             site, data_df["external_id"].unique().tolist()
@@ -79,8 +79,9 @@ def run():
 
         delete_old_models.delete_old_models()
     except Exception:
-       logging.exception("Job failed")
-       status = "failure"
+        logging.exception("Job failed")
+        status = "failure"
+
 
 #   latency = time.time() - start_ts
- #  write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
+#  write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})

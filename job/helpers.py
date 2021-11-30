@@ -9,6 +9,7 @@ from typing import List
 
 from job.steps.implicit_mf import ImplicitMF
 from sites.sites import Sites
+from sites.site import Site
 
 
 def get_site(site_name) -> Site:
