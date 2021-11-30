@@ -61,7 +61,7 @@ def fetch_data(
     dt = experiment_dt or datetime.datetime.now()
     data_dfs = []
     path = "/downloads"
-    days = 1
+    
     fields = site.fields
     for _ in range(days):
         if not os.path.isdir(path):
@@ -69,7 +69,7 @@ def fetch_data(
 
         month = pad_date(dt.month)
         day = pad_date(dt.day)
-        prefix = f"enriched/good/{dt.year}/{month}/{day}"
+        prefix = f"enriched/good/{dt.year}/{month}/{day}/00"
         args = f"aws s3 sync s3://{get_bucket_name(site)}/{prefix} {path}".split(" ")
         subprocess.call(args)
 

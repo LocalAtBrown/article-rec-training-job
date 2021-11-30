@@ -8,6 +8,7 @@ import requests
 import pandas as pd
 import pdb
 
+from lib.config import config
 from sites.helpers import ArticleFetchError
 from sites.site import Site
 
