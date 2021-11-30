@@ -9,11 +9,13 @@ from bs4 import BeautifulSoup
 from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
 import pandas as pd
-
+import json
+import pdb
+import time
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
-
+headers={'User-Agent': 'article-rec-training-job/1.0.0'}
 # supported url path formats:
 #- [`https://www.texastribune.org/2021/09/10/texas-abortion-law-ban-enforcement/?utm_campaign=trib-social&utm_content=1632982788&utm_medium=social&utm_source=twitter`](https://www.texastribune.org/2021/09/10/texas-abortion-law-ban-enforcement/?utm_campaign=trib-social&utm_content=1632982788&utm_medium=social&utm_source=twitter)
 
@@ -68,37 +70,45 @@ def extract_external_id(path: str) -> int:
     else:
         None
 
-def scrape_title(res: Response) -> str:
-    api_info = res.json()
-    headers = api_info['headline']
+def get_title(res: dict) -> str:
+   # api_info = res.json()
+   # api_info = json.loads(res.text)
+    headers = res['headline']
     return headers
 
 
-def scrape_published_at(res: Response) -> str:
+def get_published_at(res: dict) -> str:
     # example published_at: '2021-11-12T12:45:35-06:00'
-    api_info=res.json()
-    pub_date = api_info['pub_date']
+    #api_info=res.json()
+    #api_info = json.loads(res.text)
+    pub_date = res['pub_date']
     return pub_date
 
-def scrape_path(page: Response) -> str:
+def get_path(page: dict) -> str:
     # there are times when older articles redirect to an alternate path, for ex:
     # https://washingtoncitypaper.com/food/article/20830693/awardwinning-chef-michel-richard-dies-at-age-68
-    return urlparse(page.url).path
+    return urlparse(page['url']).path
 
 
 def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
-    logging.info(f"Scraping metadata from url: {page.url}")
-
+    logging.info(f"Scraping metadata from url: {page.url}, type is {type(page)}")
+    #pdb.set_trace()
+    try:
+        api_info = page.json() #json.loads(page.text.replace("\'","\"")) #  page.json()
+    except Exception as e:
+        msg = f"error json parsing for article url: {page.url}"
+        logging.exception(msg)
+        raise ArticleScrapingError(msg) from e
     metadata = {}
     scraper_funcs = [
-        ("title", scrape_title),
-        ("published_at", scrape_published_at),
-        ("path", scrape_path),
-    ]
+            ("title", get_title),
+            ("published_at", get_published_at),
+            ("path", get_path),
+        ]
 
     for prop, func in scraper_funcs:
         try:
-            val = func(page)
+            val = func(api_info)
         except Exception as e:
             msg = f"Error scraping {prop} for article url: {page.url}"
             logging.exception(msg)
@@ -110,15 +120,16 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
 
 
 
-def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str]):
-    external_id = int(external_id)
+def validate_article(external_id: str) -> (Response, Optional[BeautifulSoup], Optional[str]):
+    external_id = int(float(external_id))
     # hitting the api with 38319.0 is failing but hitting with 38319 is working
 
     url =f"https://{DOMAIN}/api/v2/articles/{external_id}"
     logging.info(f"Validating article url: {url}")
 
     try:
-        page = safe_get(url)
+        page = safe_get(url, headers)
+        time.sleep(5)
     except Exception as e:
         msg = f"Error fetching article url: {url}"
         logging.exception(msg)
