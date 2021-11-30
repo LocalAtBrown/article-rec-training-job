@@ -4,10 +4,12 @@ import logging
 import boto3
 
 from lib.config import config, STAGE, REGION
+from job.helpers import get_site
+
 
 client = boto3.client("cloudwatch", REGION)
 SERVICE = config.get("SERVICE")
-SITE = config.site()
+SITE = get_site(config.get("SITE_NAME"))
 
 
 class Unit:

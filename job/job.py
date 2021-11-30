@@ -16,14 +16,15 @@ from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
-from sites.sites import Sites
+from helpers import get_site
 
 import pdb
+
 
 def run():
     logging.info("Running job...")
 
-    site = config.site()
+    site = get_site(config.get("SITE_NAME"))
     print(f"site name: {site.name}")
     logging.info(f"Using site {site.name}")
 
