@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Tuple, Optional, Sequence, Union
 from concurrent.futures import ThreadPoolExecutor
 
+import pdb
 import pandas as pd
 import numpy as np
 from requests.models import Response
@@ -23,7 +24,7 @@ from db.mappings.base import db_proxy
 BACKFILL_ISO_DATE = "2021-09-08"
 
 
-def scrape_metadata(site: Site, external_ids: Sequence[Union[int, str]]) -> pd.DataFrame:
+def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
@@ -37,8 +38,7 @@ def scrape_metadata(site: Site, external_ids: Sequence[Union[int, str]]) -> pd.D
     total_scraped = 0
     scraping_errors = 0
 
-    external_ids = set(external_ids)
-
+    pdb.set_trace()
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}

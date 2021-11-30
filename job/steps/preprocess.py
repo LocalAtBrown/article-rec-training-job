@@ -60,6 +60,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     df_data = {"landing_page_path":good_paths, "external_id": results}
     external_id_df = pd.DataFrame(df_data)
     external_id_df = external_id_df.dropna(subset=["external_id"])
+    external_id_df["external_id"] = external_id_df["external_id"].astype(object)
 
     return external_id_df
 

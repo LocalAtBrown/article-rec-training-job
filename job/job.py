@@ -37,13 +37,16 @@ def run():
 
         data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
         external_id_df = preprocess.extract_external_ids(
-            site, data_df['landing_page_path'].unique().tolist()
+            site, data_df["landing_page_path"].unique().tolist()
         )
-        pdb.set_trace()  
+
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="left")
         data_df = data_df.dropna(subset=["external_id"]) 
+
+        pdb.set_trace()  
+        # stop
         article_df = scrape_metadata.scrape_metadata(
-            site, data_df.external_id.unique().tolist()
+            site, data_df["external_id"].unique().tolist()
         )
 
         data_df = data_df.join(
