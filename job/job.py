@@ -29,7 +29,7 @@ def run():
     status = "success"
 
     try:
-        model_id = create_model(type=Type.ARTICLE.value)
+        model_id = create_model(type=Type.ARTICLE.value, site=site.name)
         logging.info(f"Created model with id {model_id}")
         EXPERIMENT_DT = datetime.datetime.now()
 
@@ -50,7 +50,7 @@ def run():
         data_df = preprocess.filter_articles(data_df)
 
         article_df = article_df.reset_index()
-        save_defaults.save_defaults(data_df, article_df)
+        save_defaults.save_defaults(data_df, article_df, site.name)
 
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
@@ -66,7 +66,7 @@ def run():
         save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df
         )
-        set_current_model(model_id, site.name, Type.ARTICLE.value)
+        set_current_model(model_id, Type.ARTICLE.value, site.name)
 
         delete_old_models.delete_old_models()
     except Exception:

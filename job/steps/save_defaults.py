@@ -35,13 +35,15 @@ def calculate_default_recs(prepared_df: pd.DataFrame) -> pd.Series:
     return top_times_per_view
 
 
-def save_defaults(prepared_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
+def save_defaults(
+    prepared_df: pd.DataFrame, article_df: pd.DataFrame, site_name: str
+) -> None:
     top_times_per_view = calculate_default_recs(prepared_df)
     weights = get_weights(top_times_per_view.index, article_df)
     # the most read article will have a perfect score of 1.0, all others will be a fraction of that
     scores = weights * top_times_per_view / max(top_times_per_view)
     top_scores = scores.nlargest(MAX_RECS)
-    model_id = create_model(type=Type.POPULARITY.value)
+    model_id = create_model(type=Type.POPULARITY.value, site=site_name)
     logging.info("Saving default recs to db...")
     for external_id, score in zip(top_times_per_view.index, top_scores):
         matching_articles = article_df[article_df["external_id"] == external_id]
@@ -53,4 +55,4 @@ def save_defaults(prepared_df: pd.DataFrame, article_df: pd.DataFrame) -> None:
             score=score,
         )
 
-    set_current_model(model_id, Type.POPULARITY.value)
+    set_current_model(model_id, Type.POPULARITY.value, site_name)
