@@ -12,14 +12,18 @@ import pandas as pd
 
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
-FIELDS = ["collector_tstamp","page_urlpath","contexts_dev_amp_snowplow_amp_id_1",]
+FIELDS = [
+    "collector_tstamp",
+    "page_urlpath",
+    "contexts_dev_amp_snowplow_amp_id_1",
+]
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
-#<<<<<<< HEAD
+
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     requires a dataframe with the following fields:
@@ -53,8 +57,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
 
     return transformed_df
-#=======
-#>>>>>>> 294d02d... [Fix] support external_id as str
+
 
 def extract_external_id(path: str) -> str:
     result = PATH_PROG.match(path)
@@ -151,4 +154,11 @@ def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str
     return page, soup, error_msg
 
 
-WCP_SITE = Site(NAME, FIELDS, transform_raw_data, extract_external_id, scrape_article_metadata, validate_article)
+WCP_SITE = Site(
+    NAME,
+    FIELDS,
+    transform_raw_data,
+    extract_external_id,
+    scrape_article_metadata,
+    validate_article,
+)

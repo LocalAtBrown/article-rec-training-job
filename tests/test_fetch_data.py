@@ -2,7 +2,7 @@ import pytest
 
 import pandas as pd
 
-from job.steps.fetch_data import transform_raw_data
+from sites.washington_city_paper import transform_raw_data
 from lib.config import ROOT_DIR
 
 
