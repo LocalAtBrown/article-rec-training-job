@@ -17,10 +17,6 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 headers = {"User-Agent": "article-rec-training-job/1.0.0"}
-# supported url path formats:
-# - [`https://www.texastribune.org/2021/09/10/texas-abortion-law-ban-enforcement/?utm_campaign=trib-social&utm_content=1632982788&utm_medium=social&utm_source=twitter`](https://www.texastribune.org/2021/09/10/texas-abortion-law-ban-enforcement/?utm_campaign=trib-social&utm_content=1632982788&utm_medium=social&utm_source=twitter)
-
-# /2021/09/10/texas-abortion-law-ban-enforcement/
 
 
 def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
@@ -77,16 +73,12 @@ def extract_external_id(path: str) -> str:
 
 
 def get_title(res: dict) -> str:
-    # api_info = res.json()
-    # api_info = json.loads(res.text)
     headers = res["headline"]
     return headers
 
 
 def get_published_at(res: dict) -> str:
     # example published_at: '2021-11-12T12:45:35-06:00'
-    # api_info=res.json()
-    # api_info = json.loads(res.text)
     pub_date = res["pub_date"]
     return pub_date
 
@@ -99,11 +91,8 @@ def get_path(page: dict) -> str:
 
 def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
     logging.info(f"Scraping metadata from url: {page.url}, type is {type(page)}")
-    # pdb.set_trace()
     try:
-        api_info = (
-            page.json()
-        )  # json.loads(page.text.replace("\'","\"")) #  page.json()
+        api_info = page.json()
     except Exception as e:
         msg = f"error json parsing for article url: {page.url}"
         logging.exception(msg)
@@ -130,8 +119,7 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
 def validate_article(
     external_id: str,
 ) -> (Response, Optional[BeautifulSoup], Optional[str]):
-    external_id = int(float(external_id))
-    # hitting the api with 38319.0 is failing but hitting with 38319 is working
+    external_id = int(external_id)
 
     url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
     logging.info(f"Validating article url: {url}")
@@ -143,11 +131,6 @@ def validate_article(
         msg = f"Error fetching article url: {url}"
         logging.exception(msg)
         raise ArticleScrapingError(msg) from e
-    # soup = BeautifulSoup(page.text, features="html.parser")
-
-    # error_msg = None
-
-    # reason I am still sending three return values to match the return values in WCP. the scrape metadata expects three values to unpack in the function call
 
     return page, None, None
 
