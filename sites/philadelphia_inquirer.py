@@ -58,6 +58,8 @@ def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
 
 @retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
 def safe_get_pi(params:dict):
+    """
+    """
     res = requests.get(PI_ARC_API_URL, 
                         timeout=TIMEOUT_SECONDS,
                         params=params, 
@@ -90,13 +92,19 @@ def extract_external_id(path: str) -> Optional[str]:
     return None
 
 def get_date(res_val:dict) -> str:
+    """
+    """
     res_val = datetime.strptime(res_val["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
     return res_val
 
 def get_url(res_val:dict) -> str:
+    """
+    """
     return res_val["canonical_url"] 
 
 def get_headline(res_val:dict) -> str:
+    """
+    """
     res_val = res_val["headlines"]
     if "meta_title" in res_val:
         return res_val["meta_title"]
@@ -104,6 +112,8 @@ def get_headline(res_val:dict) -> str:
     return res_val["basic"]
 
 def parse_article_metadata(page: Response, external_id: str) -> dict:
+    """
+    """
     logging.info(f"Parsing metadata from id: {external_id}")
 
     metadata = {}
@@ -128,7 +138,8 @@ def parse_article_metadata(page: Response, external_id: str) -> dict:
     return metadata
 
 def validate_not_excluded(res: Response) -> Optional[str]:
-    
+    """
+    """
     try:
         res = res.json()
     except Exception as e:
@@ -153,7 +164,8 @@ def validate_not_excluded(res: Response) -> Optional[str]:
 
 
 def validate_article(external_id: str) -> (Response, str, Optional[str]):
-
+    """
+    """
     params = {
         "_id": external_id,
         "website": PI_ARC_API_SITE,

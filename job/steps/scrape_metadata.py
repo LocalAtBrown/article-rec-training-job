@@ -1,7 +1,7 @@
 import time
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import List, Tuple, Optional, Sequence, Union
+from typing import List, Tuple, Optional
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
