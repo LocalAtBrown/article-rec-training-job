@@ -77,7 +77,7 @@ def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> Non
 # If an exception occurs, the current transaction/savepoint will be rolled back.
 # Otherwise the statements will be committed at the end.
 @db_proxy.atomic()
-def set_current_model(model_id: int, model_type: Type, model_site: Site) -> None:
+def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
     current_model_query = (
         (Model.type == model_type)
         & (Model.status == Status.CURRENT.value)
