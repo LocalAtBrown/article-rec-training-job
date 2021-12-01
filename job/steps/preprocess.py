@@ -36,23 +36,24 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
         * Requisite fields: "landing_page_path" (str)
     :return: data_df with "external_id" column added
     """
-
-    # taking list of unique landing page paths because only one article will have one contentid no matter which user clicks on it
-    # running it parallely like done in the scrape_articles
     futures_list = []
     results = []
+    good_paths = []
+
     with ThreadPoolExecutor() as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
-            futures_list.append(future)
-        for future in futures_list:
+            futures_list.append((path, future))
+
+        for (path, future) in futures_list:
             try:
                 result = future.result(timeout=60)
                 results.append(result)
+                good_paths.append(path)
             except:
                 pass
 
-    df_data = {"landing_page_path": landing_page_paths, "external_id": results}
+    df_data = {"landing_page_path": good_paths, "external_id": results}
     external_id_df = pd.DataFrame(df_data)
     external_id_df = external_id_df.dropna(subset=["external_id"])
     external_id_df["external_id"] = external_id_df["external_id"].astype(object)
