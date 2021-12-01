@@ -9,8 +9,6 @@ from bs4 import BeautifulSoup
 from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
 import pandas as pd
-import json
-import pdb
 import time
 
 DOMAIN = "www.texastribune.org"
@@ -51,12 +49,12 @@ def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def extract_external_id(path: str) -> str:
-    path = f"https://{DOMAIN}{path}"
+    article_url = f"https://{DOMAIN}{path}"
 
     try:
-        page = safe_get(path)
+        page = safe_get(article_url)
     except Exception as e:
-        msg = f"Error fetching article url: {path}"
+        msg = f"Error fetching article url: {article_url}"
         logging.exception(msg)
         raise ArticleScrapingError(msg) from e
     soup = BeautifulSoup(page.text, features="html.parser")
@@ -121,18 +119,18 @@ def validate_article(
 ) -> (Response, Optional[BeautifulSoup], Optional[str]):
     external_id = int(external_id)
 
-    url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
-    logging.info(f"Validating article url: {url}")
+    api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
+    logging.info(f"Validating article url: {api_url}")
 
     try:
-        page = safe_get(url, headers)
+        res = safe_get(api_url, headers)
         time.sleep(5)
     except Exception as e:
-        msg = f"Error fetching article url: {url}"
+        msg = f"Error fetching article url: {api_url}"
         logging.exception(msg)
         raise ArticleScrapingError(msg) from e
 
-    return page, None, None
+    return res, None, None
 
 
 TT_SITE = Site(

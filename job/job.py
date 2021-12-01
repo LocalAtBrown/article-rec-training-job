@@ -24,7 +24,6 @@ def run():
     logging.info("Running job...")
 
     site = config.site()
-    print(f"site name: {site.name}")
     logging.info(f"Using site {site.name}")
 
     start_ts = time.time()
