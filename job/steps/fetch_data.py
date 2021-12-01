@@ -22,7 +22,6 @@ DAYS_OF_DATA = config.get("DAYS_OF_DATA")
 s3 = boto3.client("s3")
 
 
-
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
 def retry_s3_select(
     site: Site,
@@ -55,7 +54,6 @@ def fetch_data(
     site: Site,
     experiment_dt: datetime.datetime = None,
     days: int = DAYS_OF_DATA,
-    
 ) -> pd.DataFrame:
     start_ts = time.time()
     dt = experiment_dt or datetime.datetime.now()
@@ -68,23 +66,22 @@ def fetch_data(
 
         month = pad_date(dt.month)
         day = pad_date(dt.day)
-        prefix = f"enriched/good/{dt.year}/{month}/{day}"
+        prefix = f"enriched/good/{dt.year}/{month}/{day}/00"
         args = f"aws s3 sync s3://{get_bucket_name(site)}/{prefix} {path}".split(" ")
         subprocess.call(args)
 
         dfs_for_day = []
 
         for full_path, _, files in os.walk(path):
-             
+
             for filename in files:
                 file_path = os.path.join(full_path, filename)
                 tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
-                
+
                 common_fields = list(set(tmp_df.columns) & set(fields))
                 try:
                     df = site.transform_raw_data(tmp_df[common_fields])
-                    
-                    
+
                 except TypeError:
                     logging.exception(
                         f"Unexpected format. Can't transform data for {prefix}"
@@ -93,17 +90,18 @@ def fetch_data(
 
                 if df.size:
                     dfs_for_day.append(df)
+                    break
 
         if dfs_for_day:
-           day_df = preprocess_day(pd.concat(dfs_for_day))
-           data_dfs.append(day_df)
+            day_df = preprocess_day(pd.concat(dfs_for_day))
+            data_dfs.append(day_df)
 
         shutil.rmtree(path)
 
         dt = dt - datetime.timedelta(days=1)
 
     data_df = pd.concat(data_dfs)
-    
+
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)
