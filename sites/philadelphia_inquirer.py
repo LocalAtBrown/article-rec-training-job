@@ -10,7 +10,7 @@ import pdb
 import re
 
 from lib.config import config
-from sites.helpers import ArticleFetchError
+from sites.helpers import ArticleFetchError, transform_data_google_tag_manager
 from sites.site import Site
 
 
@@ -30,31 +30,6 @@ TIMEOUT_SECONDS = 30
 
 # /news/philadelphia-school-district-teacher-vacancies-staffing-crisis-20211128.html 
 
-def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
-    """
-        requires a dataframe with the following fields:
-                - domain_userid
-                    - collector_tstamp
-                        - page_urlpath
-    returns a dataframe with the following fields:
-        - client_id
-            - session_date
-                - activity_time
-                    - landing_page_path
-                        - event_category (conversions, newsletter sign-ups TK)
-                            - event_action (conversions, newsletter sign-ups TK)
-    """
-    transformed_df = pd.DataFrame()
-    transformed_df["client_id"] = df['domain_userid']
-    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
-    transformed_df["session_date"] = pd.to_datetime(transformed_df.activity_time.dt.date)
-    transformed_df["landing_page_path"] = df.page_urlpath
-    transformed_df["event_category"] = "snowplow_amp_page_ping"
-    transformed_df["event_category"] = transformed_df["event_category"].astype("category")
-    transformed_df["event_action"] = "impression"
-    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
-
-    return transformed_df
 
 @retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
 def safe_get_pi(params:dict):
