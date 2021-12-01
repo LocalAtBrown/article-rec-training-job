@@ -79,7 +79,7 @@ def run():
         save_predictions.save_predictions(
             model, model_id, external_article_ids, article_df
         )
-        set_current_model(model_id, Type.ARTICLE.value)
+        set_current_model(model_id, site.name, Type.ARTICLE.value)
 
         delete_old_models.delete_old_models()
     except Exception:
