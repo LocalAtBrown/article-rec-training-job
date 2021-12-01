@@ -24,3 +24,4 @@ class Model(BaseMapping):
 
     type = TextField(null=False)
     status = TextField(null=False, default=Status.PENDING.value)
+    site = TextField(null=False, default="")
