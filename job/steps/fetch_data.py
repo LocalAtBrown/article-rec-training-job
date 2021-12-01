@@ -66,7 +66,7 @@ def fetch_data(
 
         month = pad_date(dt.month)
         day = pad_date(dt.day)
-        prefix = f"enriched/good/{dt.year}/{month}/{day}/00"
+        prefix = f"enriched/good/{dt.year}/{month}/{day}"
         args = f"aws s3 sync s3://{get_bucket_name(site)}/{prefix} {path}".split(" ")
         subprocess.call(args)
 
@@ -90,7 +90,6 @@ def fetch_data(
 
                 if df.size:
                     dfs_for_day.append(df)
-                    break
 
         if dfs_for_day:
             day_df = preprocess_day(pd.concat(dfs_for_day))
