@@ -45,7 +45,7 @@ def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
     return data_df
 
 
-def time_decay2(
+def time_decay(
     data_df: pd.DataFrame, current_date: datetime.date, hf: float
 ) -> pd.DataFrame:
     """
@@ -147,7 +147,7 @@ def model_preprocessing(
     :return: DataFrame with one row for each user at each date of interest, and one column for each article
     """
     logging.info("Preprocessing: creating aggregate dwell time df...")
-    prepared_df = time_decay2(
+    prepared_df = time_decay(
         prepared_df, current_date=datetime.datetime.now().date(), hf=half_life
     )
     time_df = aggregate_time(
@@ -450,37 +450,3 @@ def aggregate_pageviews(
     )
     pageview_df = (time_df > 0).astype(int)
     return pageview_df
-
-
-def time_decay(
-    time_df: pd.DataFrame,
-    half_life: float = 10,
-) -> pd.DataFrame:
-    """
-    Computes exponential decay sum of time_df observations with decay based on session_date
-    :param time_df: DataFrame of aggregated per day dwell time statistics for each user
-    :param half_life: Desired half life of time spent in days
-    :return: DataFrame with one row for each user at each date of interest, and one column for each article
-    """
-    article_cols = time_df.columns
-    exp_time_df = time_df.reset_index()
-
-    # Apply exponential time decay
-    user_changed = ~(
-        exp_time_df.client_id.eq(exp_time_df.client_id.shift(1)).fillna(False)
-    )
-    date_delta = exp_time_df.session_date.diff().dt.days.fillna(0)
-    dwell_times = np.nan_to_num(exp_time_df[article_cols])
-    bar = ProgressBar(max_value=len(exp_time_df))
-    for i in range(1, dwell_times.shape[0]):
-        if user_changed.iloc[i]:
-            continue
-        dwell_times[i, :] += apply_decay(
-            dwell_times[i - 1, :], date_delta.iloc[i], half_life
-        )
-        bar.update(i)
-
-    exp_time_df = pd.DataFrame(
-        data=dwell_times, index=time_df.index, columns=article_cols
-    )
-    return exp_time_df

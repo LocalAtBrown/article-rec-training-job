@@ -45,7 +45,7 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        # warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
@@ -55,6 +55,9 @@ def run():
 
         data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
+        import pdb
+
+        pdb.set_trace()
         formatted_df = preprocess.model_preprocessing(
             data,
             date_list=[EXPERIMENT_DT.date()],
