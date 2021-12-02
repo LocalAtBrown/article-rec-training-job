@@ -6,7 +6,6 @@ from requests.models import Response
 
 from bs4 import BeautifulSoup
 
-<<<<<<< HEAD
 from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
 from sites.site import Site
 import pandas as pd
