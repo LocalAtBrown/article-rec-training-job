@@ -40,7 +40,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     results = []
     good_paths = []
 
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
             futures_list.append((path, future))

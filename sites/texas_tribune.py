@@ -53,7 +53,7 @@ def extract_external_id(path: str) -> str:
 
     try:
         page = safe_get(article_url, HEADERS)
-        time.sleep(5)
+        time.sleep(10)
     except Exception as e:
         msg = f"Error fetching article url: {article_url}"
         logging.exception(msg)
@@ -125,7 +125,7 @@ def validate_article(
 
     try:
         res = safe_get(api_url, HEADERS)
-        time.sleep(5)
+        time.sleep(10)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
         logging.exception(msg)

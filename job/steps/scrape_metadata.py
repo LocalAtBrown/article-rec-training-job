@@ -121,7 +121,7 @@ def scrape_articles(
     """
     futures_list = []
     results = []
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for article in articles:
             future = executor.submit(scrape_article, site, article=article)
             futures_list.append(future)
