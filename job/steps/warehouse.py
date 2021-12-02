@@ -72,7 +72,15 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
     conn.close()
 
 
-def get_dwell_times(site: Site, days=28):
+def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
+    """
+    Pulls the last {days} worth of data from the data warehouse and applies a series of
+    filtering operations in SQL:
+    - Removes articles with only one reader
+    - Removes readers who only read one article
+    - Removes interactions longer than 10 minutes (600 seconds)
+    - Removes users who spent less than one total minute on the site
+    """
     table = get_table("dwelltimes")
     query = f"""
     with article_agg as (
