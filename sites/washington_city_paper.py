@@ -3,7 +3,6 @@ import re
 import logging
 from urllib.parse import urlparse
 from requests.models import Response
-import time
 
 from bs4 import BeautifulSoup
 
@@ -133,7 +132,6 @@ def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str
 
     try:
         page = safe_get(url)
-        time.sleep(5)
     except Exception as e:
         msg = f"Error fetching article url: {url}"
         logging.exception(msg)
