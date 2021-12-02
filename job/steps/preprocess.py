@@ -150,11 +150,10 @@ def model_preprocessing(
     prepared_df = time_decay(
         prepared_df, current_date=datetime.datetime.now().date(), hf=half_life
     )
+    logging.info("Preprocessing: applying time decay...")
     time_df = aggregate_time(
         prepared_df, date_list=date_list, external_id_col=external_id_col
     )
-    logging.info("Preprocessing: applying time decay...")
-    # exp_time_df = time_decay(time_df, half_life=half_life)
 
     return time_df
 
