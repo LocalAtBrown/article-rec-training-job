@@ -21,6 +21,15 @@ def set_dwell_seconds(df: pd.DataFrame):
     return df
 
 
+def get_connection():
+    return rc.connect(
+        host=config.get("REDSHIFT_DB_HOST"),
+        database=config.get("REDSHIFT_DB_NAME"),
+        user=config.get("REDSHIFT_DB_USER"),
+        password=config.get("REDSHIFT_DB_PASSWORD"),
+    )
+
+
 def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
     """
     Update the data warehouse for the given date
@@ -31,12 +40,8 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
     df = df[["duration", "session_date", "client_id", "article_id", "site"]].copy()
     df = set_dwell_seconds(df)
 
-    conn = rc.connect(
-        host=config.get("REDSHIFT_DB_HOST"),
-        database=config.get("REDSHIFT_DB_NAME"),
-        user=config.get("REDSHIFT_DB_USER"),
-        password=config.get("REDSHIFT_DB_PASSWORD"),
-    )
+    conn = get_connection()
+
     staging_table = get_table("staging")
     dwell_time_table = get_table("dwelltimes")
 
@@ -65,3 +70,33 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
         )
     conn.commit()
     conn.close()
+
+
+def get_dwell_times(site: Site, days=28):
+    table = get_table("dwelltimes")
+    query = f"""
+    with article_agg as (
+        select count(*) as num_users_per_article, article_id 
+        from {table} group by article_id
+    ),
+    user_agg as (
+        select count(*) as num_articles_per_user, sum(duration) as duration_per_user, client_id
+        from {table} group by client_id
+    )
+    select {table}.article_id, {table}.client_id, session_date, duration from {table}
+    join article_agg on article_agg.article_id = {table}.article_id
+    join user_agg on user_agg.client_id = {table}.client_id
+    where site = '{site.name}'
+    and timestamp_cmp_date(dateadd(day, -{days}, current_date), session_date) != 1
+    and num_users_per_article > 1
+    and num_articles_per_user > 1
+    and duration < 600
+    and duration_per_user > 60
+    """
+    conn = get_connection()
+    with conn.cursor() as cursor:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        return pd.DataFrame(
+            results, columns=["article_id", "client_id", "session_date", "duration"]
+        )

@@ -45,6 +45,18 @@ def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
     return data_df
 
 
+def time_decay2(
+    data_df: pd.DataFrame, current_date: datetime.date, hf: float
+) -> pd.DataFrame:
+    """
+    Applies basic exponential decay based on the difference between the "date" column
+    and the current date argument to the dwell time
+    """
+    decay_factor = 0.5 ** ((current_date - data_df["session_date"]).dt.days / hf)
+    data_df["duration"] *= decay_factor
+    return data_df
+
+
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Snowplow.
@@ -135,13 +147,16 @@ def model_preprocessing(
     :return: DataFrame with one row for each user at each date of interest, and one column for each article
     """
     logging.info("Preprocessing: creating aggregate dwell time df...")
+    prepared_df = time_decay2(
+        prepared_df, current_date=datetime.datetime.now().date(), hf=half_life
+    )
     time_df = aggregate_time(
         prepared_df, date_list=date_list, external_id_col=external_id_col
     )
     logging.info("Preprocessing: applying time decay...")
-    exp_time_df = time_decay(time_df, half_life=half_life)
+    # exp_time_df = time_decay(time_df, half_life=half_life)
 
-    return exp_time_df
+    return time_df
 
 
 def _add_dummies(
@@ -165,9 +180,9 @@ def _add_dummies(
             [
                 {
                     "client_id": filtered_df.client_id.iloc[0],
-                    "duration": pd.to_timedelta(0.0),
+                    "duration": 0,
                     "external_id": external_id,
-                    "session_date": pd.to_datetime(datetime_obj),
+                    "session_date": pd.to_datetime(datetime_obj).date(),
                 }
                 for datetime_obj, external_id in product(
                     date_list, activity_df[external_id_col].unique()
@@ -179,9 +194,9 @@ def _add_dummies(
             [
                 {
                     "client_id": client_id,
-                    "duration": pd.to_timedelta(0.0),
+                    "duration": 0,
                     "external_id": filtered_df.external_id.iloc[0],
-                    "session_date": pd.to_datetime(datetime_obj),
+                    "session_date": pd.to_datetime(datetime_obj).date(),
                 }
                 for datetime_obj, client_id in product(
                     date_list, activity_df.client_id.unique()
@@ -383,8 +398,6 @@ def aggregate_conversion_times(
 def aggregate_time(
     activity_df: pd.DataFrame,
     date_list: [datetime.date] = [],
-    start_time: datetime.datetime = None,
-    end_time: datetime.datetime = None,
     external_id_col: str = "external_id",
 ) -> pd.DataFrame:
     """
@@ -399,15 +412,8 @@ def aggregate_time(
     filtered_df = _add_dummies(
         activity_df, date_list=date_list, external_id_col=external_id_col
     )
-    if start_time is not None:
-        filtered_df = filtered_df[filtered_df.activity_time >= start_time]
-    if end_time is not None:
-        filtered_df = filtered_df[filtered_df.activity_time < end_time]
-    filtered_df["duration_seconds"] = filtered_df.duration.dt.total_seconds()
     time_df = (
-        filtered_df.groupby(["external_id", "client_id", "session_date"])[
-            "duration_seconds"
-        ]
+        filtered_df.groupby(["external_id", "client_id", "session_date"])["duration"]
         .sum()
         .unstack(level=0)
         .sort_index()
@@ -452,7 +458,6 @@ def time_decay(
 ) -> pd.DataFrame:
     """
     Computes exponential decay sum of time_df observations with decay based on session_date
-
     :param time_df: DataFrame of aggregated per day dwell time statistics for each user
     :param half_life: Desired half life of time spent in days
     :return: DataFrame with one row for each user at each date of interest, and one column for each article
