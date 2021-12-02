@@ -1,6 +1,9 @@
 from sites.washington_city_paper import WCP_SITE
 from sites.texas_tribune import TT_SITE
+<<<<<<< HEAD
 from sites.philadelphia_inquirer import PI_SITE
+=======
+>>>>>>> TT_metadata
 
 class Sites:
     WCP = WCP_SITE

@@ -8,25 +8,25 @@ import pdb
 from datetime import timezone
 from itertools import product
 from progressbar import ProgressBar
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 from lib.bucket import save_outputs
 from sites.site import Site
-from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor
+
 
 def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     """
     Preprocess a day's worth of raw Snowplow data
-
     :param df: Raw dataFrame of activities collected from Snowplow for one day
     :return: df with initial preprocessing steps completed
     """
     df = time_activities(df)
     return df
 
-def extract_external_id(site: Site, path: str) -> Union[str, int]:
+
+def extract_external_id(site: Site, path: str) -> str:
     return site.extract_external_id(path)
 
 
@@ -36,15 +36,11 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
         * Requisite fields: "landing_page_path" (str)
     :return: data_df with "external_id" column added
     """
-    #taking list of unique landing page paths because only one article will have one contentid no matter which user clicks on it
-
-    
-    # running it parallely like done in the scrape_articles
     futures_list = []
     results = []
     good_paths = []
-    
-    with ThreadPoolExecutor() as executor:
+
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
             futures_list.append((path, future))
@@ -54,16 +50,15 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
                 result = future.result(timeout=60)
                 results.append(result)
                 good_paths.append(path)
-            except: 
+            except:
                 pass
-    
-    df_data = {"landing_page_path":good_paths, "external_id": results}
+
+    df_data = {"landing_page_path": good_paths, "external_id": results}
     external_id_df = pd.DataFrame(df_data)
     external_id_df = external_id_df.dropna(subset=["external_id"])
     external_id_df["external_id"] = external_id_df["external_id"].astype(object)
 
     return external_id_df
-
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
