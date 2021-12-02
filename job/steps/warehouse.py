@@ -87,7 +87,7 @@ def get_dwell_times(site: Site, days=28):
     join article_agg on article_agg.article_id = {table}.article_id
     join user_agg on user_agg.client_id = {table}.client_id
     where site = '{site.name}'
-    and timestamp_cmp_date(dateadd(day, -{days}, current_date), session_date) != 1
+    and timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1
     and num_users_per_article > 1
     and num_articles_per_user > 1
     and duration < 600
