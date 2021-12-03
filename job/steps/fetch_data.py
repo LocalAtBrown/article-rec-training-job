@@ -44,7 +44,7 @@ def retry_s3_select(
         logging.exception(f"{object_key} incorrectly formatted, ignored.")
         return pd.DataFrame()
     except EventStreamError as e:
-        logging.excepton(f"{object_key} encountered ephemeral streaming error.")
+        logging.exception(f"{object_key} encountered ephemeral streaming error.")
         raise e
 
     return df
@@ -104,7 +104,7 @@ def fetch_data(
     write_metric("downloaded_rows", data_df.shape[0])
     latency = time.time() - start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)
-    return data_dfi
+    return data_df
 
 
 
