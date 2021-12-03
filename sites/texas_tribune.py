@@ -14,16 +14,12 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
 
-# supported url path formats:
-#- [`https://www.texastribune.org/2021/09/10/texas-abortion-law-ban-enforcement/?utm_campaign=trib-social&utm_content=1632982788&utm_medium=social&utm_source=twitter`](https://www.texastribune.org/2021/09/10/texas-abortion-law-ban-enforcement/?utm_campaign=trib-social&utm_content=1632982788&utm_medium=social&utm_source=twitter)
-
-# /2021/09/10/texas-abortion-law-ban-enforcement/
 
 def extract_external_id(path: str) -> str:
     article_url = f"https://{DOMAIN}{path}"
 
     try:
-        page = safe_get(article_url, HEADERS)
+        page = safe_get(article_url)
         time.sleep(10)
     except Exception as e:
         msg = f"Error fetching article url: {article_url}"
@@ -94,7 +90,7 @@ def validate_article(
     logging.info(f"Validating article url: {api_url}")
 
     try:
-        res = safe_get(api_url, HEADERS)
+        res = safe_get(api_url)
         time.sleep(10)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"

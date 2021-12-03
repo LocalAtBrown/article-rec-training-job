@@ -60,6 +60,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
 
     return external_id_df
 
+
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Snowplow.

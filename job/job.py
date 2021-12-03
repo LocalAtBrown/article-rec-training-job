@@ -41,8 +41,6 @@ def run():
             site, data_df["landing_page_path"].unique().tolist()
         )
 
-        data_df = data_df.merge(external_id_df, on="landing_page_path", how="left")
-        data_df = data_df.dropna(subset=["external_id"])
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
 
         article_df = scrape_metadata.scrape_metadata(
