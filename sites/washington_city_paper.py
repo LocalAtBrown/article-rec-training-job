@@ -6,9 +6,8 @@ from requests.models import Response
 
 from bs4 import BeautifulSoup
 
-from sites.helpers import safe_get, ArticleScrapingError, transform_raw_data
+from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
 from sites.site import Site
-import pandas as pd
 
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
@@ -121,7 +120,7 @@ def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str
 WCP_SITE = Site(
     NAME,
     FIELDS,
-    transform_raw_data,
+    transform_data_google_tag_manager,
     extract_external_id,
     scrape_article_metadata,
     validate_article,

@@ -5,7 +5,6 @@ from urllib.parse import urlparse
 from requests.models import Response
 from datetime import datetime
 import requests
-import pandas as pd
 import pdb
 import re
 
@@ -25,15 +24,14 @@ PI_ARC_API_HEADER = {"Authorization": ARC_KEY}
 PI_ARC_API_SITE = "philly-media-network"
 TIMEOUT_SECONDS = 30
 
-# supported url path formats:
-#- [`https://www.inquirer.com/news/philadelphia-school-district-teacher-vacancies-staffing-crisis-20211128.html`](https://www.inquirer.com/news/philadelphia-school-district-teacher-vacancies-staffing-crisis-20211128.html)
-
-# /news/philadelphia-school-district-teacher-vacancies-staffing-crisis-20211128.html 
-
 
 @retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
 def safe_get_pi(params:dict):
-    """
+    """ Politely make requests to ARC API
+
+    :stop_max_attempt_number: times to retry
+    :wait_exponential_multiplier: exponential decay
+    :return res: request response
     """
     res = requests.get(PI_ARC_API_URL, 
                         timeout=TIMEOUT_SECONDS,
@@ -42,7 +40,10 @@ def safe_get_pi(params:dict):
     return res
 
 def extract_external_id(path: str) -> Optional[str]:
-    """
+    """ Request content ID from a url from ARC API
+
+    :path:an Inquirer url
+    :return contentID: Unique ID of url
     """
     params = {
         "website_url": path,
@@ -67,18 +68,27 @@ def extract_external_id(path: str) -> Optional[str]:
     return None
 
 def get_date(res_val:dict) -> str:
-    """
+    """ ARC response date parser. PI response includes timezone
+
+    :res_val: JSON payload from ARC API
+    :return: Isoformat date string
     """
     res_val = datetime.strptime(res_val["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
     return res_val
 
 def get_url(res_val:dict) -> str:
-    """
+    """ ARC response url parser
+
+    :res_val: JSON payload from ARC API
+    :return: Canonical URL for external_ID
     """
     return res_val["canonical_url"] 
 
 def get_headline(res_val:dict) -> str:
-    """
+    """ ARC response headline parser
+
+    :res_val: JSON payload from ARC API
+    :return: meta_title (if available) or basic title
     """
     res_val = res_val["headlines"]
     if "meta_title" in res_val:
@@ -87,7 +97,11 @@ def get_headline(res_val:dict) -> str:
     return res_val["basic"]
 
 def parse_article_metadata(page: Response, external_id: str) -> dict:
-    """
+    """ ARC API JSON parser
+    
+    :page: JSON Payload from ARC for an external_id
+    :external_id: Unique identifier for URL
+    :return: Relevant metadata from an API response
     """
     logging.info(f"Parsing metadata from id: {external_id}")
 
@@ -113,7 +127,10 @@ def parse_article_metadata(page: Response, external_id: str) -> dict:
     return metadata
 
 def validate_not_excluded(res: Response) -> Optional[str]:
-    """
+    """ ARC API response validator
+
+    :res: ARC API JSON response payload
+    :return: None if no errors; otherwise string describing validation issue
     """
     try:
         res = res.json()
@@ -139,7 +156,10 @@ def validate_not_excluded(res: Response) -> Optional[str]:
 
 
 def validate_article(external_id: str) -> (Response, str, Optional[str]):
-    """
+    """ ARC API validation handler  
+
+    :external_id: Unique identifier for a URL  
+    :return: JSON payload, external_id and an optional error message
     """
     params = {
         "_id": external_id,

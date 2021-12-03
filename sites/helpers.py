@@ -1,6 +1,6 @@
 from typing import Dict
 import requests as req
-
+import pandas as pd
 from retrying import retry
 
 def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
@@ -28,6 +28,7 @@ def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
 
     return transformed_df
+
 class ArticleScrapingError(Exception):
     pass
 

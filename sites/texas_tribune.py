@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 
 from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
 from sites.site import Site
-import pandas as pd
 
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"

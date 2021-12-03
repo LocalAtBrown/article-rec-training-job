@@ -12,6 +12,7 @@ from job.steps import (
     delete_old_models,
     warehouse,
 )
+from job.helpers import get_site
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
@@ -42,7 +43,10 @@ def run():
         )
 
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-
+        
+        db_proxy.close() 
+        db_proxy.connect()
+        
         article_df = scrape_metadata.scrape_metadata(
             site, data_df["external_id"].unique().tolist()
         )
@@ -51,7 +55,7 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
