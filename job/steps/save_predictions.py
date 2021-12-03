@@ -24,8 +24,6 @@ def save_predictions(model, model_id, internal_ids, external_item_ids, article_i
     :external_item_ids: Item IDS in ARC CMS
     :article_ids: DB article_ids
     """
-    # get the embedding for each article
-    
     start_ts = time.time()
     embeddings = np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in internal_ids])
     nbrs = NearestNeighbors(n_neighbors=MAX_RECS + 1, 
