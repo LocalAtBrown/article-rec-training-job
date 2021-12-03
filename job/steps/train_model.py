@@ -1,74 +1,42 @@
 import logging
 import numpy as np
-import scipy.sparse as sparse
-import time
+import pandas as pd
 
-from scipy.sparse import csr_matrix
-from sklearn.preprocessing import MinMaxScaler
+from spotlight.factorization.implicit import ImplicitFactorizationModel
+from spotlight.interactions import Interactions
 
-from job.steps.implicit_mf import ImplicitMF
-from lib.bucket import save_outputs
-
-
-def load_matrix(pageview_df, num_users, num_items):
+def spotlight_transform(prepared_df:pd.DataFrame, 
+                        half_life:float, 
+                        current_time: pd.Timestamp):
     """
-    #TODO: We should rewrite this without the iterrows and use it to load the df directly into sparse matrix format
-
-    :param pageview_df:
-    :param num_users:
-    :param num_items:
-    :return:
     """
-    t0 = time.time()
-    counts = sparse.dok_matrix((num_users, num_items), dtype=float)
-    total = 0.0
-    num_zeros = num_users * num_items
-    users = {}
-    items = {}
-    for i, line in pageview_df.iterrows():
-        user, item, count = line
-        users[user] = len(users) - 1
-        items[item] = len(items) - 1
-        count = float(count)
-        if len(users) >= num_users:
-            continue
-        if len(items) >= num_items:
-            continue
-        if count != 0:
-            counts[users[user], items[item]] = count
-            total += count
-            num_zeros -= 1
-        if i % 100000 == 0:
-            logging.info("loaded %i counts..." % i)
-    alpha = num_zeros / total
-    logging.info("alpha %.2f" % alpha)
-    counts *= alpha
-    counts = counts.tocsr()
-    t1 = time.time()
-    logging.info("Finished loading matrix in %f seconds" % (t1 - t0))
-    return counts, users
+    prepared_df = prepared_df[['external_id', 'article_id', 'client_id','session_date', 'duration']]
+    prepared_df = prepared_df.dropna()
+    
+    prepared_df['external_id'] = prepared_df['external_id'].astype('category')
+    prepared_df['item_id'] = prepared_df['external_id'].cat.codes + 1
+    prepared_df['user_id'] = prepared_df['client_id'].factorize()[0] + 1
+    prepared_df['timestamp'] = prepared_df['session_date'].factorize()[0] + 1
+    prepared_df['ratings'] = prepared_df['duration'].dt.total_seconds()
+    prepared_df['ratings'] = prepared_df['ratings'].clip(upper=600).astype(np.int32)
+    current_date = pd.to_datetime(current_time)
+    # exponential decay
+    prepared_df['ratings'] = prepared_df['ratings'] * (0.5**((current_date - prepared_df['session_date']).dt.days / half_life))
 
+    prepared_df.reset_index(inplace=True, drop=True) 
 
-@save_outputs("model_item_vectors.npy")
-def train_model(X: np.array, reg: float, n_components: int, epochs: int) -> ImplicitMF:
+    dataset = Interactions(user_ids=prepared_df['user_id'].values,
+                       item_ids=prepared_df['item_id'].values,
+                       ratings=prepared_df['ratings'].values,
+                       timestamps=prepared_df['timestamp'].values)
+
+    return (dataset, prepared_df['external_id'].unique(), prepared_df['item_id'].unique(), prepared_df['article_id'].unique()) 
+
+def train_model(X:pd.DataFrame, reg:float, n_components:int, epochs:int, time=pd.datetime):
     """
-    #TODO: If necessary, skip the numpy array conversion step, and load directly into sparse matrix.
-    :param X:
-    :param reg:
-    :param n_components:
-    :param epochs:
-    :return:
     """
-    X_log = np.log(1 + X)
-    X_scaler = MinMaxScaler()
-    X_scaled = X_scaler.fit_transform(X_log)
+    dataset, external_item_ids, internal_ids, article_ids = spotlight_transform(prepared_df=X, half_life=59.631698, current_time=time) 
+    model = ImplicitFactorizationModel(n_iter=epochs, embedding_dim=n_components)
+    model.fit(dataset, verbose=True)
 
-    # Hyperparameters derived using optimize_ga_pipeline.ipynb
-    model = ImplicitMF(
-        counts=csr_matrix(X_scaled),
-        reg_param=reg,
-        num_factors=n_components,
-        num_iterations=epochs,
-    )
-    model.train_model()
-    return model
+    return model, external_item_ids, internal_ids, article_ids

@@ -9,7 +9,6 @@ from itertools import product
 from progressbar import ProgressBar
 from typing import List, Tuple, Optional
 from lib.config import config, ROOT_DIR
-from job.helpers import apply_decay
 from lib.bucket import save_outputs
 from sites.site import Site
 from concurrent.futures import ThreadPoolExecutor
@@ -131,33 +130,6 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Preprocessing: filtering flyby users and articles...")
     filtered_df = filter_articles(filtered_df)
     return filtered_df
-
-
-def model_preprocessing(
-    prepared_df: pd.DataFrame,
-    date_list: list = [],
-    external_id_col: str = "external_id",
-    half_life: float = 10.0,
-) -> pd.DataFrame:
-    """
-    Format clickstream Snowplow data into user-item matrix for training.
-
-    :param prepared_df: DataFrame of activities collected from Snowplow using job.py
-        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
-            "event_action" (str), "event_category" (str), "duration" (timedelta)
-    :param date_list: List of datetimes to forcefully include in all aggregates
-    :param external_id_col: Name of column being used to denote articles
-    :param half_life: Desired half life of time spent in days
-    :return: DataFrame with one row for each user at each date of interest, and one column for each article
-    """
-    logging.info("Preprocessing: creating aggregate dwell time df...")
-    time_df = aggregate_time(
-        prepared_df, date_list=date_list, external_id_col=external_id_col
-    )
-    logging.info("Preprocessing: applying time decay...")
-    exp_time_df = time_decay(time_df, half_life=half_life)
-
-    return exp_time_df
 
 
 def _add_dummies(
@@ -395,103 +367,3 @@ def aggregate_conversion_times(
 
     return conversion_df
 
-
-def aggregate_time(
-    activity_df: pd.DataFrame,
-    date_list: [datetime.date] = [],
-    start_time: datetime.datetime = None,
-    end_time: datetime.datetime = None,
-    external_id_col: str = "external_id",
-) -> pd.DataFrame:
-    """
-    Aggregates activities into daily per-article total dwell time.
-
-    :param activity_df: DataFrame of Snowplow activities with associated dwell times
-        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
-    :param date_list: List of dates to forcefully include in all aggregates
-    :return: DataFrame of aggregated per day dwell time with one row for each user at each date of interest,
-        and one column for each article.
-    """
-    filtered_df = _add_dummies(
-        activity_df, date_list=date_list, external_id_col=external_id_col
-    )
-    if start_time is not None:
-        filtered_df = filtered_df[filtered_df.activity_time >= start_time]
-    if end_time is not None:
-        filtered_df = filtered_df[filtered_df.activity_time < end_time]
-    filtered_df["duration_seconds"] = filtered_df.duration.dt.total_seconds()
-    time_df = (
-        filtered_df.groupby(["external_id", "client_id", "session_date"])[
-            "duration_seconds"
-        ]
-        .sum()
-        .unstack(level=0)
-        .sort_index()
-        .fillna(0.0)
-    )
-
-    return time_df
-
-
-def aggregate_pageviews(
-    activity_df: pd.DataFrame,
-    date_list: [datetime.date] = [],
-    start_time: datetime.datetime = None,
-    end_time: datetime.datetime = None,
-    external_id_col: str = "external_id",
-) -> pd.DataFrame:
-    """
-    Aggregates activities into daily per-article total dwell time.
-
-    :param activity_df: DataFrame of Snowplow activities with associated dwell times
-        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str)
-    :param date_list: List of dates to forcefully include in all aggregates
-    :return: DataFrame of aggregated pageviews with one row for each user at each date of interest,
-        and one column for each article.
-    """
-    dummy_time_df = activity_df.copy()
-    dummy_time_df["duration"] = 1.0
-    time_df = aggregate_time(
-        activity_df=dummy_time_df,
-        date_list=date_list,
-        start_time=start_time,
-        end_time=end_time,
-        external_id_col=external_id_col,
-    )
-    pageview_df = (time_df > 0).astype(int)
-    return pageview_df
-
-
-def time_decay(
-    time_df: pd.DataFrame,
-    half_life: float = 10,
-) -> pd.DataFrame:
-    """
-    Computes exponential decay sum of time_df observations with decay based on session_date
-
-    :param time_df: DataFrame of aggregated per day dwell time statistics for each user
-    :param half_life: Desired half life of time spent in days
-    :return: DataFrame with one row for each user at each date of interest, and one column for each article
-    """
-    article_cols = time_df.columns
-    exp_time_df = time_df.reset_index()
-
-    # Apply exponential time decay
-    user_changed = ~(
-        exp_time_df.client_id.eq(exp_time_df.client_id.shift(1)).fillna(False)
-    )
-    date_delta = exp_time_df.session_date.diff().dt.days.fillna(0)
-    dwell_times = np.nan_to_num(exp_time_df[article_cols])
-    bar = ProgressBar(max_value=len(exp_time_df))
-    for i in range(1, dwell_times.shape[0]):
-        if user_changed.iloc[i]:
-            continue
-        dwell_times[i, :] += apply_decay(
-            dwell_times[i - 1, :], date_delta.iloc[i], half_life
-        )
-        bar.update(i)
-
-    exp_time_df = pd.DataFrame(
-        data=dwell_times, index=time_df.index, columns=article_cols
-    )
-    return exp_time_df

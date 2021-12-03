@@ -1,7 +1,6 @@
 import logging
 import pandas as pd
 
-from job.helpers import get_weights
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model, create_rec
 from lib.config import config

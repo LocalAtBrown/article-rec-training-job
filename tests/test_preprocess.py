@@ -137,74 +137,6 @@ def _test_aggregate_conversion_times(filtered_df):
     return conversion_df
 
 
-def _test_aggregate_pageviews(filtered_df):
-    pageview_df = aggregate_pageviews(
-        filtered_df, date_list=[EXPERIMENT_DATE], external_id_col="article_id"
-    )
-    assert all(filtered_df.groupby("article_id").count() == pageview_df.sum())
-    assert all(
-        [
-            (client_id, EXPERIMENT_DATE) in pageview_df.index
-            for client_id in filtered_df.client_id.unique()
-        ]
-    )
-    return pageview_df
-
-
-def _test_aggregate_time(filtered_df):
-    time_df = aggregate_time(
-        filtered_df, date_list=[EXPERIMENT_DATE], external_id_col="external_id"
-    )
-    assert (time_df.dtypes == float).all()
-    # Lower than floating point error
-    assert all(
-        (
-            filtered_df.groupby("external_id").duration.sum().dt.total_seconds()
-            - time_df.sum()
-        ).abs()
-        < 1e-12
-    )
-    assert all(
-        [
-            (client_id, EXPERIMENT_DATE) in time_df.index
-            for client_id in filtered_df.client_id.unique()
-        ]
-    )
-    return time_df
-
-
-def _test_time_decay(time_df):
-    # A reader registers decayed time on an article if and only if reader registers some time.
-    exp_time_df = time_decay(time_df, half_life=1)
-    visited_articles = (
-        time_df.reset_index().drop(columns="session_date").groupby("client_id").max()
-        > 0
-    )
-    visited_decayed_articles = (
-        exp_time_df.reset_index()
-        .drop(columns="session_date")
-        .groupby("client_id")
-        .max()
-        > 0
-    )
-    assert all((visited_articles == visited_decayed_articles).all())
-    # An infinite half life means there is no decay
-    exp_time_df = time_decay(time_df, half_life=float("inf"))
-    assert all(
-        (
-            exp_time_df.reset_index(drop=True)
-            == time_df.reset_index().groupby(["client_id"]).cumsum()
-        ).all()
-    )
-    # A half life of 0 means dwell time is immediately decayed the day after
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
-    exp_time_df = time_decay(time_df, half_life=0)
-    warnings.resetwarnings()
-    assert all((exp_time_df == time_df).all())
-
-    return exp_time_df
-
-
 
 def _test_filter_users(activity_df):
     returning_user_df = filter_flyby_users(activity_df)
@@ -234,5 +166,3 @@ def test_pipeline(activity_df):
     clean_df = _test_fix_dtypes(top_article_df)
     sorted_df = _test_time_activities(clean_df)
     filtered_df = _test_filter_activities(sorted_df)
-    time_df = _test_aggregate_time(filtered_df)
-    exp_time_df = _test_time_decay(time_df)

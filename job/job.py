@@ -48,7 +48,7 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
@@ -56,18 +56,15 @@ def run():
         save_defaults.save_defaults(data_df, article_df, site.name)
 
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
-        formatted_df = preprocess.model_preprocessing(
-            data_df, date_list=[EXPERIMENT_DT.date()], half_life=59.631698
-        )
-        model = train_model.train_model(
-            X=formatted_df, reg=2.319952, n_components=130, epochs=2
-        )
+        model, external_item_ids, internal_ids, article_ids = train_model.train_model(
+                    X=data_df, reg=2.319952, n_components=128, epochs=25, time=EXPERIMENT_DT
+                )
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
-        # External IDs to map articles back to
-        external_article_ids = formatted_df.columns
 
         save_predictions.save_predictions(
-            model, model_id, external_article_ids, article_df
+            model=model, model_id=model_id, 
+            internal_ids=internal_ids, external_item_ids=external_item_ids,
+            article_ids=article_ids
         )
         set_current_model(model_id, Type.ARTICLE.value, site.name)
 
