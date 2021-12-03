@@ -51,7 +51,7 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
