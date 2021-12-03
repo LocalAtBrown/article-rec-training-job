@@ -3,7 +3,7 @@ import re
 import logging
 from urllib.parse import urlparse
 from requests.models import Response
-
+import time
 from bs4 import BeautifulSoup
 
 from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
