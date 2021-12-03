@@ -5,6 +5,7 @@ Site = namedtuple(
     [
         "name",
         "fields",
+        "params",
         "transform_raw_data",
         "extract_external_id",
         "scrape_article_metadata",

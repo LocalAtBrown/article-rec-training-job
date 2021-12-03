@@ -14,7 +14,11 @@ import time
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
-
+PARAMS = {
+ "hl": 15.0,
+ "embeddings_dim": 128,
+ "epochs": 27 
+}
 
 def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -136,6 +140,7 @@ def validate_article(
 TT_SITE = Site(
     NAME,
     FIELDS,
+    PARAMS,
     transform_data_google_tag_manager,
     extract_external_id,
     scrape_article_metadata,

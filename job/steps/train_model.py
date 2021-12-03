@@ -8,7 +8,12 @@ from spotlight.interactions import Interactions
 def spotlight_transform(prepared_df:pd.DataFrame, 
                         half_life:float, 
                         current_time: pd.Timestamp):
-    """
+    """Transform data for Spotlight
+
+    :prepared_df: Dataframe with user-article interactions
+    :half_life: time decay for articles 
+    :current_time: time to benchmark decay against
+    :return: (dataset, external_id uniques, item_id uniques, article_id uniques)
     """
     prepared_df = prepared_df[['external_id', 'article_id', 'client_id','session_date', 'duration']]
     prepared_df = prepared_df.dropna()
@@ -32,11 +37,21 @@ def spotlight_transform(prepared_df:pd.DataFrame,
 
     return (dataset, prepared_df['external_id'].unique(), prepared_df['item_id'].unique(), prepared_df['article_id'].unique()) 
 
-def train_model(X:pd.DataFrame, reg:float, n_components:int, epochs:int, time=pd.datetime):
+def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
+    """Train spotlight model
+
+    X: pandas dataframe of interactions
+    params: Hyperparameters
+    time: time to benchmark decay against
+
+    return: (model: Spotlight model, 
+            external_item_ids: ARC CMS article IDs, 
+            internal_ids: Spotlight article IDs, 
+            article_ids: LNL DB article IDs)
     """
-    """
-    dataset, external_item_ids, internal_ids, article_ids = spotlight_transform(prepared_df=X, half_life=59.631698, current_time=time) 
-    model = ImplicitFactorizationModel(n_iter=epochs, embedding_dim=n_components)
+    dataset, external_item_ids, internal_ids, article_ids = spotlight_transform(prepared_df=X, half_life=params["hl"], current_time=time) 
+
+    model = ImplicitFactorizationModel(n_iter=params["epochs"], embedding_dim=params["embeddings_dim"])
     model.fit(dataset, verbose=True)
 
     return model, external_item_ids, internal_ids, article_ids

@@ -1,21 +1,28 @@
 import logging
 import time
 from typing import List
-
-from db.helpers import create_rec
-from lib.config import config
-from lib.metrics import write_metric, Unit
-
+import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import torch
 
+from db.helpers import create_rec
+from db.mappings.recommendation import Rec
+from lib.config import config
+from lib.metrics import write_metric, Unit
+
 MAX_RECS = config.get("MAX_RECS")
 
-def get_nearest(i, indices, distances, article_ids):
+def _get_nearest(i, indices, distances, article_ids):
     return (article_ids[indices[i - 1][1:]], distances[i - 1][1:])
 
 def save_predictions(model, model_id, internal_ids, external_item_ids, article_ids):
-    """
+    """Save predictions to the db
+    
+    :model: Spotlight model  
+    :model_id: unique id of model 
+    :internal_ids: Spotlight IDS
+    :external_item_ids: Item IDS in ARC CMS
+    :article_ids: DB article_ids
     """
     # get the embedding for each article
     
@@ -24,13 +31,13 @@ def save_predictions(model, model_id, internal_ids, external_item_ids, article_i
     nbrs = NearestNeighbors(n_neighbors=MAX_RECS + 1, 
                             metric='cosine',
                             algorithm='brute').fit(embeddings) 
-    distances, indices = nbrs.kneigbors(embeddings)
+    distances, indices = nbrs.kneighbors(embeddings)
 
     to_save = []
 
     for i in internal_ids:
         source_db_external_id = external_item_ids[i - 1]
-        recommendations = get_nearest(i, indices, distances, article_ids)
+        recommendations = _get_nearest(i, indices, distances, article_ids)
 
         to_save += [Rec(source_entity_id=source_db_external_id,
                             model_id=model_id,
@@ -43,4 +50,4 @@ def save_predictions(model, model_id, internal_ids, external_item_ids, article_i
     Rec.bulk_create(to_save, batch_size=50)
     latency = time.time() - start_ts
     write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
-    write_metric("rec_creation_total", created_recs)
+    write_metric("rec_creation_total", len(to_save))

@@ -16,7 +16,6 @@ from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
-from sites.sites import Sites
 import pandas as pd
 
 
@@ -57,13 +56,14 @@ def run():
 
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         model, external_item_ids, internal_ids, article_ids = train_model.train_model(
-                    X=data_df, reg=2.319952, n_components=128, epochs=25, time=EXPERIMENT_DT
+            X=data_df, params=site.params, time=EXPERIMENT_DT
                 )
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
 
         save_predictions.save_predictions(
             model=model, model_id=model_id, 
-            internal_ids=internal_ids, external_item_ids=external_item_ids,
+            internal_ids=internal_ids, 
+            external_item_ids=external_item_ids,
             article_ids=article_ids
         )
         set_current_model(model_id, Type.ARTICLE.value, site.name)
