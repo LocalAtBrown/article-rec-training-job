@@ -8,15 +8,55 @@ from bs4 import BeautifulSoup
 
 from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
-
+import pandas as pd
 
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
+FIELDS = [
+    "collector_tstamp",
+    "page_urlpath",
+    "contexts_dev_amp_snowplow_amp_id_1",
+]
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
+
+
+def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    requires a dataframe with the following fields:
+    - contexts_dev_amp_snowplow_amp_id_1
+    - collector_tstamp
+    - page_urlpath
+
+    returns a dataframe with the following fields:
+    - client_id
+    - session_date
+    - activity_time
+    - landing_page_path
+    - event_category (conversions, newsletter sign-ups TK)
+    - event_action (conversions, newsletter sign-ups TK)
+    """
+    df = df.dropna(subset=["contexts_dev_amp_snowplow_amp_id_1"])
+    transformed_df = pd.DataFrame()
+    transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(
+        lambda x: x[0]["ampClientId"]
+    )
+    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
+    transformed_df["session_date"] = pd.to_datetime(
+        transformed_df.activity_time.dt.date
+    )
+    transformed_df["landing_page_path"] = df.page_urlpath
+    transformed_df["event_category"] = "snowplow_amp_page_ping"
+    transformed_df["event_category"] = transformed_df["event_category"].astype(
+        "category"
+    )
+    transformed_df["event_action"] = "impression"
+    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
+
+    return transformed_df
 
 
 def extract_external_id(path: str) -> str:
@@ -114,4 +154,11 @@ def validate_article(external_id: int) -> (Response, BeautifulSoup, Optional[str
     return page, soup, error_msg
 
 
-WCP_SITE = Site(NAME, extract_external_id, scrape_article_metadata, validate_article)
+WCP_SITE = Site(
+    NAME,
+    FIELDS,
+    transform_raw_data,
+    extract_external_id,
+    scrape_article_metadata,
+    validate_article,
+)

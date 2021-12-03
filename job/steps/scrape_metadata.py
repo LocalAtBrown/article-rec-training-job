@@ -36,9 +36,7 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     start_ts = time.time()
     total_scraped = 0
     scraping_errors = 0
-
     external_ids = set(external_ids)
-
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
@@ -71,6 +69,7 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
         "site": [a.site for a in articles],
     }
     article_df = pd.DataFrame(df_data).set_index("external_id")
+    article_df.index = article_df.index.astype("object")
     return article_df
 
 
@@ -122,7 +121,7 @@ def scrape_articles(
     """
     futures_list = []
     results = []
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for article in articles:
             future = executor.submit(scrape_article, site, article=article)
             futures_list.append(future)

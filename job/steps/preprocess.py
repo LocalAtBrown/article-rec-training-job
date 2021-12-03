@@ -7,11 +7,12 @@ import pandas as pd
 from datetime import timezone
 from itertools import product
 from progressbar import ProgressBar
-
+from typing import List, Tuple, Optional
 from lib.config import config, ROOT_DIR
 from job.helpers import apply_decay
 from lib.bucket import save_outputs
 from sites.site import Site
+from concurrent.futures import ThreadPoolExecutor
 
 
 def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
@@ -25,24 +26,39 @@ def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def extract_external_id(site: Site, data_row: pd.Series) -> str:
-    return site.extract_external_id(data_row["landing_page_path"])
+def extract_external_id(site: Site, path: str) -> str:
+    return site.extract_external_id(path)
 
 
-def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
+def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Snowplow.
         * Requisite fields: "landing_page_path" (str)
     :return: data_df with "external_id" column added
     """
-    data_df["external_id"] = data_df.apply(
-        lambda x: extract_external_id(site, x), axis=1
-    )
+    futures_list = []
+    results = []
+    good_paths = []
 
-    # drop non-article pages (ie vertical pages like "/news" and "/coronavirus")
-    data_df = data_df.dropna(subset=["external_id"])
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for path in landing_page_paths:
+            future = executor.submit(extract_external_id, site, path=path)
+            futures_list.append((path, future))
 
-    return data_df
+        for (path, future) in futures_list:
+            try:
+                result = future.result(timeout=60)
+                results.append(result)
+                good_paths.append(path)
+            except:
+                pass
+
+    df_data = {"landing_page_path": good_paths, "external_id": results}
+    external_id_df = pd.DataFrame(df_data)
+    external_id_df = external_id_df.dropna(subset=["external_id"])
+    external_id_df["external_id"] = external_id_df["external_id"].astype(object)
+
+    return external_id_df
 
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:

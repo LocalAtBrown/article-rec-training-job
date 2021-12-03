@@ -17,6 +17,7 @@ from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.sites import Sites
+import pandas as pd
 
 
 def run():
@@ -34,7 +35,10 @@ def run():
         EXPERIMENT_DT = datetime.datetime.now()
 
         data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
-        data_df = preprocess.extract_external_ids(site, data_df)
+        external_id_df = preprocess.extract_external_ids(
+            site, list(data_df["landing_page_path"].unique())
+        )
+        data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
 
         article_df = scrape_metadata.scrape_metadata(
             site, list(data_df.external_id.unique())
@@ -48,7 +52,6 @@ def run():
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
-
         article_df = article_df.reset_index()
         save_defaults.save_defaults(data_df, article_df, site.name)
 

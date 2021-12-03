@@ -19,47 +19,7 @@ from job.steps.preprocess import preprocess_day
 from sites.site import get_bucket_name, Site
 
 DAYS_OF_DATA = config.get("DAYS_OF_DATA")
-FIELDS = [
-    "collector_tstamp",
-    "page_urlpath",
-    "contexts_dev_amp_snowplow_amp_id_1",
-]
 s3 = boto3.client("s3")
-
-
-def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    requires a dataframe with the following fields:
-    - contexts_dev_amp_snowplow_amp_id_1
-    - collector_tstamp
-    - page_urlpath
-
-    returns a dataframe with the following fields:
-    - client_id
-    - session_date
-    - activity_time
-    - landing_page_path
-    - event_category (conversions, newsletter sign-ups TK)
-    - event_action (conversions, newsletter sign-ups TK)
-    """
-    df = df.dropna(subset=["contexts_dev_amp_snowplow_amp_id_1"])
-    transformed_df = pd.DataFrame()
-    transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(
-        lambda x: x[0]["ampClientId"]
-    )
-    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
-    transformed_df["session_date"] = pd.to_datetime(
-        transformed_df.activity_time.dt.date
-    )
-    transformed_df["landing_page_path"] = df.page_urlpath
-    transformed_df["event_category"] = "snowplow_amp_page_ping"
-    transformed_df["event_category"] = transformed_df["event_category"].astype(
-        "category"
-    )
-    transformed_df["event_action"] = "impression"
-    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
-
-    return transformed_df
 
 
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -94,14 +54,12 @@ def fetch_data(
     site: Site,
     experiment_dt: datetime.datetime = None,
     days: int = DAYS_OF_DATA,
-    fields: List[str] = FIELDS,
-    transformer: Callable = transform_raw_data,
 ) -> pd.DataFrame:
     start_ts = time.time()
     dt = experiment_dt or datetime.datetime.now()
     data_dfs = []
     path = "/downloads"
-
+    fields = site.fields
     for _ in range(days):
         if not os.path.isdir(path):
             os.makedirs(path)
@@ -119,9 +77,11 @@ def fetch_data(
             for filename in files:
                 file_path = os.path.join(full_path, filename)
                 tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
+
                 common_fields = list(set(tmp_df.columns) & set(fields))
                 try:
-                    df = transformer(tmp_df[common_fields])
+                    df = site.transform_raw_data(tmp_df[common_fields])
+
                 except TypeError:
                     logging.exception(
                         f"Unexpected format. Can't transform data for {prefix}"

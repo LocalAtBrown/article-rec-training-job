@@ -20,7 +20,7 @@ function getCron(stage: helpers.STAGE, index: number) {
   let n = partners.filter(f => f.enabled).length
   if (stage == helpers.STAGE.DEVELOPMENT) {
     // Development job runs once per day
-    // Offset each development job by 1 hour. 
+    // Offset each development job by 1 hour.
     return {
       hour: `${index % 24}`,
       minute: '0',
@@ -93,8 +93,6 @@ export class AppStack extends cdk.Stack {
       extraHash: Date.now().toString(),
     });
 
-    // find more cpu and memory options for fargate here:
-    // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
     const cpu = props.site.cpu
     const memoryLimitMiB = props.site.memoryLimitMiB
 
