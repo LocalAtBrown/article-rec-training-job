@@ -35,7 +35,7 @@ def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
     return instance.to_dict()
 
 
-def get_articles_by_external_ids(site: Site, external_ids: List[str]) -> List[dict]:
+def get_articles_by_external_ids(site: Site, external_ids: Iterable[str]) -> List[dict]:
     res = Article.select().where(
         (Article.site == site.name) & Article.external_id.in_(list(external_ids))
     )
