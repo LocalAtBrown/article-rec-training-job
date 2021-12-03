@@ -14,7 +14,6 @@ import time
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
-HEADERS = {"User-Agent": "article-rec-training-job/1.0.0"}
 
 
 def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
@@ -52,7 +51,7 @@ def extract_external_id(path: str) -> str:
     article_url = f"https://{DOMAIN}{path}"
 
     try:
-        page = safe_get(article_url, HEADERS)
+        page = safe_get(article_url)
         time.sleep(10)
     except Exception as e:
         msg = f"Error fetching article url: {article_url}"
@@ -124,7 +123,7 @@ def validate_article(
     logging.info(f"Validating article url: {api_url}")
 
     try:
-        res = safe_get(api_url, HEADERS)
+        res = safe_get(api_url)
         time.sleep(10)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
