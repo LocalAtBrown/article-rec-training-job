@@ -20,8 +20,6 @@ from lib.config import config
 from sites.sites import Sites
 import pandas as pd
 
-from db.mappings.base import db_proxy
-
 def run():
     logging.info("Running job...")
 
@@ -44,9 +42,6 @@ def run():
 
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
         
-        db_proxy.close() 
-        db_proxy.connect()
-        
         article_df = scrape_metadata.scrape_metadata(
             site, data_df["external_id"].unique().tolist()
         )
@@ -55,7 +50,7 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
