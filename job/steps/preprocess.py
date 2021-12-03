@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 def preprocess_day(df: pd.DataFrame) -> pd.DataFrame:
     """
     Preprocess a day's worth of raw Snowplow data
+
     :param df: Raw dataFrame of activities collected from Snowplow for one day
     :return: df with initial preprocessing steps completed
     """

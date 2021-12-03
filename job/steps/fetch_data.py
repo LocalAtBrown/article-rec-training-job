@@ -107,7 +107,6 @@ def fetch_data(
     return data_df
 
 
-
 def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
 

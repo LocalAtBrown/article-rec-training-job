@@ -79,6 +79,5 @@ def run():
         logging.exception("Job failed")
         status = "failure"
 
-
     latency = time.time() - start_ts
     write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
