@@ -56,7 +56,7 @@ def save_predictions(model, model_id:int,
                             score= 1 - score) for (recommended_item_id, score) in zip(*recommendations)]
 
         if len(to_save) % 1000 == 0:
-            logging.info(f"Created {created_recs} recommendations...")
+            logging.info(f"Created {len(to_save)} recommendations...")
 
     Rec.bulk_create(to_save, batch_size=50)
     latency = time.time() - start_ts

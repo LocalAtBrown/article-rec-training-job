@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import logging
 import time
 
@@ -12,17 +12,17 @@ from job.steps import (
     delete_old_models,
     warehouse,
 )
+from job.helpers import get_site
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
 import pandas as pd
 
-
 def run():
     logging.info("Running job...")
 
-    site = config.site()
+    site = get_site(config.get("SITE_NAME"))
     logging.info(f"Using site {site.name}")
 
     start_ts = time.time()
@@ -31,16 +31,17 @@ def run():
     try:
         model_id = create_model(type=Type.ARTICLE.value, site=site.name)
         logging.info(f"Created model with id {model_id}")
-        EXPERIMENT_DT = datetime.datetime.now()
+        EXPERIMENT_DT = datetime.now()
 
         data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
         external_id_df = preprocess.extract_external_ids(
-            site, list(data_df["landing_page_path"].unique())
+            site, data_df["landing_page_path"].unique().tolist()
         )
-        data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
 
+        data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
+       
         article_df = scrape_metadata.scrape_metadata(
-            site, list(data_df.external_id.unique())
+            site, data_df["external_id"].unique().tolist()
         )
 
         data_df = data_df.join(

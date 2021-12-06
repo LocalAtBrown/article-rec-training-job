@@ -6,6 +6,17 @@ from datetime import datetime, timezone
 from lib.bucket import save_outputs
 from typing import List
 
+from sites.sites import Sites
+from sites.site import Site
+
+
+def get_site(site_name) -> Site:
+    site = Sites.mapping.get(site_name)
+    if site is None:
+        raise Exception(f"Could not find site {site_name} in sites.py")
+    return site
+
+
 def get_weights(
     external_ids: List[str], article_df: pd.DataFrame, half_life: float = 10
 ) -> np.array:

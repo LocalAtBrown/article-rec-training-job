@@ -3,13 +3,16 @@ import re
 import logging
 from urllib.parse import urlparse
 from requests.models import Response
-
+import time
 from bs4 import BeautifulSoup
 
-from sites.helpers import safe_get, ArticleScrapingError
+from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
 from sites.site import Site
-import pandas as pd
-import time
+
+"""
+TT API documentation
+https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451a345bb0d2&p=209fa6fada864bc0a1555622bb559181
+"""
 
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
@@ -19,37 +22,6 @@ PARAMS = {
  "embeddings_dim": 128,
  "epochs": 27 
 }
-
-def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
-    """
-        requires a dataframe with the following fields:
-                - domain_userid
-                    - collector_tstamp
-                        - page_urlpath
-    returns a dataframe with the following fields:
-        - client_id
-            - session_date
-                - activity_time
-                    - landing_page_path
-                        - event_category (conversions, newsletter sign-ups TK)
-                            - event_action (conversions, newsletter sign-ups TK)
-    """
-    transformed_df = pd.DataFrame()
-    transformed_df["client_id"] = df["domain_userid"]
-    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
-    transformed_df["session_date"] = pd.to_datetime(
-        transformed_df.activity_time.dt.date
-    )
-    transformed_df["landing_page_path"] = df.page_urlpath
-    transformed_df["event_category"] = "snowplow_amp_page_ping"
-    transformed_df["event_category"] = transformed_df["event_category"].astype(
-        "category"
-    )
-    transformed_df["event_action"] = "impression"
-    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
-
-    return transformed_df
-
 
 def extract_external_id(path: str) -> str:
     article_url = f"https://{DOMAIN}{path}"
@@ -72,7 +44,6 @@ def extract_external_id(path: str) -> str:
         return str(int(contentID))
     else:
         return None
-
 
 def get_title(res: dict) -> str:
     title = res["headline"]
