@@ -4,58 +4,66 @@ import pytest
 
 from datetime import datetime, timedelta
 from spotlight.factorization.implicit import ImplicitFactorizationModel
+from spotlight.interactions import Interactions
 from db.mappings.base import tzaware_now
+from job.steps.save_predictions import get_similarities, get_nearest, get_model_embeddings
+from job.steps.train_model import generate_interactions 
 
 
-@pytest.fixture(scope="module")
-def model():
-    counts = np.array([[0, 0.25, 0.75], [0, 0.5, 0.75], [0.25, 0.5, 0.75]])
-    model = ImplicitMF(
-        counts=csr_matrix(counts), num_factors=1, num_iterations=10, reg_param=0.0
-    )
-    model.item_vectors = counts
+def build_model(dataset):
+    model =  ImplicitFactorizationModel(n_iter=5, random_state=np.random.RandomState(42), embedding_dim=8)
+    model.fit(dataset)
     return model
 
 
 @pytest.fixture(scope="module")
-def article_df():
-    articles = []
-    articles.append(
-        {"published_at": tzaware_now() - timedelta(days=1), "external_id": "1"}
-    )
-    articles.append(
-        {"published_at": tzaware_now() - timedelta(days=10), "external_id": "2"}
-    )
-    articles.append(
-        {"published_at": tzaware_now() - timedelta(days=50), "external_id": "3"}
-    )
-    articles.append(
-        {"published_at": tzaware_now() - timedelta(days=100), "external_id": "4"}
-    )
-    article_df = pd.DataFrame(articles)
-    return article_df
+def user_ids():
+    return np.array([1,1,2,1,3,3,1,2])
 
+@pytest.fixture(scope="module")
+def item_ids():
+    return np.array([4,4,1,2,1,2,3,2])
+
+@pytest.fixture(scope="module")
+def ratings():
+    return np.array([1,2,0,1,3,1,2,1])
+
+@pytest.fixture(scope="module")
+def publish_dates():
+    return np.array([3,1,2,1,2,1,2,3])
+
+@pytest.fixture(scope="module")
+def article_ids():
+    return np.array([14,14,11,12,11,12,13,12])
 
 @pytest.fixture(scope="module")
 def external_ids():
-    return ["1", "2", "4"]
+    return np.array(["24","24","21","22","21","22","23","22"])
 
 
-def _test_similarities(model):
-    similarities = get_similarities(model)
-    assert similarities.shape == (3, 3)
-    assert all([similarities[i, i] > 0.999 for i in range(similarities.shape[0])])
-    return similarities
+def _test_similarities(embeddings:np.ndarray, n_recs:int):
+    distances, indices = get_similarities(embeddings, n_recs)
+    assert distances.shape == (4, n_recs)
+    assert all([distances[i, 0] < 0.0001 for i in range(distances.shape[0])])
+    return distances, indices
 
 
+def _test_orders(n_recs:int, indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray):
+    rec_indexes, rec_distances = get_nearest(1, indices, distances, article_ids) 
+    print(rec_indexes, rec_distances)
+    assert rec_indexes.shape == (n_recs - 1,)
+    assert (rec_indexes == np.array([13,14])).all()
+    return rec_indexes, rec_distances 
 
-def _test_orders(similarities, weights):
-    orders = get_orders(similarities, weights)
-    assert orders.shape == (3, 3)
-    assert (orders == np.array([[0, 1, 2], [1, 0, 2], [1, 0, 2]])).all()
-    return orders
 
-
-def test_article_recommendations(model, external_ids, article_df):
-    similarities = _test_similarities(model)
-    orders = _test_orders(similarities)
+def test_article_recommendations(item_ids, user_ids, ratings, publish_dates, article_ids, external_ids):
+    n_recs = 3
+    dataset = generate_interactions(pd.DataFrame({'user_id': user_ids,
+                                                'item_id': item_ids,
+                                                'ratings': ratings,
+                                                'timestamp': publish_dates}))
+    model = build_model(dataset)
+    embeddings = get_model_embeddings(model, np.unique(item_ids))
+    distances, indices = _test_similarities(embeddings, n_recs)
+    nearest_recs = _test_orders(n_recs, indices, distances, np.unique(article_ids))
+    

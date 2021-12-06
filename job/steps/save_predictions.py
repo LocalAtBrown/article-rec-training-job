@@ -12,10 +12,27 @@ from lib.metrics import write_metric, Unit
 
 MAX_RECS = config.get("MAX_RECS")
 
-def _get_nearest(i, indices, distances, article_ids):
+def get_model_embeddings(model, internal_ids:np.ndarray):
+    """ Get embeddings from Spotlight model for all internal_ids"""
+    return np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in internal_ids])
+
+
+def get_similarities(embeddings:np.ndarray, n_recs:int):
+    """ Get K nearest neighbors for each article"""
+    nbrs = NearestNeighbors(n_neighbors=n_recs, 
+                            metric='cosine',
+                            algorithm='brute').fit(embeddings) 
+
+    return nbrs.kneighbors(embeddings)
+
+def get_nearest(i:int, indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray):
+    """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[indices[i - 1][1:]], distances[i - 1][1:])
 
-def save_predictions(model, model_id, internal_ids, external_item_ids, article_ids):
+def save_predictions(model, model_id:int, 
+                    internal_ids:np.ndarray, 
+                    external_item_ids:np.ndarray, 
+                    article_ids:np.ndarray):
     """Save predictions to the db
     
     :model: Spotlight model  
@@ -25,17 +42,13 @@ def save_predictions(model, model_id, internal_ids, external_item_ids, article_i
     :article_ids: DB article_ids
     """
     start_ts = time.time()
-    embeddings = np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in internal_ids])
-    nbrs = NearestNeighbors(n_neighbors=MAX_RECS + 1, 
-                            metric='cosine',
-                            algorithm='brute').fit(embeddings) 
-    distances, indices = nbrs.kneighbors(embeddings)
-
+    embeddings = get_model_embeddings(model, internal_ids)
+    distances, indices = get_similarities(embeddings, MAX_RECS + 1)
     to_save = []
 
     for i in internal_ids:
         source_db_external_id = external_item_ids[i - 1]
-        recommendations = _get_nearest(i, indices, distances, article_ids)
+        recommendations = get_nearest(i, indices, distances, article_ids)
 
         to_save += [Rec(source_entity_id=source_db_external_id,
                             model_id=model_id,

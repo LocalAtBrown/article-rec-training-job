@@ -5,6 +5,14 @@ import pandas as pd
 from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.interactions import Interactions
 
+def generate_interactions(prepared_df:pd.DataFrame):
+    """ Generate an Interactions object"""
+    dataset = Interactions(user_ids=prepared_df['user_id'].values,
+                       item_ids=prepared_df['item_id'].values,
+                       ratings=prepared_df['ratings'].values,
+                       timestamps=prepared_df['timestamp'].values)
+    return dataset
+
 def spotlight_transform(prepared_df:pd.DataFrame, 
                         half_life:float, 
                         current_time: pd.Timestamp):
@@ -23,17 +31,14 @@ def spotlight_transform(prepared_df:pd.DataFrame,
     prepared_df['user_id'] = prepared_df['client_id'].factorize()[0] + 1
     prepared_df['timestamp'] = prepared_df['session_date'].factorize()[0] + 1
     prepared_df['ratings'] = prepared_df['duration'].dt.total_seconds()
-    prepared_df['ratings'] = prepared_df['ratings'].clip(upper=600).astype(np.int32)
+    prepared_df['ratings'] = prepared_df['ratings'].astype(np.int32)
     current_date = pd.to_datetime(current_time)
-    # exponential decay
+
     prepared_df['ratings'] = prepared_df['ratings'] * (0.5**((current_date - prepared_df['session_date']).dt.days / half_life))
 
     prepared_df.reset_index(inplace=True, drop=True) 
 
-    dataset = Interactions(user_ids=prepared_df['user_id'].values,
-                       item_ids=prepared_df['item_id'].values,
-                       ratings=prepared_df['ratings'].values,
-                       timestamps=prepared_df['timestamp'].values)
+    dataset = generate_interactions(prepared_df)
 
     return (dataset, prepared_df['external_id'].unique(), prepared_df['item_id'].unique(), prepared_df['article_id'].unique()) 
 
