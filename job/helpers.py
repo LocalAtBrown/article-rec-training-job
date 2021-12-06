@@ -8,6 +8,15 @@ from scipy.spatial import distance
 from typing import List
 
 from job.steps.implicit_mf import ImplicitMF
+from sites.sites import Sites
+from sites.site import Site
+
+
+def get_site(site_name) -> Site:
+    site = Sites.mapping.get(site_name)
+    if site is None:
+        raise Exception(f"Could not find site {site_name} in sites.py")
+    return site
 
 
 def get_similarities(model: ImplicitMF) -> np.array:

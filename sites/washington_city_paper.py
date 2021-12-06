@@ -23,14 +23,12 @@ FIELDS = [
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
-
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     requires a dataframe with the following fields:
     - contexts_dev_amp_snowplow_amp_id_1
     - collector_tstamp
     - page_urlpath
-
     returns a dataframe with the following fields:
     - client_id
     - session_date
@@ -57,7 +55,6 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
 
     return transformed_df
-
 
 def extract_external_id(path: str) -> str:
     result = PATH_PROG.match(path)
