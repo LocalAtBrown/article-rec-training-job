@@ -3,10 +3,7 @@ import pandas as pd
 import pytest
 
 from datetime import datetime, timedelta
-from scipy.sparse import csr_matrix
-
-from job.helpers import get_similarities, get_orders, get_weights
-from job.steps.implicit_mf import ImplicitMF
+from spotlight.factorization.implicit import ImplicitFactorizationModel
 from db.mappings.base import tzaware_now
 
 
@@ -51,17 +48,6 @@ def _test_similarities(model):
     return similarities
 
 
-def _test_weights(external_ids, article_df):
-    regular_weights = get_weights(external_ids, article_df, half_life=float("inf"))
-    assert regular_weights.shape == (3,)
-    assert regular_weights[0] == regular_weights[1] == regular_weights[2]
-    decayed_weights = get_weights(external_ids, article_df, half_life=10)
-    assert decayed_weights.shape == (3,)
-    assert decayed_weights[0] > decayed_weights[1] > decayed_weights[2]
-    assert (0 < decayed_weights).all()
-    assert (decayed_weights < 1).all()
-    return decayed_weights
-
 
 def _test_orders(similarities, weights):
     orders = get_orders(similarities, weights)
@@ -72,5 +58,4 @@ def _test_orders(similarities, weights):
 
 def test_article_recommendations(model, external_ids, article_df):
     similarities = _test_similarities(model)
-    weights = _test_weights(external_ids, article_df)
-    orders = _test_orders(similarities, weights)
+    orders = _test_orders(similarities)

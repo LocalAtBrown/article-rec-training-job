@@ -123,19 +123,6 @@ def _test_filter_activities(labeled_df):
     return filtered_df
 
 
-def _test_aggregate_conversion_times(filtered_df):
-    conversion_df = aggregate_conversion_times(
-        filtered_df, date_list=[EXPERIMENT_DATE], external_id_col="article_id"
-    )
-    assert all(filtered_df.groupby("article_id").duration.sum() == conversion_df.sum())
-    assert all(
-        [
-            (client_id, EXPERIMENT_DATE) in conversion_df.index
-            for client_id in filtered_df.client_id.unique()
-        ]
-    )
-    return conversion_df
-
 
 
 def _test_filter_users(activity_df):
