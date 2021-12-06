@@ -5,39 +5,27 @@ from urllib.parse import urlparse
 from requests.models import Response
 from datetime import datetime
 import requests
-import pdb
 import re
 
 from lib.config import config
-from sites.helpers import ArticleFetchError, transform_data_google_tag_manager
+from sites.helpers import ArticleFetchError, transform_data_google_tag_manager, safe_get
 from sites.site import Site
 
+"""
+ARC API documentation 
+https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451a345bb0d2&p=209fa6fada864bc0a1555622bb559181
+"""
 
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
 FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
 
-PI_ARC_API_URL = "https://api.pmn.arcpublishing.com/content/v4"
-# Note I've removed this key from the commit
-ARC_KEY = config.get("INQUIRER_TOKEN")
-PI_ARC_API_HEADER = {"Authorization": ARC_KEY}
-PI_ARC_API_SITE = "philly-media-network"
-TIMEOUT_SECONDS = 30
+API_URL = "https://api.pmn.arcpublishing.com/content/v4"
+API_KEY = config.get("INQUIRER_TOKEN")
+API_HEADER = {"Authorization": API_KEY}
+API_SITE = "philly-media-network"
+IMEOUT_SECONDS = 30
 
-
-@retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
-def safe_get_pi(params:dict):
-    """ Politely make requests to ARC API
-
-    :stop_max_attempt_number: times to retry
-    :wait_exponential_multiplier: exponential decay
-    :return res: request response
-    """
-    res = requests.get(PI_ARC_API_URL, 
-                        timeout=TIMEOUT_SECONDS,
-                        params=params, 
-                        headers=PI_ARC_API_HEADER)
-    return res
 
 def extract_external_id(path: str) -> Optional[str]:
     """ Request content ID from a url from ARC API
@@ -48,7 +36,7 @@ def extract_external_id(path: str) -> Optional[str]:
     params = {
         "website_url": path,
         "published": "true",
-        "website": PI_ARC_API_SITE,
+        "website": API_SITE,
         "included_fields": "_id"
     }
 
@@ -56,7 +44,7 @@ def extract_external_id(path: str) -> Optional[str]:
         return None
 
     try:
-        res = safe_get_pi(params)
+        res = safe_get(API_URL, API_HEADER, params)
         res = res.json()
         contentID = res["_id"]
         return contentID
@@ -76,11 +64,12 @@ def get_date(res_val:dict) -> str:
     res_val = datetime.strptime(res_val["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
     return res_val
 
-def get_url(res_val:dict) -> str:
-    """ ARC response url parser
+def get_path(res_val:dict) -> str:
+    """ ARC response canonical path parser
 
     :res_val: JSON payload from ARC API
-    :return: Canonical URL for external_ID
+    :return: Canonical URL Path for external_ID
+    E.g.,: /news/philadelphia-mayor-jim-kenney-johnny-doc-bobby-henon-convicted-20211116.html
     """
     return res_val["canonical_url"] 
 
@@ -109,7 +98,7 @@ def parse_article_metadata(page: Response, external_id: str) -> dict:
     parse_keys = [
         ("title", get_headline),
         ("published_at", get_date), # example published_at: '2021-11-17T00:44:12.319Z'
-        ("path", get_url)
+        ("path", get_path)
     ]
     
     res = page.json()
@@ -163,7 +152,7 @@ def validate_article(external_id: str) -> (Response, str, Optional[str]):
     """
     params = {
         "_id": external_id,
-        "website": PI_ARC_API_SITE,
+        "website": API_SITE,
         "published": "true",
         "included_fields": "headlines,publish_date,_id,canonical_url"
     }
@@ -171,7 +160,7 @@ def validate_article(external_id: str) -> (Response, str, Optional[str]):
     logging.info(f"Validating article url: {external_id}")
 
     try:
-        res = safe_get_pi(params)
+        res = safe_get(API_URL, API_HEADER, params)
     except Exception as e:
         msg = f"Error fetching article url: {url}"
         logging.exception(msg)

@@ -24,7 +24,6 @@ def run():
     logging.info("Running job...")
 
     site = get_site(config.get("SITE_NAME"))
-    print(f"site name: {site.name}")
     logging.info(f"Using site {site.name}")
 
     start_ts = time.time()
@@ -41,7 +40,7 @@ def run():
         )
 
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-        
+       
         article_df = scrape_metadata.scrape_metadata(
             site, data_df["external_id"].unique().tolist()
         )

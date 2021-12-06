@@ -9,6 +9,11 @@ from bs4 import BeautifulSoup
 from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
 from sites.site import Site
 
+"""
+TT API documentation
+https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451a345bb0d2&p=209fa6fada864bc0a1555622bb559181
+"""
+
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
