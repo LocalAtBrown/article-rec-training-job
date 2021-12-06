@@ -135,11 +135,10 @@ def validate_not_excluded(res: Response) -> Optional[str]:
     if "publish_date" not in res:
         return "Article publish date missing"
     
-    if "publish_date" in res:
-        try: 
-            datetime.strptime(res["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
-        except Exception as e:
-            return e
+    try: 
+        datetime.strptime(res["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
+    except Exception as e:
+        return e
 
     return None 
 
