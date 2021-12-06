@@ -14,6 +14,5 @@ progressbar2
 scikit-learn
 redshift-connector
 h5py
-https://anaconda.org/pytorch/pytorch/1.10.0/download/linux-64/pytorch-1.10.0-py3.7_cpu_0.tar.bz2
 git+https://github.com/maciejkula/spotlight.git@master
--f https://download.pytorch.org/whl/torch_stable.html
+torch==1.10.0
