@@ -24,8 +24,11 @@ API_URL = "https://api.pmn.arcpublishing.com/content/v4"
 API_KEY = config.get("INQUIRER_TOKEN")
 API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
-IMEOUT_SECONDS = 30
-
+PARAMS = {
+ "hl": 15.0,
+ "embeddings_dim": 128,
+ "epochs": 27 
+}
 
 def extract_external_id(path: str) -> Optional[str]:
     """ Request content ID from a url from ARC API
@@ -181,4 +184,4 @@ def validate_article(external_id: str) -> (Response, str, Optional[str]):
     return res, external_id, error_msg
 
 
-PI_SITE = Site(NAME, FIELDS, transform_data_google_tag_manager, extract_external_id, parse_article_metadata, validate_article)
+PI_SITE = Site(NAME, FIELDS, PARAMS, transform_data_google_tag_manager, extract_external_id, parse_article_metadata, validate_article)
