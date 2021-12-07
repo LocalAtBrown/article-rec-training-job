@@ -26,7 +26,7 @@ API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
 PARAMS = {
  "hl": 8,
- "embedding_dim": 128,
+ "embedding_dim": 144,
  "epochs": 15 
 }
 

@@ -66,7 +66,7 @@ def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
             internal_ids: Spotlight article IDs, 
             article_ids: LNL DB article IDs)
     """
-    dataset, external_item_ids, internal_ids, article_ids = spotlight_transform(prepared_df=X, half_life=params["hl"], current_time=time)
+    dataset, external_item_ids, internal_ids, article_ids = spotlight_transform(prepared_df=X, half_life=params["hl"], experiment_time=time)
     params = get_hparams(params)
 
     model = ImplicitFactorizationModel(n_iter=params["epochs"], embedding_dim=params["embedding_dim"])

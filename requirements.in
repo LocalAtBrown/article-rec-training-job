@@ -14,5 +14,3 @@ progressbar2
 scikit-learn
 redshift-connector
 h5py
-git+https://github.com/maciejkula/spotlight.git@master
-torch==1.10.0
