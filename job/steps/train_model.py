@@ -39,9 +39,9 @@ def spotlight_transform(prepared_df:pd.DataFrame,
     prepared_df['timestamp'] = prepared_df['session_date'].factorize()[0] + 1
     prepared_df['ratings'] = prepared_df['duration'].dt.total_seconds()
     prepared_df['ratings'] = prepared_df['ratings'].astype(np.int32)
-    current_date = pd.to_datetime(experiment_time)
+    experiment_time = pd.to_datetime(experiment_time)
 
-    prepared_df['ratings'] = prepared_df['ratings'] * (0.5**((current_date - prepared_df['session_date']).dt.days / half_life))
+    prepared_df['ratings'] *= 0.5**((experiment_time - prepared_df['session_date']).dt.days / half_life)
 
     prepared_df.reset_index(inplace=True, drop=True) 
 

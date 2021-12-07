@@ -60,20 +60,6 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     return external_id_df
 
 
-def time_decay(
-    data_df: pd.DataFrame, experiment_date: datetime.date, half_life: float
-) -> pd.DataFrame:
-    """
-    Applies basic exponential decay based on the difference between the "date" column
-    and the current date argument to the dwell time
-    """
-    decay_factor = 0.5 ** (
-        (experiment_date - data_df["session_date"]).dt.days / half_life
-    )
-    data_df["duration"] *= decay_factor
-    return data_df
-
-
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Snowplow.
@@ -145,53 +131,6 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     filtered_df = filter_articles(filtered_df)
     return filtered_df
 
-
-def _add_dummies(
-    activity_df: pd.DataFrame,
-    date_list: [datetime.date] = [],
-    external_id_col: str = "external_id",
-):
-    """
-    :param activity_df: DataFrame of Snowplow activities with associated dwell times
-    :param date_list: List of dates to forcefully include in all aggregates
-    :param external_id_col: Name of column being used to denote articles
-
-    :return: DataFrame of Snowplow activities with dummy rows for each user and date of interest included
-    """
-    filtered_df = activity_df.copy()
-    filtered_df = filtered_df.rename(columns={external_id_col: "external_id"})
-    filtered_df = (
-        filtered_df
-        # Adding dummy rows to ensure each article ID from original activity_df is included
-        .append(
-            [
-                {
-                    "client_id": filtered_df.client_id.iloc[0],
-                    "duration": 0,
-                    "external_id": external_id,
-                    "session_date": pd.to_datetime(datetime_obj).date(),
-                }
-                for datetime_obj, external_id in product(
-                    date_list, activity_df[external_id_col].unique()
-                )
-            ]
-        )
-        # Adding dummy rows to ensure each client ID from original activity_df is included
-        .append(
-            [
-                {
-                    "client_id": client_id,
-                    "duration": 0,
-                    "external_id": filtered_df.external_id.iloc[0],
-                    "session_date": pd.to_datetime(datetime_obj).date(),
-                }
-                for datetime_obj, client_id in product(
-                    date_list, activity_df.client_id.unique()
-                )
-            ]
-        )
-    )
-    return filtered_df
 
 
 def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
