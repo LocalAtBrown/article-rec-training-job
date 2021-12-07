@@ -1,6 +1,7 @@
 import json
 import pytest
 import warnings
+from job.steps import preprocess, warehouse
 
 from job.steps.preprocess import *
 from lib.config import ROOT_DIR
@@ -123,8 +124,6 @@ def _test_filter_activities(labeled_df):
     return filtered_df
 
 
-
-
 def _test_filter_users(activity_df):
     returning_user_df = filter_flyby_users(activity_df)
     assert len(returning_user_df.client_id.unique()) < len(
@@ -153,3 +152,4 @@ def test_pipeline(activity_df):
     clean_df = _test_fix_dtypes(top_article_df)
     sorted_df = _test_time_activities(clean_df)
     filtered_df = _test_filter_activities(sorted_df)
+

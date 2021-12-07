@@ -60,6 +60,20 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     return external_id_df
 
 
+def time_decay(
+    data_df: pd.DataFrame, experiment_date: datetime.date, half_life: float
+) -> pd.DataFrame:
+    """
+    Applies basic exponential decay based on the difference between the "date" column
+    and the current date argument to the dwell time
+    """
+    decay_factor = 0.5 ** (
+        (experiment_date - data_df["session_date"]).dt.days / half_life
+    )
+    data_df["duration"] *= decay_factor
+    return data_df
+
+
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
     :param data_df: DataFrame of activities collected from Snowplow.
@@ -153,9 +167,9 @@ def _add_dummies(
             [
                 {
                     "client_id": filtered_df.client_id.iloc[0],
-                    "duration": pd.to_timedelta(0.0),
+                    "duration": 0,
                     "external_id": external_id,
-                    "session_date": pd.to_datetime(datetime_obj),
+                    "session_date": pd.to_datetime(datetime_obj).date(),
                 }
                 for datetime_obj, external_id in product(
                     date_list, activity_df[external_id_col].unique()
@@ -167,9 +181,9 @@ def _add_dummies(
             [
                 {
                     "client_id": client_id,
-                    "duration": pd.to_timedelta(0.0),
+                    "duration": 0,
                     "external_id": filtered_df.external_id.iloc[0],
-                    "session_date": pd.to_datetime(datetime_obj),
+                    "session_date": pd.to_datetime(datetime_obj).date(),
                 }
                 for datetime_obj, client_id in product(
                     date_list, activity_df.client_id.unique()
@@ -326,5 +340,3 @@ def filter_activities(
     ]
     filtered_df = filtered_df[filtered_df.client_id.isin(valid_clients)]
     return filtered_df
-
-
