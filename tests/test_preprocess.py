@@ -232,11 +232,13 @@ def test_pipeline(activity_df):
 def test_time_decay_unit():
     df = pd.DataFrame(
         [
-            datetime.datetime(2021, 10, 1).date(),
-            datetime.datetime(2021, 10, 2).date(),
-            datetime.datetime(2021, 10, 3).date(),
+            [
+                datetime.datetime(2021, 10, 1).date(),
+                datetime.datetime(2021, 10, 2).date(),
+                datetime.datetime(2021, 10, 3).date(),
+            ],
+            [1, 1, 1],
         ],
-        [1, 1, 1],
         columns=["session_date", "duration"],
     )
     exp_date = datetime.datetime(2021, 10, 3).date()
