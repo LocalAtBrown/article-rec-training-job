@@ -25,9 +25,9 @@ def get_similarities(embeddings:np.ndarray, n_recs:int):
 
     return nbrs.kneighbors(embeddings)
 
-def get_nearest(i:int, indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray):
+def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray):
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
-    return (article_ids[indices[i - 1][1:]], distances[i - 1][1:])
+    return (article_ids[nearest_indices[spotlight_id - 1][1:]], distances[spotlight_id - 1][1:])
 
 def save_predictions(model, model_id:int, 
                     spotlight_ids:np.ndarray, 
@@ -37,18 +37,18 @@ def save_predictions(model, model_id:int,
     
     :model: Spotlight model  
     :model_id: unique id of model 
-    :spotlight_ids: Spotlight IDs
+    :spotlight_ids: Spotlight 1-indexed item IDs
     :external_item_ids: Unique article ID from publisher
     :article_ids: DB article_ids
     """
     start_ts = time.time()
     embeddings = get_model_embeddings(model, spotlight_ids)
-    distances, indices = get_similarities(embeddings, MAX_RECS + 1)
+    distances, nearest_indices = get_similarities(embeddings, MAX_RECS + 1)
     to_save = []
 
     for i in spotlight_ids:
         source_external_id = external_item_ids[i - 1]
-        recommendations = get_nearest(i, indices, distances, article_ids)
+        recommendations = get_nearest(i, nearest_indices, distances, article_ids)
 
         to_save += [Rec(source_entity_id=source_external_id,
                             model_id=model_id,
