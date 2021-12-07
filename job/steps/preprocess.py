@@ -46,13 +46,15 @@ def extract_external_ids(site: Site, data_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def time_decay(
-    data_df: pd.DataFrame, current_date: datetime.date, hf: float
+    data_df: pd.DataFrame, experiment_date: datetime.date, half_life: float
 ) -> pd.DataFrame:
     """
     Applies basic exponential decay based on the difference between the "date" column
     and the current date argument to the dwell time
     """
-    decay_factor = 0.5 ** ((current_date - data_df["session_date"]).dt.days / hf)
+    decay_factor = 0.5 ** (
+        (experiment_date - data_df["session_date"]).dt.days / half_life
+    )
     data_df["duration"] *= decay_factor
     return data_df
 
@@ -148,7 +150,7 @@ def model_preprocessing(
     """
     logging.info("Preprocessing: creating aggregate dwell time df...")
     prepared_df = time_decay(
-        prepared_df, current_date=datetime.datetime.now().date(), hf=half_life
+        prepared_df, experiment_date=datetime.datetime.now().date(), half_life=half_life
     )
     logging.info("Preprocessing: applying time decay...")
     time_df = aggregate_time(

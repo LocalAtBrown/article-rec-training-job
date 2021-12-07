@@ -1,6 +1,7 @@
 import json
 import pytest
 import warnings
+from job.steps import preprocess, warehouse
 
 from job.steps.preprocess import *
 from lib.config import ROOT_DIR
@@ -176,7 +177,7 @@ def _test_time_decay(time_df):
     time_df["duration"] = time_df["duration"].dt.total_seconds()
     time_df["session_date"] = time_df["session_date"].dt.date
 
-    exp_time_df = time_decay(time_df, current_date=cur_date, hf=1)
+    exp_time_df = time_decay(time_df, experiment_date=cur_date, half_life=1)
     visited_articles = (
         time_df.reset_index()
         .drop(columns="session_date")
@@ -226,3 +227,21 @@ def test_pipeline(activity_df):
     filtered_df = _test_filter_activities(sorted_df)
     time_df = _test_time_decay(filtered_df)
     agg_df = _test_aggregate_time(time_df)
+
+
+def test_time_decay_unit():
+    df = pd.DataFrame(
+        [
+            datetime.datetime(2021, 10, 1).date(),
+            datetime.datetime(2021, 10, 2).date(),
+            datetime.datetime(2021, 10, 3).date(),
+        ],
+        [1, 1, 1],
+        columns=["session_date", "duration"],
+    )
+    exp_date = datetime.datetime(2021, 10, 3).date()
+    decay_df = preprocess.time_decay(df, half_life=1, experiment_date=exp_date)
+    assert len(decay_df == len(df))
+    assert decay_df["duration"][0] == 0.5 ** 2
+    assert decay_df["duration"][1] == 0.5 ** 1
+    assert decay_df["duration"][2] == 0.5 ** 0
