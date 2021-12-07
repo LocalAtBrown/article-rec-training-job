@@ -56,10 +56,15 @@ def run():
         article_df = article_df.reset_index()
         save_defaults.save_defaults(data_df, article_df, site.name)
 
+        data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
-            data_df, date_list=[EXPERIMENT_DT.date()], half_life=59.631698
+            data,
+            date_list=[EXPERIMENT_DT.date()],
+            half_life=59.631698,
+            external_id_col="article_id",
         )
+
         model = train_model.train_model(
             X=formatted_df, reg=2.319952, n_components=130, epochs=2
         )

@@ -1,6 +1,7 @@
 import json
 import pytest
 import warnings
+from job.steps import preprocess, warehouse
 
 from job.steps.preprocess import *
 from lib.config import ROOT_DIR
@@ -158,15 +159,12 @@ def _test_aggregate_time(filtered_df):
     assert (time_df.dtypes == float).all()
     # Lower than floating point error
     assert all(
-        (
-            filtered_df.groupby("external_id").duration.sum().dt.total_seconds()
-            - time_df.sum()
-        ).abs()
+        (filtered_df.groupby("external_id").duration.sum() - time_df.sum()).abs()
         < 1e-12
     )
     assert all(
         [
-            (client_id, EXPERIMENT_DATE) in time_df.index
+            (client_id, EXPERIMENT_DATE.date()) in time_df.index
             for client_id in filtered_df.client_id.unique()
         ]
     )
@@ -175,35 +173,28 @@ def _test_aggregate_time(filtered_df):
 
 def _test_time_decay(time_df):
     # A reader registers decayed time on an article if and only if reader registers some time.
-    exp_time_df = time_decay(time_df, half_life=1)
+    cur_date = np.max(time_df["session_date"]).date()
+    time_df["duration"] = time_df["duration"].dt.total_seconds()
+    time_df["session_date"] = time_df["session_date"].dt.date
+
+    exp_time_df = time_decay(time_df, experiment_date=cur_date, half_life=1)
     visited_articles = (
-        time_df.reset_index().drop(columns="session_date").groupby("client_id").max()
+        time_df.reset_index()
+        .drop(columns="session_date")
+        .groupby("client_id")["duration"]
+        .max()
         > 0
     )
     visited_decayed_articles = (
         exp_time_df.reset_index()
         .drop(columns="session_date")
-        .groupby("client_id")
+        .groupby("client_id")["duration"]
         .max()
         > 0
     )
-    assert all((visited_articles == visited_decayed_articles).all())
-    # An infinite half life means there is no decay
-    exp_time_df = time_decay(time_df, half_life=float("inf"))
-    assert all(
-        (
-            exp_time_df.reset_index(drop=True)
-            == time_df.reset_index().groupby(["client_id"]).cumsum()
-        ).all()
-    )
-    # A half life of 0 means dwell time is immediately decayed the day after
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
-    exp_time_df = time_decay(time_df, half_life=0)
-    warnings.resetwarnings()
-    assert all((exp_time_df == time_df).all())
+    assert (visited_articles == visited_decayed_articles).all()
 
     return exp_time_df
-
 
 
 def _test_filter_users(activity_df):
@@ -234,5 +225,24 @@ def test_pipeline(activity_df):
     clean_df = _test_fix_dtypes(top_article_df)
     sorted_df = _test_time_activities(clean_df)
     filtered_df = _test_filter_activities(sorted_df)
-    time_df = _test_aggregate_time(filtered_df)
-    exp_time_df = _test_time_decay(time_df)
+    time_df = _test_time_decay(filtered_df)
+    agg_df = _test_aggregate_time(time_df)
+
+
+def test_time_decay_unit():
+    df = pd.DataFrame(
+        {
+            "session_date": [
+                datetime.datetime(2021, 10, 1).date(),
+                datetime.datetime(2021, 10, 2).date(),
+                datetime.datetime(2021, 10, 3).date(),
+            ],
+            "duration": [1, 1, 1],
+        },
+    )
+    exp_date = datetime.datetime(2021, 10, 3).date()
+    decay_df = preprocess.time_decay(df, half_life=1, experiment_date=exp_date)
+    assert len(decay_df == len(df))
+    assert decay_df["duration"][0] == 0.5 ** 2
+    assert decay_df["duration"][1] == 0.5 ** 1
+    assert decay_df["duration"][2] == 0.5 ** 0
