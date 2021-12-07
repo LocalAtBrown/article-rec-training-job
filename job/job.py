@@ -44,6 +44,7 @@ def run():
       
         db_proxy.close() 
         db_proxy.connect()
+
         logging.info("Scraping metadata")
         article_df = scrape_metadata.scrape_metadata(
             site, data_df["external_id"].unique().tolist()
@@ -61,14 +62,14 @@ def run():
         save_defaults.save_defaults(data_df, article_df, site.name)
 
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
-        model, external_item_ids, internal_ids, article_ids = train_model.train_model(
+        model, external_item_ids, spotlight_ids, article_ids = train_model.train_model(
             X=data_df, params=site.params, time=EXPERIMENT_DT
                 )
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
 
         save_predictions.save_predictions(
             model=model, model_id=model_id, 
-            internal_ids=internal_ids, 
+            spotlight_ids=spotlight_ids, 
             external_item_ids=external_item_ids,
             article_ids=article_ids
         )

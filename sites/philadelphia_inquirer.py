@@ -25,9 +25,9 @@ API_KEY = config.get("INQUIRER_TOKEN")
 API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
 PARAMS = {
- "hl": 15.0,
- "embeddings_dim": 128,
- "epochs": 27 
+ "hl": 8,
+ "embedding_dim": 128,
+ "epochs": 15 
 }
 
 def extract_external_id(path: str) -> Optional[str]:

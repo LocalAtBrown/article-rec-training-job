@@ -18,9 +18,9 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 PARAMS = {
- "hl": 15.0,
- "embeddings_dim": 128,
- "epochs": 27 
+ "hl": 8,
+ "embedding_dim": 96,
+ "epochs": 15 
 }
 
 def extract_external_id(path: str) -> str:

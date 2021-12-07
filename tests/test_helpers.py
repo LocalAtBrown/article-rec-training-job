@@ -44,13 +44,12 @@ def external_ids():
 def _test_similarities(embeddings:np.ndarray, n_recs:int):
     distances, indices = get_similarities(embeddings, n_recs)
     assert distances.shape == (4, n_recs)
-    assert all([distances[i, 0] < 0.0001 for i in range(distances.shape[0])])
+    assert all([distances[i, 0] == 0. for i in range(distances.shape[0])])
     return distances, indices
 
 
 def _test_orders(n_recs:int, indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray):
     rec_indexes, rec_distances = get_nearest(1, indices, distances, article_ids) 
-    print(rec_indexes, rec_distances)
     assert rec_indexes.shape == (n_recs - 1,)
     assert (rec_indexes == np.array([13,14])).all()
     return rec_indexes, rec_distances 

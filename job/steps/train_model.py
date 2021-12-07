@@ -1,9 +1,16 @@
 import logging
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 
 from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.interactions import Interactions
+
+DEFAULT_PARAMS = {
+        "hl": 10,
+        "epochs": 20,
+        "embedding_dim": 72
+        }
 
 def generate_interactions(prepared_df:pd.DataFrame):
     """ Generate an Interactions object"""
@@ -15,12 +22,12 @@ def generate_interactions(prepared_df:pd.DataFrame):
 
 def spotlight_transform(prepared_df:pd.DataFrame, 
                         half_life:float, 
-                        current_time: pd.Timestamp):
+                        experiment_time: pd.Timestamp):
     """Transform data for Spotlight
 
     :prepared_df: Dataframe with user-article interactions
     :half_life: time decay for articles 
-    :current_time: time to benchmark decay against
+    :experiment_time: time to benchmark decay against
     :return: (dataset, external_id uniques, item_id uniques, article_id uniques)
     """
     prepared_df = prepared_df[['external_id', 'article_id', 'client_id','session_date', 'duration']]
@@ -32,7 +39,7 @@ def spotlight_transform(prepared_df:pd.DataFrame,
     prepared_df['timestamp'] = prepared_df['session_date'].factorize()[0] + 1
     prepared_df['ratings'] = prepared_df['duration'].dt.total_seconds()
     prepared_df['ratings'] = prepared_df['ratings'].astype(np.int32)
-    current_date = pd.to_datetime(current_time)
+    current_date = pd.to_datetime(experiment_time)
 
     prepared_df['ratings'] = prepared_df['ratings'] * (0.5**((current_date - prepared_df['session_date']).dt.days / half_life))
 
@@ -42,6 +49,11 @@ def spotlight_transform(prepared_df:pd.DataFrame,
 
     return (dataset, prepared_df['external_id'].unique(), prepared_df['item_id'].unique(), prepared_df['article_id'].unique()) 
 
+def get_hparams(params:dict = None):
+    _params = deepcopy(DEFAULT_PARAMS)
+    _params.update(params)
+    return _params
+
 def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
     """Train spotlight model
 
@@ -50,13 +62,14 @@ def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
     time: time to benchmark decay against
 
     return: (model: Spotlight model, 
-            external_item_ids: ARC CMS article IDs, 
+            external_item_ids: Publisher unique article IDs, 
             internal_ids: Spotlight article IDs, 
             article_ids: LNL DB article IDs)
     """
-    dataset, external_item_ids, internal_ids, article_ids = spotlight_transform(prepared_df=X, half_life=params["hl"], current_time=time) 
+    dataset, external_item_ids, internal_ids, article_ids = spotlight_transform(prepared_df=X, half_life=params["hl"], current_time=time)
+    params = get_hparams(params)
 
-    model = ImplicitFactorizationModel(n_iter=params["epochs"], embedding_dim=params["embeddings_dim"])
+    model = ImplicitFactorizationModel(n_iter=params["epochs"], embedding_dim=params["embedding_dim"])
     model.fit(dataset, verbose=True)
 
     return model, external_item_ids, internal_ids, article_ids
