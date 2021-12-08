@@ -53,7 +53,7 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
@@ -61,9 +61,10 @@ def run():
         save_defaults.save_defaults(data_df, article_df, site.name)
 
         data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         model, external_item_ids, spotlight_ids, article_ids = train_model.train_model(
-            X=data_df, params=site.params, time=EXPERIMENT_DT
+            X=data, params=site.params, time=EXPERIMENT_DT
                 )
         logging.info(f"Successfully trained model on {len(article_df)} inputs.")
 
