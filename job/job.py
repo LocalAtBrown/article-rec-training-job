@@ -20,6 +20,7 @@ from lib.config import config
 from sites.sites import Sites
 import pandas as pd
 
+
 def run():
     logging.info("Running job...")
 
@@ -40,7 +41,7 @@ def run():
         )
 
         data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-       
+
         article_df = scrape_metadata.scrape_metadata(
             site, data_df["external_id"].unique().tolist()
         )
@@ -49,20 +50,22 @@ def run():
             article_df, on="external_id", lsuffix="_original", how="inner"
         )
 
-        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        # warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
         article_df = article_df.reset_index()
         save_defaults.save_defaults(data_df, article_df, site.name)
 
-        data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+        # Ensure the duration is in seconds and session date is a date (not datetime)
+        data_df["session_date"] = data_df["session_date"].dt.date
+        data_df["duration"] = data_df["duration"].dt.total_seconds()
+
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
-            data,
+            data_df,
             date_list=[EXPERIMENT_DT.date()],
             half_life=59.631698,
-            external_id_col="article_id",
         )
 
         model = train_model.train_model(
