@@ -60,7 +60,6 @@ def _test_orders(n_recs:int, nearest_indices:np.ndarray, distances:np.ndarray, a
     _test_spotlight_id = 1
     rec_ids, rec_distances = get_nearest(_test_spotlight_id, nearest_indices, distances, article_ids) 
     assert rec_ids.shape == (n_recs - 1,)
-    print(rec_ids)
     assert (rec_ids == np.array([13,14])).all()
     return rec_ids, rec_distances 
 

@@ -27,7 +27,7 @@ API_SITE = "philly-media-network"
 PARAMS = {
  "hl": 8,
  "embedding_dim": 144,
- "epochs": 15 
+ "epochs": 10 
 }
 
 def extract_external_id(path: str) -> Optional[str]:
