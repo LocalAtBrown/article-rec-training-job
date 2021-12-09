@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import numpy as np
 import redshift_connector as rc
+import s3fs
 
 from sites.site import Site
 from lib.config import config
@@ -36,9 +37,18 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
 
     df = df[df["session_date"] == np.datetime64(date)]
     df = df[
-        ["duration", "session_date", "client_id", "article_id", "site", "external_id"]
+        [
+            "duration",
+            "session_date",
+            "client_id",
+            "article_id",
+            "site",
+            "external_id",
+            "published_at",
+        ]
     ].copy()
     df = set_dwell_seconds(df)
+    df["published_at"] = df["published_at"].dt.date
 
     conn = get_connection()
 
@@ -49,11 +59,24 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
 
         logging.info("Creating staging table...")
         cursor.execute(f"create temp table {staging_table} (like {dwell_time_table});")
-        logging.info("Uploading today's data...")
-        cursor.write_dataframe(
-            df,
-            staging_table,
+        logging.info(f"Uploading {len(df)} rowsfor {date}...")
+        s3 = s3fs.S3FileSystem(anon=False)
+
+        s3_path = f"{config.get('REDSHIFT_CACHE_BUCKET')}/load/{site.name}/{date}.csv"
+        with s3.open(s3_path, "w") as f:
+            df.to_csv(f, index=False)
+
+        cursor.execute(
+            f"""
+            COPY {staging_table} FROM 's3://{s3_path}'
+            CREDENTIALS 'aws_iam_role={config.get("REDSHIFT_SERVICE_ROLE")}'
+            DELIMITER AS ','
+			DATEFORMAT 'YYYY-MM-DD'
+			IGNOREHEADER 1
+            csv;
+            """
         )
+
         logging.info("Deleting stale data...")
         cursor.execute(
             f"""
@@ -64,7 +87,7 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
         cursor.execute(
             f"""
                 insert into {dwell_time_table}
-                    select sum(duration) as duration, session_date, client_id, article_id, site, external_id
+                    select sum(duration) as duration, session_date, client_id, article_id, site, external_id, MAX(published_at) as published_at
                         from {staging_table} group by 2,3,4,5,6;
             """
         )
@@ -91,7 +114,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
         select count(*) as num_articles_per_user, sum(duration) as duration_per_user, client_id
         from {table} group by client_id
     )
-    select {table}.article_id, {table}.client_id, session_date, duration from {table}
+    select {table}.article_id, {table}.external_id, {table}.client_id, session_date, duration from {table}
     join article_agg on article_agg.article_id = {table}.article_id
     join user_agg on user_agg.client_id = {table}.client_id
     where site = '{site.name}'
@@ -107,5 +130,12 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
         cursor.execute(query)
         results = cursor.fetchall()
         return pd.DataFrame(
-            results, columns=["article_id", "client_id", "session_date", "duration"]
+            results,
+            columns=[
+                "article_id",
+                "external_id",
+                "client_id",
+                "session_date",
+                "duration",
+            ],
         )
