@@ -1,6 +1,5 @@
 """
 this script allows you to backfill the data warehouse
-for the site specified in env.json
 """
 
 import datetime
