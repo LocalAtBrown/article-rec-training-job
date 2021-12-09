@@ -1,6 +1,7 @@
 -e file:.#egg=lib
-awscli
-boto3
+redshift-connector
+s3fs
+aiobotocore[awscli, boto3]
 peewee
 psycopg2-binary
 requests
@@ -12,5 +13,4 @@ pytest
 scipy
 progressbar2
 scikit-learn
-redshift-connector
 h5py

@@ -18,7 +18,39 @@ from db.helpers import create_model, set_current_model
 from db.mappings.base import db_proxy
 from lib.metrics import write_metric, Unit
 from lib.config import config
+from sites.sites import Sites
+from sites.site import Site
 import pandas as pd
+
+
+def fetch_and_upload_data(
+    site: Site, date: datetime.date, days=config.get("DAYS_OF_DATA")
+):
+    """
+    Fetch data from S3
+    Dwell time calculation
+    Hydrate with article metadata
+    Upload to data warehouse
+    Return df of data, and articles
+    """
+    data_df = fetch_data.fetch_data(site, date, days)
+    external_id_df = preprocess.extract_external_ids(
+        site, data_df["landing_page_path"].unique().tolist()
+    )
+
+    data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
+
+    article_df = scrape_metadata.scrape_metadata(
+        site, data_df["external_id"].unique().tolist()
+    )
+
+    data_df = data_df.join(
+        article_df, on="external_id", lsuffix="_original", how="inner"
+    )
+
+    warehouse.update_dwell_times(data_df, date, site)
+    return data_df, article_df
+
 
 def run():
     logging.info("Running job...")
@@ -54,6 +86,8 @@ def run():
         )
 
         #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        EXPERIMENT_DT = datetime.now().date()
+        data_df, article_df = fetch_and_upload_data(site, EXPERIMENT_DT)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
@@ -61,6 +95,10 @@ def run():
         save_defaults.save_defaults(data_df, article_df, site.name)
 
         wh_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+        # Ensure the duration is in seconds and session date is a date (not datetime)
+        data_df["session_date"] = data_df["session_date"].dt.date
+        data_df["duration"] = data_df["duration"].dt.total_seconds()
+
 
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         model, external_item_ids, spotlight_ids, article_ids = train_model.train_model(

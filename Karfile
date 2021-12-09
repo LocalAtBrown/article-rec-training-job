@@ -31,3 +31,9 @@ task-run() {
 task-test() {
     docker run $DOCKER_OPTS $REPOSITORY py.test tests
 }
+
+#@backfill
+#+Run backfill command in docker container.
+task-backfill() {
+    docker run $DOCKER_OPTS -it $REPOSITORY python /app/backfill_task.py $@
+}
