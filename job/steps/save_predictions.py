@@ -25,6 +25,8 @@ def get_model_embeddings(model, spotlight_ids:np.ndarray):
 def weighted_cosine(a,b):
     # dot product of a and b (cosine similarity) scaled by the time_decay of b
     # note: embeddings are already l1 normalized
+    # :a embedding vector for article
+    # :b embedding vector for article
     # :return [0,1] distance score, where 0 is closer
     if np.array_equal(a, b): return 0
 

@@ -96,17 +96,17 @@ def run():
 
         wh_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
-        model, external_item_ids, spotlight_ids, article_ids, date_decays = train_model.train_model(
+        model, dates_df = train_model.train_model(
             X=wh_data, params=site.params, time=EXPERIMENT_DT
                 )
         logging.info(f"Successfully trained model on {len(wh_data)} inputs.")
 
         save_predictions.save_predictions(
             model=model, model_id=model_id, 
-            spotlight_ids=spotlight_ids, 
-            external_item_ids=external_item_ids,
-            article_ids=article_ids,
-            date_decays=date_decays
+            spotlight_ids=dates_df["item_id"].values, 
+            external_item_ids=dates_df["external_id"].values,
+            article_ids=dates_df["article_id"].values,
+            date_decays=dates_df["date_decays"].values
         )
         set_current_model(model_id, Type.ARTICLE.value, site.name)
 

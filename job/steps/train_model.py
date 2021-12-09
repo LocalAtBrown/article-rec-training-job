@@ -1,7 +1,6 @@
 import logging
 import numpy as np
 import pandas as pd
-import pdb
 from copy import deepcopy
 
 from spotlight.factorization.implicit import ImplicitFactorizationModel
@@ -38,7 +37,10 @@ def spotlight_transform(prepared_df:pd.DataFrame,
     :prepared_df: Dataframe with user-article interactions
     :half_life: time decay for articles 
     :experiment_time: time to benchmark decay against
-    :return: (dataset, external_id uniques, item_id uniques, article_id uniques, date_decays)
+    :return: (dataset, 
+            dates_df: pd.DataFrame with columns:
+                external_id uniques, item_id uniques, article_id uniques, date_decays
+            )
     """
     prepared_df = prepared_df.dropna()
 
@@ -51,23 +53,22 @@ def spotlight_transform(prepared_df:pd.DataFrame,
     prepared_df['user_id'] = prepared_df['client_id'].factorize()[0] + 1
     prepared_df['timestamp'] = prepared_df['session_date'].factorize()[0] + 1
 
-    pdb.set_trace()
-
     dataset = generate_interactions(prepared_df)
     dates_df = generate_datedecays(prepared_df, half_life, experiment_time)
-    
-    pdb.set_trace()
 
-    return (dataset, 
-            dates_df["external_id"].values, 
-            dates_df["item_id"].values, 
-            dates_df["article_id"].values, 
-            dates_df["date_decays"].values) 
+    return (dataset, dates_df)
 
 def get_hparams(params:dict = None):
     _params = deepcopy(DEFAULT_PARAMS)
     _params.update(params)
     return _params
+
+def fit_model(params:dict, dataset):
+    """ Fit and return Spotlight model"""
+    model = ImplicitFactorizationModel(n_iter=params["epochs"], 
+                                        embedding_dim=params["embedding_dim"])
+    model.fit(dataset, verbose=True)
+    return model
 
 def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
     """Train spotlight model
@@ -77,15 +78,14 @@ def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
     time: time to benchmark decay against
 
     return: (model: Spotlight model, 
-            external_item_ids: Publisher unique article IDs, 
-            internal_ids: Spotlight article IDs, 
-            article_ids: LNL DB article IDs,
-            date_decays: Decay factors for each article [0,1])
+            dates_df: pd.DataFrame with columns:
+                external_item_ids: Publisher unique article IDs, 
+                internal_ids: Spotlight article IDs, 
+                article_ids: LNL DB article IDs,
+                date_decays: Decay factors for each article [0,1]
+            )
     """
-    dataset, external_item_ids, spotlight_ids, article_ids, date_decays = spotlight_transform(prepared_df=X, half_life=params["hl"], experiment_time=time)
+    dataset, dates_df = spotlight_transform(prepared_df=X, half_life=params["hl"], experiment_time=time)
     params = get_hparams(params)
-
-    model = ImplicitFactorizationModel(n_iter=params["epochs"], embedding_dim=params["embedding_dim"])
-    model.fit(dataset, verbose=True)
-
-    return model, external_item_ids, spotlight_ids, article_ids, date_decays
+    model = fit_model(params, dataset)
+    return model, dates_df
