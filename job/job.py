@@ -15,7 +15,6 @@ from job.steps import (
 from job.helpers import get_site
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model
-from db.mappings.base import db_proxy
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.sites import Sites
@@ -64,28 +63,6 @@ def run():
     try:
         model_id = create_model(type=Type.ARTICLE.value, site=site.name)
         logging.info(f"Created model with id {model_id}")
-        EXPERIMENT_DT = datetime.now()
-
-        data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
-        logging.info("Fetched data")
-        external_id_df = preprocess.extract_external_ids(
-            site, data_df["landing_page_path"].unique().tolist()
-        )
-
-        data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-      
-        db_proxy.close() 
-        db_proxy.connect()
-
-        article_df = scrape_metadata.scrape_metadata(
-            site, data_df["external_id"].unique().tolist()
-        )
-
-        data_df = data_df.join(
-            article_df, on="external_id", lsuffix="_original", how="inner"
-        )
-
-        #warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
         EXPERIMENT_DT = datetime.now().date()
         data_df, article_df = fetch_and_upload_data(site, EXPERIMENT_DT)
 
