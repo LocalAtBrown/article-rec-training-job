@@ -18,7 +18,35 @@ from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.sites import Sites
+from sites.site import Site
 import pandas as pd
+
+
+def fetch_and_upload_data(site: Site, date: datetime.date):
+    """
+    Fetch data from S3
+    Dwell time calculation
+    Hydrate with article metadata
+    Upload to data warehouse
+    Return df of data, and articles
+    """
+    data_df = fetch_data.fetch_data(site, date)
+    external_id_df = preprocess.extract_external_ids(
+        site, data_df["landing_page_path"].unique().tolist()
+    )
+
+    data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
+
+    article_df = scrape_metadata.scrape_metadata(
+        site, data_df["external_id"].unique().tolist()
+    )
+
+    data_df = data_df.join(
+        article_df, on="external_id", lsuffix="_original", how="inner"
+    )
+
+    warehouse.update_dwell_times(data_df, date, site)
+    return data_df, article_df
 
 
 def run():
@@ -33,24 +61,8 @@ def run():
     try:
         model_id = create_model(type=Type.ARTICLE.value, site=site.name)
         logging.info(f"Created model with id {model_id}")
-        EXPERIMENT_DT = datetime.now()
-
-        data_df = fetch_data.fetch_data(site, EXPERIMENT_DT)
-        external_id_df = preprocess.extract_external_ids(
-            site, data_df["landing_page_path"].unique().tolist()
-        )
-
-        data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-
-        article_df = scrape_metadata.scrape_metadata(
-            site, data_df["external_id"].unique().tolist()
-        )
-
-        data_df = data_df.join(
-            article_df, on="external_id", lsuffix="_original", how="inner"
-        )
-
-        warehouse.update_dwell_times(data_df, EXPERIMENT_DT.date(), site)
+        EXPERIMENT_DT = datetime.now().date()
+        data_df, article_df = fetch_and_upload_data(site, EXPERIMENT_DT)
 
         data_df = preprocess.filter_activities(data_df)
         data_df = preprocess.filter_articles(data_df)
@@ -64,7 +76,7 @@ def run():
         # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
         formatted_df = preprocess.model_preprocessing(
             data_df,
-            date_list=[EXPERIMENT_DT.date()],
+            date_list=[EXPERIMENT_DT],
             half_life=59.631698,
         )
 
