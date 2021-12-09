@@ -32,7 +32,8 @@ def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarr
 def save_predictions(model, model_id:int, 
                     spotlight_ids:np.ndarray, 
                     external_item_ids:np.ndarray, 
-                    article_ids:np.ndarray):
+                    article_ids:np.ndarray,
+                    date_offsets:np.ndarray):
     """Save predictions to the db
     
     :model: Spotlight model  

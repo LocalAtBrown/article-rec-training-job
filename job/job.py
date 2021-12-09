@@ -95,13 +95,8 @@ def run():
         save_defaults.save_defaults(data_df, article_df, site.name)
 
         wh_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
-        # Ensure the duration is in seconds and session date is a date (not datetime)
-        data_df["session_date"] = data_df["session_date"].dt.date
-        data_df["duration"] = data_df["duration"].dt.total_seconds()
 
-
-        # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
-        model, external_item_ids, spotlight_ids, article_ids = train_model.train_model(
+        model, external_item_ids, spotlight_ids, article_ids, date_offsets = train_model.train_model(
             X=wh_data, params=site.params, time=EXPERIMENT_DT
                 )
         logging.info(f"Successfully trained model on {len(wh_data)} inputs.")
@@ -110,7 +105,8 @@ def run():
             model=model, model_id=model_id, 
             spotlight_ids=spotlight_ids, 
             external_item_ids=external_item_ids,
-            article_ids=article_ids
+            article_ids=article_ids,
+            date_offsets=date_offsets
         )
         set_current_model(model_id, Type.ARTICLE.value, site.name)
 
