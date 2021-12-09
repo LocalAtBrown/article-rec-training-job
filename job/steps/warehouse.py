@@ -31,11 +31,13 @@ def get_connection():
 def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
     """
     Update the data warehouse for the given date
-    df columns: client_id, article_id, date, duration, site
+    df columns: client_id, external_id, article_id, date, duration, site
     """
 
     df = df[df["session_date"] == np.datetime64(date)]
-    df = df[["duration", "session_date", "client_id", "article_id", "site"]].copy()
+    df = df[
+        ["duration", "session_date", "client_id", "article_id", "site", "external_id"]
+    ].copy()
     df = set_dwell_seconds(df)
 
     conn = get_connection()
@@ -62,8 +64,8 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
         cursor.execute(
             f"""
                 insert into {dwell_time_table}
-                    select sum(duration) as duration, session_date, client_id, article_id, site 
-                        from {staging_table} group by 2,3,4,5;
+                    select sum(duration) as duration, session_date, client_id, article_id, site, external_id
+                        from {staging_table} group by 2,3,4,5,6;
             """
         )
     conn.commit()
