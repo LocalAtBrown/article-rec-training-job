@@ -59,7 +59,7 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
 
         logging.info("Creating staging table...")
         cursor.execute(f"create temp table {staging_table} (like {dwell_time_table});")
-        logging.info(f"Uploading {len(df)} rowsfor {date}...")
+        logging.info(f"Uploading {len(df)} rows for {date}...")
         s3 = s3fs.S3FileSystem(anon=False)
 
         s3_path = f"{config.get('REDSHIFT_CACHE_BUCKET')}/load/{site.name}/{date}.csv"
@@ -77,7 +77,7 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
             """
         )
 
-        logging.info("Deleting stale data...")
+        logging.info(f"Deleting stale data from {dwell_time_table}...")
         cursor.execute(
             f"""
                 delete from {dwell_time_table} where session_date = '{date}' and site = '{site.name}';
