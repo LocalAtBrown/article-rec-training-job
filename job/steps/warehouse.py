@@ -11,9 +11,7 @@ from lib.config import config
 
 
 def get_table(table):
-    if os.environ.get("stage") == "prod":
-        return table
-    return "dev" + table
+    return config.get("REDSHIFT_PREFIX") + table
 
 
 def set_dwell_seconds(df: pd.DataFrame):
