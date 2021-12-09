@@ -25,10 +25,7 @@ def get_model_embeddings(model, spotlight_ids:np.ndarray):
 def weighted_cosine(a,b):
     # dot product of a and b (cosine similarity) scaled by the time_decay of b
     # note: embeddings are already l1 normalized
-    # :return [0,1] distance score, where 0 is closer
-    if np.array_equal(a, b): return 0
-
-    return  (1 - (b[-1] * (a[:-1] @ b[:-1])))
+    return  1 - (a[:-1] @ b[:-1])) * b[-1]
 
 def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int):
     """ Get K nearest neighbors for each article"""
@@ -55,11 +52,10 @@ def save_predictions(model, model_id:int,
     :spotlight_ids: Spotlight 1-indexed item IDs
     :external_item_ids: Unique article ID from publisher
     :article_ids: DB article_ids
-    :date_decays: decay factors for each article [0,1]
     """
     start_ts = time.time()
     embeddings = get_model_embeddings(model, spotlight_ids)
-    distances, nearest_indices = get_similarities(embeddings, date_decays, MAX_RECS + 1)
+    distances, nearest_indices = get_similarities(embeddings, date_offsets, MAX_RECS + 1)
     to_save = []
 
     for i in spotlight_ids:

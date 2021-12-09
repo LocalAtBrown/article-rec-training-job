@@ -96,7 +96,7 @@ def run():
 
         wh_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
-        model, external_item_ids, spotlight_ids, article_ids, date_offsets = train_model.train_model(
+        model, external_item_ids, spotlight_ids, article_ids, date_decays = train_model.train_model(
             X=wh_data, params=site.params, time=EXPERIMENT_DT
                 )
         logging.info(f"Successfully trained model on {len(wh_data)} inputs.")
@@ -106,7 +106,7 @@ def run():
             spotlight_ids=spotlight_ids, 
             external_item_ids=external_item_ids,
             article_ids=article_ids,
-            date_offsets=date_offsets
+            date_decays=date_decays
         )
         set_current_model(model_id, Type.ARTICLE.value, site.name)
 

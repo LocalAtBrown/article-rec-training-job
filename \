@@ -37,11 +37,11 @@ def article_ids():
 
 @pytest.fixture(scope="module")
 def decays():
-    return np.array([0.9,1,1,1,0.95,0.98,0.95,0.98])
+    return np.array([0.9,1,1,0.99,0.9,1,0.98,0.95])
 
-def _test_similarities(embeddings:np.ndarray, n_recs:int, decays:np.ndarray):
+def _test_similarities(embeddings:np.ndarray, n_recs:int):
     """ Checks that n recs are returned and the most similar rec is identical"""
-    distances, indices = get_similarities(embeddings, np.unique(decays), n_recs)
+    distances, indices = get_similarities(embeddings, n_recs)
     assert distances.shape == (4, n_recs)
     assert all([distances[i, 0] == 0. for i in range(distances.shape[0])])
     return distances, indices
@@ -67,7 +67,7 @@ def _test_orders(n_recs:int, nearest_indices:np.ndarray, distances:np.ndarray, a
     return rec_ids, rec_distances 
 
 
-def test_article_recommendations(spotlight_ids, user_ids, durations, publish_dates, article_ids, decays):
+def test_article_recommendations(spotlight_ids, user_ids, durations, publish_dates, article_ids):
     n_recs = 3
     dataset = generate_interactions(pd.DataFrame({'user_id': user_ids,
                                                 'item_id': spotlight_ids,
@@ -75,6 +75,6 @@ def test_article_recommendations(spotlight_ids, user_ids, durations, publish_dat
                                                 'timestamp': publish_dates}))
     model = build_model(dataset)
     embeddings = get_model_embeddings(model, np.unique(spotlight_ids))
-    distances, nearest_indices = _test_similarities(embeddings, n_recs, decays)
+    distances, nearest_indices = _test_similarities(embeddings, n_recs)
     nearest_recs = _test_orders(n_recs, nearest_indices, distances, np.unique(article_ids))
     
