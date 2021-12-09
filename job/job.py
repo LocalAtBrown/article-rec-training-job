@@ -22,7 +22,9 @@ from sites.site import Site
 import pandas as pd
 
 
-def fetch_and_upload_data(site: Site, date: datetime.date):
+def fetch_and_upload_data(
+    site: Site, date: datetime.date, days=config.get("DAYS_OF_DATA")
+):
     """
     Fetch data from S3
     Dwell time calculation
@@ -30,7 +32,7 @@ def fetch_and_upload_data(site: Site, date: datetime.date):
     Upload to data warehouse
     Return df of data, and articles
     """
-    data_df = fetch_data.fetch_data(site, date)
+    data_df = fetch_data.fetch_data(site, date, days)
     external_id_df = preprocess.extract_external_ids(
         site, data_df["landing_page_path"].unique().tolist()
     )
