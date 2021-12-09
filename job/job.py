@@ -73,9 +73,10 @@ def run():
 
         wh_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
-        model, dates_df = train_model.train_model(
-            X=wh_data, params=site.params, time=EXPERIMENT_DT
-                )
+        model, dates_df = train_model.train_model(X=wh_data, 
+                                                params=site.params, 
+                                                time=EXPERIMENT_DT)
+
         logging.info(f"Successfully trained model on {len(wh_data)} inputs.")
 
         save_predictions.save_predictions(
