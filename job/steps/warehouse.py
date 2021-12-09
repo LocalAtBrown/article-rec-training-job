@@ -32,7 +32,7 @@ def get_connection():
 def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
     """
     Update the data warehouse for the given date
-    df columns: client_id, external_id, article_id, date, duration, site
+    df columns: client_id, external_id, article_id, date, duration, site, published_at
     """
 
     df = df[df["session_date"] == np.datetime64(date)]
@@ -114,7 +114,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
         select count(*) as num_articles_per_user, sum(duration) as duration_per_user, client_id
         from {table} group by client_id
     )
-    select {table}.article_id, {table}.external_id, {table}.client_id, session_date, duration from {table}
+    select {table}.article_id, {table}.external_id, {table}.client_id, session_date, duration, published_at from {table}
     join article_agg on article_agg.article_id = {table}.article_id
     join user_agg on user_agg.client_id = {table}.client_id
     where site = '{site.name}'
@@ -137,5 +137,6 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
                 "client_id",
                 "session_date",
                 "duration",
+                "published_at",
             ],
         )
