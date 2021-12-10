@@ -23,7 +23,9 @@ from db.mappings.base import db_proxy
 BACKFILL_ISO_DATE = "2021-09-08"
 
 
-def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
+def scrape_metadata(
+    site: Site, article_df: pd.DataFrame, external_ids: List[str]
+) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
@@ -36,7 +38,9 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     start_ts = time.time()
     total_scraped = 0
     scraping_errors = 0
+
     external_ids = set(external_ids)
+    external_ids.add(set(article_df["external_id"].unique().tolist()))
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
@@ -61,6 +65,7 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     write_metric("article_scraping_errors", scraping_errors)
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
+
     df_data = {
         "article_id": [a.id for a in articles],
         "external_id": [a.external_id for a in articles],
@@ -68,9 +73,11 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
         "landing_page_path": [a.path for a in articles],
         "site": [a.site for a in articles],
     }
-    article_df = pd.DataFrame(df_data).set_index("external_id")
-    article_df.index = article_df.index.astype("object")
-    return article_df
+    new_article_df = pd.DataFrame(df_data).set_index("external_id")
+    new_article_df.index = new_article_df.index.astype("object")
+
+    old_article_df = article_df[~article_df["external_id"].isin(refresh_articles)]
+    return old_article_df.append(new_article_df)
 
 
 def should_refresh(article: Article) -> bool:

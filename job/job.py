@@ -56,17 +56,6 @@ def fetch_and_upload_data(
         site, missing_article_paths
     )
 
-    # TING TODO:
-    # 1. pass the existing article_df in and remove the current create or update logic
-    #
-    # 2. it's possible that not every existing external_id was found in the path lookup,
-    # so we'll have to do another lookup for existing articles by external_id
-    # add any found articles to the article_df
-    # check for recent articles in the existing article_df and update them
-    #
-    # 3. create articles for everything that we've newly extracted external id's for
-    #
-    # 4. return a merged df of all existing and newly created articles
     article_df = scrape_metadata.scrape_metadata(
         site, article_df, external_id_df["external_id"].unique().tolist()
     )
