@@ -6,6 +6,8 @@ from copy import deepcopy
 from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.interactions import Interactions
 
+from job.steps.preprocess import decay_fn
+
 DEFAULT_PARAMS = {
         "hl": 10,
         "epochs": 20,
@@ -26,7 +28,7 @@ def generate_datedecays(prepared_df:pd.DataFrame,
     """ Build columns with date decay and external id""" 
     dates_df = prepared_df[["published_at", "external_id", "item_id", "article_id"]].drop_duplicates()
 
-    dates_df["date_decays"] = 0.5**((experiment_time - dates_df["published_at"]).dt.days / half_life) 
+    dates_df["date_decays"] = decay_fn(experiment_time, dates_df["published_at"], half_life) 
     return dates_df
 
 def spotlight_transform(prepared_df:pd.DataFrame, 

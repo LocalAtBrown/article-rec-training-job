@@ -3,6 +3,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pdb
 
 from datetime import timezone
 from itertools import product
@@ -59,6 +60,23 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
 
     return external_id_df
 
+def decay_fn(experiment_date:datetime.date, df_column:pd.Series, half_life:float):
+    """ half life decay a column value"""
+    return 0.5 ** (
+        (experiment_date - df_column).dt.days / half_life
+    )
+
+def time_decay(
+    data_df: pd.DataFrame, experiment_date: datetime.date, half_life: float
+) -> pd.DataFrame:
+    """
+    Applies basic exponential decay based on the difference between the "date" column
+    and the current date argument to the dwell time
+    """
+    decay_factor = decay_fn(experiment_date, data_df["session_date"], half_life)
+    data_df["duration"] *= decay_factor
+    
+    return data_df
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
