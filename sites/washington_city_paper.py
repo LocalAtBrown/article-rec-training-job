@@ -32,31 +32,11 @@ PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
 
+# TODO TING:
+# move this to sites/helpers.py
 def get_articles_by_path(paths: List[str]) -> List[Article]:
-    """
-    paths like "/article/290217/skip-james-hard-time-killing-floor-blues/"
-    are stored in the db either as:
-    - "/article/290217/skip-james-hard-time-killing-floor-blues/"
-    - "/article/290217/"
-    """
-    PATH_PREFIX_PATERN = "(\/article\/\d+)"
-    PATH_PREFIX_PROG = re.compile(PATH_PREFIX_PATERN)
-    if not paths:
-        return []
-
     query = Article.select().where(Article.site == NAME)
-    clauses = []
-    for path in paths:
-        path_prefix = None
-        result = PATH_PREFIX_PROG.match(path)
-        if result:
-            path_prefix = result.groups()[0]
-        if path_prefix:
-            clauses.append((Article.path.startswith(path_prefix)))
-
-    reduced = reduce(operator.or_, clauses)
-    query = query.where(reduced)
-
+    query = query.where(Article.path.in_(paths))
     return [x.to_dict() for x in query]
 
 
