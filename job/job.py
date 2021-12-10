@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import time
+from typing import List
 
 from job.steps import (
     fetch_data,
@@ -14,12 +15,20 @@ from job.steps import (
 )
 from job.helpers import get_site
 from db.mappings.model import Type
+from db.mappings.article import Article
 from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.sites import Sites
 from sites.site import Site
 import pandas as pd
+
+
+# TODO TING:
+# consider moving to db helpers
+def get_articles_by_path(site: Site, paths: List[str]) -> List[Article]:
+    query = Article.select().where(Article.site == site.name)
+    return query.where(Article.path.in_(paths))
 
 
 def fetch_and_upload_data(
@@ -36,7 +45,9 @@ def fetch_and_upload_data(
 
     # TING TODO:
     # abstract shared code in scrape_metadata for formatting article_df
-    articles = site.get_articles_by_path(data_df["landing_page_path"].unique().tolist())
+    articles = get_articles_by_path(
+        site, data_df["landing_page_path"].unique().tolist()
+    )
     df_data = {
         "article_id": [a.id for a in articles],
         "external_id": [a.external_id for a in articles],
@@ -44,12 +55,12 @@ def fetch_and_upload_data(
         "landing_page_path": [a.path for a in articles],
         "site": [a.site for a in articles],
     }
-    article_df = pd.DataFrame(df_data).set_index("external_id")
+    article_df = pd.DataFrame(df_data)
 
     # TING TODO:
     # move missing_article_paths logic to separate func
     existing_articles = article_df["landing_page_path"].unique().tolist()
-    missing_articles = data_df[data_df[~"landing_page_path"].isin(existing_articles)]
+    missing_articles = data_df[~data_df["landing_page_path"].isin(existing_articles)]
     missing_article_paths = missing_articles["landing_page_path"].unique().tolist()
 
     missing_external_id_df = preprocess.extract_external_ids(
@@ -57,7 +68,7 @@ def fetch_and_upload_data(
     )
 
     article_df = scrape_metadata.scrape_metadata(
-        site, article_df, external_id_df["external_id"].unique().tolist()
+        site, article_df, missing_external_id_df["external_id"].unique().tolist()
     )
 
     data_df = data_df.join(

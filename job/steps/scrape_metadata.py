@@ -30,7 +30,8 @@ def scrape_metadata(
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
     :param site: Site object enabling retrieval of external ID
-    :param external_ids: Article id's from external news site
+    :param article_df: DataFrame containing articles that were found in our db by path
+    :param external_ids: Article id's from publisher that we were unable to find in our db by path
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
         * Requisite fields: "article_id" (str), "external_id" (str)
@@ -39,8 +40,8 @@ def scrape_metadata(
     total_scraped = 0
     scraping_errors = 0
 
+    external_ids.extend(article_df["external_id"].unique().tolist())
     external_ids = set(external_ids)
-    external_ids.add(set(article_df["external_id"].unique().tolist()))
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
@@ -73,11 +74,17 @@ def scrape_metadata(
         "landing_page_path": [a.path for a in articles],
         "site": [a.site for a in articles],
     }
-    new_article_df = pd.DataFrame(df_data).set_index("external_id")
-    new_article_df.index = new_article_df.index.astype("object")
+    new_article_df = pd.DataFrame(df_data)
 
     old_article_df = article_df[~article_df["external_id"].isin(refresh_articles)]
-    return old_article_df.append(new_article_df)
+    logging.info(f"Found {len(old_article_df)} by path")
+    logging.info(f"Found or created {len(new_article_df)} by external_id")
+
+    article_df = old_article_df.append(new_article_df)
+    article_df = article_df.set_index("external_id")
+    article_df.index = article_df.index.astype("object")
+
+    return article_df
 
 
 def should_refresh(article: Article) -> bool:
@@ -220,5 +227,7 @@ def validate_article(
     return site.validate_article(path)
 
 
-def scrape_article_metadata(site: Site, page: Response, soup:Optional[BeautifulSoup]) -> dict:
+def scrape_article_metadata(
+    site: Site, page: Response, soup: Optional[BeautifulSoup]
+) -> dict:
     return site.scrape_article_metadata(page, soup)
