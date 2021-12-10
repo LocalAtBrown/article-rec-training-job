@@ -92,4 +92,5 @@ def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
 
 def get_articles_by_path(site: str, paths: List[str]) -> List[Article]:
     query = Article.select().where(Article.site == site)
+    logging.info(f"Found {query.count()} articles by path")
     return query.where(Article.path.in_(paths))

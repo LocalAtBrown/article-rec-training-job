@@ -73,8 +73,6 @@ def scrape_metadata(
     # combine the articles found by path with the articles found by external id
     new_article_df = articles_to_df(articles)
     old_article_df = article_df[~article_df["external_id"].isin(refresh_articles)]
-    logging.info(f"Found {len(old_article_df)} by path")
-    logging.info(f"Found or created {len(new_article_df)} by external_id")
     article_df = old_article_df.append(new_article_df)
 
     # use the original landing page path from the pageview data to enable joining
