@@ -83,7 +83,22 @@ def scrape_metadata(
     logging.info(f"Found or created {len(new_article_df)} by external_id")
 
     article_df = old_article_df.append(new_article_df)
-    article_df = article_df.set_index("external_id")
+
+    external_id_dict = external_id_df.to_dict("index")
+    original_path_lookup = {
+        v["external_id"]: v["landing_page_path"] for k, v in external_id_dict.items()
+    }
+
+    article_df["landing_page_path_tmp"] = article_df["external_id"].apply(
+        lambda x: original_path_lookup.get(x)
+    )
+    article_df["landing_page_path_tmp"] = article_df["landing_page_path_tmp"].fillna(
+        article_df["landing_page_path"]
+    )
+    article_df["landing_page_path"] = article_df["landing_page_path_tmp"]
+    article_df = article_df.drop(["landing_page_path_tmp"], axis=1)
+
+    article_df = article_df.set_index("landing_page_path")
     article_df.index = article_df.index.astype("object")
 
     return article_df
