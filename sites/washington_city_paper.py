@@ -1,17 +1,14 @@
-import operator
-from functools import reduce
-from typing import Optional, List
+from typing import Optional
 import re
 import logging
 from urllib.parse import urlparse
 from requests.models import Response
 
 from bs4 import BeautifulSoup
-import pandas as pd
 
-from db.mappings.article import Article
 from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
+import pandas as pd
 
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
@@ -20,11 +17,7 @@ FIELDS = [
     "page_urlpath",
     "contexts_dev_amp_snowplow_amp_id_1",
 ]
-PARAMS = {
- "hl": 15.0,
- "embedding_dim": 72,
- "epochs": 8 
-}
+PARAMS = {"hl": 15.0, "embedding_dim": 72, "epochs": 8}
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
