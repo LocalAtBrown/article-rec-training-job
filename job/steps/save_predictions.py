@@ -64,6 +64,8 @@ def save_predictions(model:ImplicitFactorizationModel, model_id:int,
     start_ts = time.time()
     embeddings = get_model_embeddings(model, spotlight_ids)
     distances, nearest_indices = get_similarities(embeddings, date_decays, MAX_RECS + 1)
+    knn_latency = time.time() - start_ts
+    logging.info(f"Total latency to find K-Nearest Neighbors: {knn_latency}")
     to_save = []
 
     for i in spotlight_ids:
