@@ -68,11 +68,30 @@ def fetch_and_upload_data(
     )
 
     article_df = scrape_metadata.scrape_metadata(
-        site, article_df, missing_external_id_df["external_id"].unique().tolist()
+        site, article_df, missing_external_id_df
     )
 
-    data_df = data_df.join(
-        article_df, on="external_id", lsuffix="_original", how="inner"
+    # article_df contains
+    # some matching landing_page_paths
+    # some external ids that match to external ids in missing_external_id_df
+    # missing_external_id_df in turn contains matching landing_page_paths
+
+    reset_index = missing_external_id_df.set_index("external_id")
+    new_article_df = article_df.join(reset_index, lsuffix="_original", how="outer")
+    new_article_df = new_article_df.reset_index()
+    new_article_df["landing_page_path_original"] = new_article_df[
+        "landing_page_path_original"
+    ].fillna(new_article_df["landing_page_path"])
+    dropped = new_article_df.drop(["landing_page_path"], axis=1)
+    # check that len article_df before and after join is same
+    # check columns
+    # for null landing_page_path_original values copy over value in landing_page_path col
+
+    data_df = data_df.merge(
+        dropped,
+        left_on="landing_page_path",
+        right_on="landing_page_path_original",
+        how="inner",
     )
 
     warehouse.update_dwell_times(data_df, date, site)

@@ -24,14 +24,14 @@ BACKFILL_ISO_DATE = "2021-09-08"
 
 
 def scrape_metadata(
-    site: Site, article_df: pd.DataFrame, external_ids: List[str]
+    site: Site, article_df: pd.DataFrame, external_id_df: pd.DataFrame
 ) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
 
     :param site: Site object enabling retrieval of external ID
-    :param article_df: DataFrame containing articles that were found in our db by path
-    :param external_ids: Article id's from publisher that we were unable to find in our db by path
+    :param article_df: DataFrame of articles that were found in our db by path
+    :param external_id_df: DataFrame of articles that we couldn't find in our db by path
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
         * Requisite fields: "article_id" (str), "external_id" (str)
@@ -40,8 +40,10 @@ def scrape_metadata(
     total_scraped = 0
     scraping_errors = 0
 
+    external_ids = external_id_df["external_id"].unique().tolist()
     external_ids.extend(article_df["external_id"].unique().tolist())
     external_ids = set(external_ids)
+
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
