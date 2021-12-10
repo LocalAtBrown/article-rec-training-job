@@ -7,7 +7,6 @@ import pandas as pd
 from functools import wraps
 from typing import List
 
-from job.steps.implicit_mf import ImplicitMF
 from lib.config import ROOT_DIR
 
 RESOURCE = boto3.resource("s3")
@@ -41,9 +40,6 @@ def save_outputs(filename):
                 upload_to_s3(filepath, bucket=ARTIFACT_BUCKET)
             elif type(result) == pd.DataFrame:
                 result.to_csv(filepath)
-                upload_to_s3(filepath, bucket=ARTIFACT_BUCKET)
-            elif type(result) == ImplicitMF:
-                np.save(filepath, result.item_vectors)
                 upload_to_s3(filepath, bucket=ARTIFACT_BUCKET)
             else:
                 raise NotImplementedError

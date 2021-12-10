@@ -13,3 +13,4 @@ pytest
 scipy
 progressbar2
 scikit-learn
+h5py

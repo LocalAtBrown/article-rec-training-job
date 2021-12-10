@@ -4,27 +4,22 @@ import pandas as pd
 from datetime import datetime, timezone
 
 from lib.bucket import save_outputs
-from scipy.spatial import distance
 from typing import List
 
-from job.steps.implicit_mf import ImplicitMF
 from sites.sites import Sites
 from sites.site import Site
 
+def decay_fn(experiment_date:datetime.date, df_column:pd.Series, half_life:float) -> pd.Series:
+    """ half life decay a pandas Series"""
+    return 0.5 ** (
+        (experiment_date - df_column).dt.days / half_life
+    )
 
 def get_site(site_name) -> Site:
     site = Sites.mapping.get(site_name)
     if site is None:
         raise Exception(f"Could not find site {site_name} in sites.py")
     return site
-
-
-def get_similarities(model: ImplicitMF) -> np.array:
-    vector_distances = distance.cdist(
-        model.item_vectors, model.item_vectors, metric="cosine"
-    )
-    vector_similarities = 1 - vector_distances
-    return np.nan_to_num(vector_similarities)
 
 
 def get_weights(
@@ -48,9 +43,7 @@ def apply_decay(values: np.array, date_delta: int, half_life: float) -> np.array
     """
     Computes exponential decay of value over date_delta, with a half life of half_life.
     Can be used for cumulative row-wise sums, by the principle that:
-
         exp(T3 - T1) = exp(T3 - T2) * exp(T2 - T1)
-
     :param values: (NumPy array of floats) values being decayed
     :param date_delta: (int) time span in days over which decay occurs
     :param half_life: (float) half life of decay
@@ -60,9 +53,3 @@ def apply_decay(values: np.array, date_delta: int, half_life: float) -> np.array
     decay_constant = np.log(2) / half_life
     decayed_values = values * np.exp(-date_delta * decay_constant)
     return decayed_values
-
-
-def get_orders(similarities: np.array, weights: np.array):
-    similarities *= weights
-    orders = similarities.argsort()[:, ::-1]
-    return orders

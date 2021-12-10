@@ -71,26 +71,20 @@ def run():
         article_df = article_df.reset_index()
         save_defaults.save_defaults(data_df, article_df, site.name)
 
-        # Ensure the duration is in seconds and session date is a date (not datetime)
-        data_df["session_date"] = data_df["session_date"].dt.date
-        data_df["duration"] = data_df["duration"].dt.total_seconds()
+        interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
-        # Hyperparameters derived using optimize_ga_pipeline.ipynb notebook in google-analytics-exploration
-        formatted_df = preprocess.model_preprocessing(
-            data_df,
-            date_list=[EXPERIMENT_DT],
-            half_life=59.631698,
-        )
-
-        model = train_model.train_model(
-            X=formatted_df, reg=2.319952, n_components=130, epochs=2
-        )
-        logging.info(f"Successfully trained model on {len(article_df)} inputs.")
-        # External IDs to map articles back to
-        external_article_ids = formatted_df.columns
+        model, dates_df = train_model.train_model(X=interactions_data, 
+                                                params=site.training_params, 
+                                                time=EXPERIMENT_DT)
+        
+        logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
         save_predictions.save_predictions(
-            model, model_id, external_article_ids, article_df
+            model=model, model_id=model_id, 
+            spotlight_ids=dates_df["item_id"].values, 
+            external_item_ids=dates_df["external_id"].values,
+            article_ids=dates_df["article_id"].values,
+            date_decays=dates_df["date_decays"].values
         )
         set_current_model(model_id, Type.ARTICLE.value, site.name)
 

@@ -16,8 +16,12 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
-FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
-
+FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
+PARAMS = {
+ "hl": 8,
+ "embedding_dim": 96,
+ "epochs": 10 
+}
 
 def extract_external_id(path: str) -> str:
     article_url = f"https://{DOMAIN}{path}"
@@ -107,6 +111,7 @@ def validate_article(
 TT_SITE = Site(
     NAME,
     FIELDS,
+    PARAMS,
     transform_data_google_tag_manager,
     extract_external_id,
     scrape_article_metadata,

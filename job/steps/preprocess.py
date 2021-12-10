@@ -9,9 +9,9 @@ from itertools import product
 from progressbar import ProgressBar
 from typing import List, Tuple, Optional
 from lib.config import config, ROOT_DIR
-from job.helpers import apply_decay
 from lib.bucket import save_outputs
 from sites.site import Site
+from job.helpers import decay_fn
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -61,6 +61,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     return external_id_df
 
 
+
 def time_decay(
     data_df: pd.DataFrame, experiment_date: datetime.date, half_life: float
 ) -> pd.DataFrame:
@@ -68,12 +69,10 @@ def time_decay(
     Applies basic exponential decay based on the difference between the "date" column
     and the current date argument to the dwell time
     """
-    decay_factor = 0.5 ** (
-        (experiment_date - data_df["session_date"]).dt.days / half_life
-    )
+    decay_factor = decay_fn(experiment_date, data_df["session_date"], half_life)
     data_df["duration"] *= decay_factor
+    
     return data_df
-
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -146,82 +145,6 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     filtered_df = filter_articles(filtered_df)
     return filtered_df
 
-
-def model_preprocessing(
-    prepared_df: pd.DataFrame,
-    date_list: list = [],
-    external_id_col: str = "external_id",
-    half_life: float = 10.0,
-) -> pd.DataFrame:
-    """
-    Format clickstream Snowplow data into user-item matrix for training.
-
-    :param prepared_df: DataFrame of activities collected from Snowplow using job.py
-        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str),
-            "event_action" (str), "event_category" (str), "duration" (timedelta)
-    :param date_list: List of datetimes to forcefully include in all aggregates
-    :param external_id_col: Name of column being used to denote articles
-    :param half_life: Desired half life of time spent in days
-    :return: DataFrame with one row for each user at each date of interest, and one column for each article
-    """
-    logging.info("Preprocessing: creating aggregate dwell time df...")
-    prepared_df = time_decay(
-        prepared_df, experiment_date=datetime.datetime.now().date(), half_life=half_life
-    )
-    logging.info("Preprocessing: applying time decay...")
-    time_df = aggregate_time(
-        prepared_df, date_list=date_list, external_id_col=external_id_col
-    )
-
-    return time_df
-
-
-def _add_dummies(
-    activity_df: pd.DataFrame,
-    date_list: [datetime.date] = [],
-    external_id_col: str = "external_id",
-):
-    """
-    :param activity_df: DataFrame of Snowplow activities with associated dwell times
-    :param date_list: List of dates to forcefully include in all aggregates
-    :param external_id_col: Name of column being used to denote articles
-
-    :return: DataFrame of Snowplow activities with dummy rows for each user and date of interest included
-    """
-    filtered_df = activity_df.copy()
-    filtered_df = filtered_df.rename(columns={external_id_col: "external_id"})
-    filtered_df = (
-        filtered_df
-        # Adding dummy rows to ensure each article ID from original activity_df is included
-        .append(
-            [
-                {
-                    "client_id": filtered_df.client_id.iloc[0],
-                    "duration": 0,
-                    "external_id": external_id,
-                    "session_date": pd.to_datetime(datetime_obj).date(),
-                }
-                for datetime_obj, external_id in product(
-                    date_list, activity_df[external_id_col].unique()
-                )
-            ]
-        )
-        # Adding dummy rows to ensure each client ID from original activity_df is included
-        .append(
-            [
-                {
-                    "client_id": client_id,
-                    "duration": 0,
-                    "external_id": filtered_df.external_id.iloc[0],
-                    "session_date": pd.to_datetime(datetime_obj).date(),
-                }
-                for datetime_obj, client_id in product(
-                    date_list, activity_df.client_id.unique()
-                )
-            ]
-        )
-    )
-    return filtered_df
 
 
 def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
@@ -370,100 +293,3 @@ def filter_activities(
     ]
     filtered_df = filtered_df[filtered_df.client_id.isin(valid_clients)]
     return filtered_df
-
-
-def aggregate_conversion_times(
-    activity_df: pd.DataFrame,
-    date_list: [datetime.date] = [],
-    start_time: datetime.datetime = None,
-    end_time: datetime.datetime = None,
-    external_id_col: str = "external_id",
-) -> pd.DataFrame:
-    """
-    Aggregates activities into minimum time to conversion on interactions with each article.
-
-    :param activity_df: DataFrame of Snowplow activities with associated dwell times
-        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str),
-            "activity_time" (optional datetime.datetime)
-    :param date_list: List of datetimes to forcefully include in all aggregates
-    :param start_time: (optional) Only consider events happening after a specific start time
-    :param end_time: (optional) Only consider events happening before a specific end time
-    :param external_id_col: Name of column being used to denote articles
-    :return: DataFrame of aggregated per day conversion dates with one row for each user at each date of interest,
-        and one column for each article.
-    """
-    filtered_df = _add_dummies(
-        activity_df, date_list=date_list, external_id_col=external_id_col
-    )
-    if start_time is not None:
-        filtered_df = filtered_df[filtered_df.activity_time >= start_time]
-    if end_time is not None:
-        filtered_df = filtered_df[filtered_df.activity_time < end_time]
-    conversion_df = (
-        filtered_df.groupby(["external_id", "client_id", "session_date"])[
-            "time_to_conversion"
-        ]
-        .min()
-        .unstack(level=0)
-        .sort_index()
-        .fillna(0.0)
-    )
-
-    return conversion_df
-
-
-def aggregate_time(
-    activity_df: pd.DataFrame,
-    date_list: [datetime.date] = [],
-    external_id_col: str = "external_id",
-) -> pd.DataFrame:
-    """
-    Aggregates activities into daily per-article total dwell time.
-
-    :param activity_df: DataFrame of Snowplow activities with associated dwell times
-        * Requisite fields: "duration" (float), "session_date" (datetime.date), "client_id" (str), "external_id" (str)
-    :param date_list: List of dates to forcefully include in all aggregates
-    :return: DataFrame of aggregated per day dwell time with one row for each user at each date of interest,
-        and one column for each article.
-    """
-    filtered_df = _add_dummies(
-        activity_df, date_list=date_list, external_id_col=external_id_col
-    )
-    time_df = (
-        filtered_df.groupby(["external_id", "client_id", "session_date"])["duration"]
-        .sum()
-        .unstack(level=0)
-        .sort_index()
-        .fillna(0.0)
-    )
-
-    return time_df
-
-
-def aggregate_pageviews(
-    activity_df: pd.DataFrame,
-    date_list: [datetime.date] = [],
-    start_time: datetime.datetime = None,
-    end_time: datetime.datetime = None,
-    external_id_col: str = "external_id",
-) -> pd.DataFrame:
-    """
-    Aggregates activities into daily per-article total dwell time.
-
-    :param activity_df: DataFrame of Snowplow activities with associated dwell times
-        * Requisite fields: "session_date" (datetime.date), "client_id" (str), "external_id" (str)
-    :param date_list: List of dates to forcefully include in all aggregates
-    :return: DataFrame of aggregated pageviews with one row for each user at each date of interest,
-        and one column for each article.
-    """
-    dummy_time_df = activity_df.copy()
-    dummy_time_df["duration"] = 1.0
-    time_df = aggregate_time(
-        activity_df=dummy_time_df,
-        date_list=date_list,
-        start_time=start_time,
-        end_time=end_time,
-        external_id_col=external_id_col,
-    )
-    pageview_df = (time_df > 0).astype(int)
-    return pageview_df
