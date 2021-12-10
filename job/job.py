@@ -15,20 +15,12 @@ from job.steps import (
 )
 from job.helpers import get_site
 from db.mappings.model import Type
-from db.mappings.article import Article
-from db.helpers import create_model, set_current_model
+from db.helpers import create_model, set_current_model, get_articles_by_path
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.sites import Sites
 from sites.site import Site
 import pandas as pd
-
-
-# TODO TING:
-# consider moving to db helpers
-def get_articles_by_path(site: Site, paths: List[str]) -> List[Article]:
-    query = Article.select().where(Article.site == site.name)
-    return query.where(Article.path.in_(paths))
 
 
 def fetch_and_upload_data(
@@ -46,7 +38,7 @@ def fetch_and_upload_data(
     # TING TODO:
     # abstract shared code in scrape_metadata for formatting article_df
     articles = get_articles_by_path(
-        site, data_df["landing_page_path"].unique().tolist()
+        site.name, data_df["landing_page_path"].unique().tolist()
     )
     df_data = {
         "article_id": [a.id for a in articles],

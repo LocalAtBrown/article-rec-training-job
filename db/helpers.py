@@ -88,3 +88,8 @@ def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
     logging.info(
         f"Successfully updated model id {model_id} as current '{model_type}' model for '{model_site}'"
     )
+
+
+def get_articles_by_path(site: str, paths: List[str]) -> List[Article]:
+    query = Article.select().where(Article.site == site)
+    return query.where(Article.path.in_(paths))
