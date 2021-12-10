@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 import re
 import logging
 from urllib.parse import urlparse
@@ -6,8 +6,13 @@ from requests.models import Response
 import time
 from bs4 import BeautifulSoup
 
-from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
+from sites.helpers import (
+    safe_get,
+    ArticleScrapingError,
+    transform_data_google_tag_manager,
+)
 from sites.site import Site
+from db.mappings.article import Article
 
 """
 TT API documentation
@@ -17,11 +22,13 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
-PARAMS = {
- "hl": 8,
- "embedding_dim": 96,
- "epochs": 10 
-}
+PARAMS = {"hl": 8, "embedding_dim": 96, "epochs": 10}
+
+
+def get_articles_by_path(paths: List[str]) -> List[Article]:
+    query = Article.select().where(Article.path.in_(paths))
+    return [x.to_dict() for x in query]
+
 
 def extract_external_id(path: str) -> str:
     article_url = f"https://{DOMAIN}{path}"
@@ -44,6 +51,7 @@ def extract_external_id(path: str) -> str:
         return str(int(contentID))
     else:
         return None
+
 
 def get_title(res: dict) -> str:
     title = res["headline"]

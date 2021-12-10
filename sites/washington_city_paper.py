@@ -28,6 +28,33 @@ PARAMS = {
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
+
+def get_articles_by_path(paths: List[str]) -> List[Article]:
+    """
+    paths like "/article/290217/skip-james-hard-time-killing-floor-blues/"
+    are stored in the db either as:
+    - "/article/290217/skip-james-hard-time-killing-floor-blues/"
+    - "/article/290217/"
+    """
+    PATH_PREFIX_PATERN = "(\/article\/\d+)"
+    PATH_PREFIX_PROG = re.compile(PATH_PREFIX_PATERN)
+    if not paths:
+        return []
+
+    query = Article.select()
+    for path in paths:
+        path_prefix = None
+        result = PATH_PREFIX_PROG.match(path)
+        if result:
+            path_prefix = result.groups()[0]
+        if not path_prefix:
+            continue
+
+        query = query.where(Article.path.startswith(path_prefix))
+
+    return [x.to_dict() for x in query]
+
+
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     requires a dataframe with the following fields:
