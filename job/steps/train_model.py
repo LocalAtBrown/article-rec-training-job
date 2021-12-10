@@ -1,4 +1,5 @@
 import logging
+import time
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -7,6 +8,7 @@ from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.interactions import Interactions
 
 from job.helpers import decay_fn
+from lib.metrics import write_metric, Unit
 
 DEFAULT_PARAMS = {
         "hl": 10,
@@ -67,9 +69,12 @@ def get_hyperparameters(params:dict = None):
 
 def fit_model(params:dict, dataset) -> ImplicitFactorizationModel:
     """ Fit and return Spotlight model"""
+    start_ts = time.time()
     model = ImplicitFactorizationModel(n_iter=params["epochs"], 
                                         embedding_dim=params["embedding_dim"])
     model.fit(dataset, verbose=True)
+    latency = time.time() - start_ts
+    write_metric("model_training_time", latency, unit=Unit.SECONDS)
     return model
 
 def train_model(X:pd.DataFrame, params:dict, time=pd.datetime) -> (ImplicitFactorizationModel, pd.DataFrame):
