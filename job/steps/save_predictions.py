@@ -32,14 +32,14 @@ def weighted_cosine(a:np.ndarray, b:np.ndarray) -> float:
     # :return [0,1] distance score, where 0 is closer
     if np.array_equal(a, b): return 0
     decay_constant = b[-1]
-    return  (1 - (decay_constant * (a[:-1] @ b[:-1])))
+    return  1 - (decay_constant * (a[:-1] @ b[:-1]))
 
 def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) -> (np.ndarray, np.ndarray):
     """ Get K nearest neighbors for each article"""
     weighted_embeddings = np.hstack([embeddings, np.expand_dims(date_decays, axis=1)]) 
     nbrs = NearestNeighbors(n_neighbors=n_recs, 
                             metric=weighted_cosine,
-                            algorithm='brute').fit(weighted_embeddings) 
+                            algorithm='ball_tree').fit(weighted_embeddings) 
 
     return nbrs.kneighbors(weighted_embeddings)
 
