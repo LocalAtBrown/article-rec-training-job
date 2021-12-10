@@ -26,7 +26,8 @@ PARAMS = {"hl": 8, "embedding_dim": 96, "epochs": 10}
 
 
 def get_articles_by_path(paths: List[str]) -> List[Article]:
-    query = Article.select().where(Article.path.in_(paths))
+    query = Article.select().where(Article.site == NAME)
+    query = query.where(Article.path.in_(paths))
     return [x.to_dict() for x in query]
 
 

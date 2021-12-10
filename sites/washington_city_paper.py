@@ -1,14 +1,17 @@
-from typing import Optional
+import operator
+from functools import reduce
+from typing import Optional, List
 import re
 import logging
 from urllib.parse import urlparse
 from requests.models import Response
 
 from bs4 import BeautifulSoup
+import pandas as pd
 
+from db.mappings.article import Article
 from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
-import pandas as pd
 
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
@@ -41,16 +44,18 @@ def get_articles_by_path(paths: List[str]) -> List[Article]:
     if not paths:
         return []
 
-    query = Article.select()
+    query = Article.select().where(Article.site == NAME)
+    clauses = []
     for path in paths:
         path_prefix = None
         result = PATH_PREFIX_PROG.match(path)
         if result:
             path_prefix = result.groups()[0]
-        if not path_prefix:
-            continue
+        if path_prefix:
+            clauses.append((Article.path.startswith(path_prefix)))
 
-        query = query.where(Article.path.startswith(path_prefix))
+    reduced = reduce(operator.or_, clauses)
+    query = query.where(reduced)
 
     return [x.to_dict() for x in query]
 
@@ -87,6 +92,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
 
     return transformed_df
+
 
 def extract_external_id(path: str) -> str:
     result = PATH_PROG.match(path)
