@@ -33,14 +33,42 @@ def fetch_and_upload_data(
     Return df of data, and articles
     """
     data_df = fetch_data.fetch_data(site, date, days)
-    external_id_df = preprocess.extract_external_ids(
-        site, data_df["landing_page_path"].unique().tolist()
+
+    # TING TODO:
+    # abstract shared code in scrape_metadata for formatting article_df
+    articles = site.get_articles_by_path(data_df["landing_page_path"].unique().tolist())
+    df_data = {
+        "article_id": [a.id for a in articles],
+        "external_id": [a.external_id for a in articles],
+        "published_at": [a.published_at for a in articles],
+        "landing_page_path": [a.path for a in articles],
+        "site": [a.site for a in articles],
+    }
+    article_df = pd.DataFrame(df_data).set_index("external_id")
+
+    # TING TODO:
+    # move missing_article_paths logic to separate func
+    existing_articles = article_df["landing_page_path"].unique().tolist()
+    missing_articles = data_df[data_df[~"landing_page_path"].isin(existing_articles)]
+    missing_article_paths = missing_articles["landing_page_path"].unique().tolist()
+
+    missing_external_id_df = preprocess.extract_external_ids(
+        site, missing_article_paths
     )
 
-    data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-
+    # TING TODO:
+    # 1. pass the existing article_df in and remove the current create or update logic
+    #
+    # 2. it's possible that not every existing external_id was found in the path lookup,
+    # so we'll have to do another lookup for existing articles by external_id
+    # add any found articles to the article_df
+    # check for recent articles in the existing article_df and update them
+    #
+    # 3. create articles for everything that we've newly extracted external id's for
+    #
+    # 4. return a merged df of all existing and newly created articles
     article_df = scrape_metadata.scrape_metadata(
-        site, data_df["external_id"].unique().tolist()
+        site, article_df, external_id_df["external_id"].unique().tolist()
     )
 
     data_df = data_df.join(
