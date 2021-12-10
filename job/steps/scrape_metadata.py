@@ -70,19 +70,18 @@ def scrape_metadata(
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
 
+    # combine the articles found by path with the articles found by external id
     new_article_df = articles_to_df(articles)
-
     old_article_df = article_df[~article_df["external_id"].isin(refresh_articles)]
     logging.info(f"Found {len(old_article_df)} by path")
     logging.info(f"Found or created {len(new_article_df)} by external_id")
-
     article_df = old_article_df.append(new_article_df)
 
+    # use the original landing page path from the pageview data to enable joining
     external_id_dict = external_id_df.to_dict("index")
     original_path_lookup = {
         v["external_id"]: v["landing_page_path"] for k, v in external_id_dict.items()
     }
-
     article_df["landing_page_path_tmp"] = article_df["external_id"].apply(
         lambda x: original_path_lookup.get(x)
     )
