@@ -25,14 +25,6 @@ PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
 
-# TODO TING:
-# move this to sites/helpers.py
-def get_articles_by_path(paths: List[str]) -> List[Article]:
-    query = Article.select().where(Article.site == NAME)
-    query = query.where(Article.path.in_(paths))
-    return [x.to_dict() for x in query]
-
-
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     requires a dataframe with the following fields:
