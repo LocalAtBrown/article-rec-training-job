@@ -16,23 +16,25 @@ from lib.metrics import write_metric, Unit
 MAX_RECS = config.get("MAX_RECS")
 
 def normalize_embeddings(embedding_matrix:np.ndarray) -> np.ndarray:
-    """l1 normalize all embeddings along row dimension of matrix"""
+    """l2 normalize all embeddings along row dimension of matrix"""
     return normalize(embedding_matrix, axis=1, norm='l2')
 
 
 def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
-    """ Get l1 normalized embeddings from Spotlight model for all spotlight_ids"""
+    """ Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
     return normalize_embeddings(np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
 def weighted_cosine(a:np.ndarray, b:np.ndarray) -> float:
     # dot product of a and b (cosine similarity) scaled by the time_decay of b
-    # note: embeddings are already l1 normalized (not including decay constant in last index)
+    # note: embeddings are already l2 normalized (not including decay constant in last index)
+    # note: we use 0.99999 because float multiplication does result in some rounding error
+    # I've tested this is a suitable number of decimals
     # :a embedding vector for article. last entry is decay constant.
     # :b embedding vector for article. last entry is decay constant.
     # :return [0,1] distance score, where 0 is closer
     decay_constant = b[-1]
     distance = a[:-1] @ b[:-1]
-    if distance > 0.9999999: return 0
+    if distance > 0.99999: return 0
     return  1 - (decay_constant * distance)
 
 def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) -> (np.ndarray, np.ndarray):
