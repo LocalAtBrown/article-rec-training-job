@@ -23,6 +23,13 @@ from sites.site import Site
 import pandas as pd
 
 
+def get_missing_paths(data_df: pd.DataFrame, article_df: pd.DataFrame) -> List[str]:
+    existing_articles = article_df["landing_page_path"].unique().tolist()
+    missing_articles = data_df[~data_df["landing_page_path"].isin(existing_articles)]
+    missing_article_paths = missing_articles["landing_page_path"].unique().tolist()
+    return missing_article_paths
+
+
 def fetch_and_upload_data(
     site: Site, date: datetime.date, days=config.get("DAYS_OF_DATA")
 ):
@@ -35,18 +42,12 @@ def fetch_and_upload_data(
     """
     data_df = fetch_data.fetch_data(site, date, days)
 
-    # TING TODO:
-    # abstract shared code in scrape_metadata for formatting article_df
     articles = get_articles_by_path(
         site.name, data_df["landing_page_path"].unique().tolist()
     )
     article_df = articles_to_df(articles)
 
-    # TING TODO:
-    # move missing_article_paths logic to separate func
-    existing_articles = article_df["landing_page_path"].unique().tolist()
-    missing_articles = data_df[~data_df["landing_page_path"].isin(existing_articles)]
-    missing_article_paths = missing_articles["landing_page_path"].unique().tolist()
+    missing_article_paths = get_missing_paths(data_df, article_df)
 
     missing_external_id_df = preprocess.extract_external_ids(
         site, missing_article_paths
