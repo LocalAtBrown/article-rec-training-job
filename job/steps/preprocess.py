@@ -11,6 +11,7 @@ from typing import List, Tuple, Optional
 from lib.config import config, ROOT_DIR
 from lib.bucket import save_outputs
 from sites.site import Site
+from job.helpers import decay_fn
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -59,11 +60,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
 
     return external_id_df
 
-def decay_fn(experiment_date:datetime.date, df_column:pd.Series, half_life:float):
-    """ half life decay a column value"""
-    return 0.5 ** (
-        (experiment_date - df_column).dt.days / half_life
-    )
+
 
 def time_decay(
     data_df: pd.DataFrame, experiment_date: datetime.date, half_life: float

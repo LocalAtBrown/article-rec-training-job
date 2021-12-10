@@ -6,7 +6,7 @@ from copy import deepcopy
 from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.interactions import Interactions
 
-from job.steps.preprocess import decay_fn
+from job.helpers import decay_fn
 
 DEFAULT_PARAMS = {
         "hl": 10,
@@ -33,7 +33,7 @@ def generate_datedecays(prepared_df:pd.DataFrame,
 
 def spotlight_transform(prepared_df:pd.DataFrame, 
                         half_life:float, 
-                        experiment_time: pd.Timestamp):
+                        experiment_time: pd.Timestamp) -> (Interactions, pd.DataFrame):
     """Transform data for Spotlight
 
     :prepared_df: Dataframe with user-article interactions
@@ -60,19 +60,19 @@ def spotlight_transform(prepared_df:pd.DataFrame,
 
     return (dataset, dates_df)
 
-def get_hparams(params:dict = None):
+def get_hyperparameters(params:dict = None):
     _params = deepcopy(DEFAULT_PARAMS)
     _params.update(params)
     return _params
 
-def fit_model(params:dict, dataset):
+def fit_model(params:dict, dataset) -> ImplicitFactorizationModel:
     """ Fit and return Spotlight model"""
     model = ImplicitFactorizationModel(n_iter=params["epochs"], 
                                         embedding_dim=params["embedding_dim"])
     model.fit(dataset, verbose=True)
     return model
 
-def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
+def train_model(X:pd.DataFrame, params:dict, time=pd.datetime) -> (ImplicitFactorizationModel, pd.DataFrame):
     """Train spotlight model
 
     X: pandas dataframe of interactions
@@ -88,6 +88,6 @@ def train_model(X:pd.DataFrame, params:dict, time=pd.datetime):
             )
     """
     dataset, dates_df = spotlight_transform(prepared_df=X, half_life=params["hl"], experiment_time=time)
-    params = get_hparams(params)
+    params = get_hyperparameters(params)
     model = fit_model(params, dataset)
     return model, dates_df

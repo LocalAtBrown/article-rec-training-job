@@ -71,13 +71,13 @@ def run():
         article_df = article_df.reset_index()
         save_defaults.save_defaults(data_df, article_df, site.name)
 
-        wh_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+        interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
-        model, dates_df = train_model.train_model(X=wh_data, 
-                                                params=site.params, 
+        model, dates_df = train_model.train_model(X=interactions_data, 
+                                                params=site.training_params, 
                                                 time=EXPERIMENT_DT)
-
-        logging.info(f"Successfully trained model on {len(wh_data)} inputs.")
+        
+        logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
         save_predictions.save_predictions(
             model=model, model_id=model_id, 

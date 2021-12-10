@@ -9,6 +9,11 @@ from typing import List
 from sites.sites import Sites
 from sites.site import Site
 
+def decay_fn(experiment_date:datetime.date, df_column:pd.Series, half_life:float) -> pd.Series:
+    """ half life decay a pandas Series"""
+    return 0.5 ** (
+        (experiment_date - df_column).dt.days / half_life
+    )
 
 def get_site(site_name) -> Site:
     site = Sites.mapping.get(site_name)

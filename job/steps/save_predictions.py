@@ -1,10 +1,12 @@
 import logging
 import time
 from typing import List
+
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize
 import torch
+from spotlight.factorization.implicit import ImplicitFactorizationModel
 
 from db.helpers import create_rec
 from db.mappings.recommendation import Rec
@@ -13,16 +15,16 @@ from lib.metrics import write_metric, Unit
 
 MAX_RECS = config.get("MAX_RECS")
 
-def normalize_embeddings(embedding_matrix):
-    """l1 normalize all embeddings along row-dimension of matrix"""
+def normalize_embeddings(embedding_matrix:np.ndarray) -> np.ndarray:
+    """l1 normalize all embeddings along row dimension of matrix"""
     return normalize(embedding_matrix, axis=1, norm='l1')
 
 
-def get_model_embeddings(model, spotlight_ids:np.ndarray):
+def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
     """ Get l1 normalized embeddings from Spotlight model for all spotlight_ids"""
     return normalize_embeddings(np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
-def weighted_cosine(a,b):
+def weighted_cosine(a:np.ndarray, b:np.ndarray) -> float:
     # dot product of a and b (cosine similarity) scaled by the time_decay of b
     # note: embeddings are already l1 normalized (not including decay constant in last index)
     # :a embedding vector for article. last entry is decay constant.
@@ -32,7 +34,7 @@ def weighted_cosine(a,b):
     decay_constant = b[-1]
     return  (1 - (decay_constant * (a[:-1] @ b[:-1])))
 
-def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int):
+def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) -> (np.ndarray, np.ndarray):
     """ Get K nearest neighbors for each article"""
     weighted_embeddings = np.hstack([embeddings, np.expand_dims(date_decays, axis=1)]) 
     nbrs = NearestNeighbors(n_neighbors=n_recs, 
@@ -41,15 +43,15 @@ def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int):
 
     return nbrs.kneighbors(weighted_embeddings)
 
-def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray):
+def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray) -> (np.ndarray, np.ndarray):
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[nearest_indices[spotlight_id - 1][1:]], distances[spotlight_id - 1][1:])
 
-def save_predictions(model, model_id:int, 
+def save_predictions(model:ImplicitFactorizationModel, model_id:int, 
                     spotlight_ids:np.ndarray, 
                     external_item_ids:np.ndarray, 
                     article_ids:np.ndarray,
-                    date_decays:np.ndarray):
+                    date_decays:np.ndarray) -> None:
     """Save predictions to the db
     
     :model: Spotlight model  
