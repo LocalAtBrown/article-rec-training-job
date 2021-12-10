@@ -24,13 +24,13 @@ def get_model_embeddings(model, spotlight_ids:np.ndarray):
 
 def weighted_cosine(a,b):
     # dot product of a and b (cosine similarity) scaled by the time_decay of b
-    # note: embeddings are already l1 normalized
-    # :a embedding vector for article
-    # :b embedding vector for article
+    # note: embeddings are already l1 normalized (not including decay constant in last index)
+    # :a embedding vector for article. last entry is decay constant.
+    # :b embedding vector for article. last entry is decay constant.
     # :return [0,1] distance score, where 0 is closer
     if np.array_equal(a, b): return 0
-
-    return  (1 - (b[-1] * (a[:-1] @ b[:-1])))
+    decay_constant = b[-1]
+    return  (1 - (decay_constant * (a[:-1] @ b[:-1])))
 
 def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int):
     """ Get K nearest neighbors for each article"""
