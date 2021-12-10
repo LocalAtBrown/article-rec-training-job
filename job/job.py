@@ -13,7 +13,7 @@ from job.steps import (
     delete_old_models,
     warehouse,
 )
-from job.helpers import get_site
+from job.helpers import get_site, articles_to_df
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model, get_articles_by_path
 from lib.metrics import write_metric, Unit
@@ -40,14 +40,7 @@ def fetch_and_upload_data(
     articles = get_articles_by_path(
         site.name, data_df["landing_page_path"].unique().tolist()
     )
-    df_data = {
-        "article_id": [a.id for a in articles],
-        "external_id": [a.external_id for a in articles],
-        "published_at": [a.published_at for a in articles],
-        "landing_page_path": [a.path for a in articles],
-        "site": [a.site for a in articles],
-    }
-    article_df = pd.DataFrame(df_data)
+    article_df = articles_to_df(articles)
 
     # TING TODO:
     # move missing_article_paths logic to separate func

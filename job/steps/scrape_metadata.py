@@ -19,6 +19,7 @@ from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 from db.helpers import delete_articles
 from db.mappings.base import db_proxy
+from job.helpers import articles_to_df
 
 BACKFILL_ISO_DATE = "2021-09-08"
 
@@ -69,14 +70,7 @@ def scrape_metadata(
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
 
-    df_data = {
-        "article_id": [a.id for a in articles],
-        "external_id": [a.external_id for a in articles],
-        "published_at": [a.published_at for a in articles],
-        "landing_page_path": [a.path for a in articles],
-        "site": [a.site for a in articles],
-    }
-    new_article_df = pd.DataFrame(df_data)
+    new_article_df = articles_to_df(articles)
 
     old_article_df = article_df[~article_df["external_id"].isin(refresh_articles)]
     logging.info(f"Found {len(old_article_df)} by path")
