@@ -17,7 +17,7 @@ MAX_RECS = config.get("MAX_RECS")
 
 def normalize_embeddings(embedding_matrix:np.ndarray) -> np.ndarray:
     """l1 normalize all embeddings along row dimension of matrix"""
-    return normalize(embedding_matrix, axis=1, norm='l1')
+    return normalize(embedding_matrix, axis=1, norm='l2')
 
 
 def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
@@ -30,19 +30,19 @@ def weighted_cosine(a:np.ndarray, b:np.ndarray) -> float:
     # :a embedding vector for article. last entry is decay constant.
     # :b embedding vector for article. last entry is decay constant.
     # :return [0,1] distance score, where 0 is closer
-    if np.array_equal(a, b): return 0
     decay_constant = b[-1]
-    return  1 - (decay_constant * (a[:-1] @ b[:-1]))
+    distance = a[:-1] @ b[:-1]
+    if distance > 0.9999999: return 0
+    return  1 - (decay_constant * distance)
 
 def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) -> (np.ndarray, np.ndarray):
     """ Get K nearest neighbors for each article"""
     weighted_embeddings = np.hstack([embeddings, np.expand_dims(date_decays, axis=1)]) 
     nbrs = NearestNeighbors(n_neighbors=n_recs, 
                             metric=weighted_cosine,
-                            algorithm='ball_tree').fit(weighted_embeddings) 
+                            algorithm='brute').fit(weighted_embeddings) 
 
     return nbrs.kneighbors(weighted_embeddings)
-
 def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray) -> (np.ndarray, np.ndarray):
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[nearest_indices[spotlight_id - 1][1:]], distances[spotlight_id - 1][1:])
