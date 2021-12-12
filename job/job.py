@@ -48,9 +48,9 @@ def hydrate_by_path(site, data_df):
 def hydrate_by_external_id(site, data_df, article_df_by_path):
     missing_article_paths = get_missing_paths(data_df, article_df_by_path)
     external_id_df = preprocess.extract_external_ids(site, missing_article_paths)
-    import pdb
-
-    pdb.set_trace()
+    external_id_df = external_id_df[
+        ~external_id_df["external_id"].isin(article_df_by_path.index)
+    ]
     data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
     article_df = scrape_metadata.scrape_metadata(
         site, external_id_df["external_id"].unique().tolist()
