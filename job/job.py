@@ -30,6 +30,39 @@ def get_missing_paths(data_df: pd.DataFrame, article_df: pd.DataFrame) -> List[s
     return missing_article_paths
 
 
+def hydrate_by_path(site, data_df):
+    articles = get_articles_by_path(
+        site.name, data_df["landing_page_path"].unique().tolist()
+    )
+    article_df = scrape_metadata.scrape_metadata(
+        site, [a.external_id for a in articles]
+    )
+    article_df = article_df.set_index("landing_page_path")
+    data_df = data_df.join(article_df, on="landing_page_path", how="inner")
+    article_df = article_df.reset_index()
+    article_df = article_df.set_index("external_id")
+    article_df.index = article_df.index.astype("object")
+    return article_df, data_df
+
+
+def hydrate_by_external_id(site, data_df, article_df_by_path):
+    missing_article_paths = get_missing_paths(data_df, article_df_by_path)
+    external_id_df = preprocess.extract_external_ids(site, missing_article_paths)
+    import pdb
+
+    pdb.set_trace()
+    data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
+    article_df = scrape_metadata.scrape_metadata(
+        site, external_id_df["external_id"].unique().tolist()
+    )
+    article_df = article_df.set_index("external_id")
+    article_df.index = article_df.index.astype("object")
+    data_df = data_df.join(
+        article_df, on="external_id", lsuffix="_original", how="inner"
+    )
+    return article_df, data_df
+
+
 def fetch_and_upload_data(
     site: Site, date: datetime.date, days=config.get("DAYS_OF_DATA")
 ):
@@ -42,41 +75,11 @@ def fetch_and_upload_data(
     """
     data_df = fetch_data.fetch_data(site, date, days)
 
-    articles_by_path = get_articles_by_path(
-        site.name, data_df["landing_page_path"].unique().tolist()
-    )
-    article_df_by_path = scrape_metadata.scrape_metadata(
-        site, [a.external_id for a in articles_by_path]
-    )
+    article_df_by_path, data_df_by_path = hydrate_by_path(site, data_df)
 
-    article_df_by_path = article_df_by_path.set_index("landing_page_path")
-    data_df_by_path = data_df.join(
-        article_df_by_path, on="landing_page_path", how="inner"
+    article_df_by_external_id, data_df_by_external_id = hydrate_by_external_id(
+        site, data_df, article_df_by_path
     )
-    article_df_by_path = article_df_by_path.reset_index()
-    article_df_by_path = article_df_by_path.set_index("external_id")
-    article_df_by_path.index = article_df_by_path.index.astype("object")
-    # article_df_by_path, data_df_by_path = get_articles_by_path(data_df)
-
-    missing_article_paths = get_missing_paths(data_df, article_df_by_path)
-    missing_external_id_df = preprocess.extract_external_ids(
-        site, missing_article_paths
-    )
-    # extra step to subtract any external ids in article_df_by_path from missing_external_id_df
-    data_df_by_external_id = data_df.merge(
-        missing_external_id_df, on="landing_page_path", how="inner"
-    )
-    article_df_by_external_id = scrape_metadata.scrape_metadata(
-        site, missing_external_id_df["external_id"].unique().tolist()
-    )
-    article_df_by_external_id = article_df_by_external_id.set_index("external_id")
-    article_df_by_external_id.index = article_df_by_external_id.index.astype("object")
-    data_df_by_external_id = data_df_by_external_id.join(
-        article_df_by_external_id, on="external_id", lsuffix="_original", how="inner"
-    )
-    # article_df_by_external_id, data_df_by_external_id = get_articles_by_external_id(
-    #     data_df, article_df_by_path
-    # )
 
     article_df = article_df_by_path.append(article_df_by_external_id)
     data_df = data_df_by_path.append(data_df_by_external_id)
