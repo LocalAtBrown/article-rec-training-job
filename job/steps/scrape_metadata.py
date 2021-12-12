@@ -19,20 +19,15 @@ from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 from db.helpers import delete_articles
 from db.mappings.base import db_proxy
-from job.helpers import articles_to_df
 
 BACKFILL_ISO_DATE = "2021-09-08"
 
 
-def scrape_metadata(
-    site: Site, article_df: pd.DataFrame, external_id_df: pd.DataFrame
-) -> pd.DataFrame:
+def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
-
     :param site: Site object enabling retrieval of external ID
-    :param article_df: DataFrame of articles that were found in our db by path
-    :param external_id_df: DataFrame of articles that we couldn't find in our db by path
+    :param external_ids: Article id's from external news site
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
         and the article ID in the database.
         * Requisite fields: "article_id" (str), "external_id" (str)
@@ -40,11 +35,7 @@ def scrape_metadata(
     start_ts = time.time()
     total_scraped = 0
     scraping_errors = 0
-
-    external_ids = external_id_df["external_id"].unique().tolist()
-    external_ids.extend(article_df["external_id"].unique().tolist())
     external_ids = set(external_ids)
-
     articles = get_articles_by_external_ids(site, external_ids)
     refresh_articles = [a for a in articles if should_refresh(a)]
     found_external_ids = {a.external_id for a in articles}
@@ -69,29 +60,26 @@ def scrape_metadata(
     write_metric("article_scraping_errors", scraping_errors)
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
-
-    # combine the articles found by path with the articles found by external id
-    new_article_df = articles_to_df(articles)
-    old_article_df = article_df[~article_df["external_id"].isin(refresh_articles)]
-    article_df = old_article_df.append(new_article_df)
-
-    # use the original landing page path from the pageview data to enable joining
-    external_id_dict = external_id_df.to_dict("index")
-    original_path_lookup = {
-        v["external_id"]: v["landing_page_path"] for k, v in external_id_dict.items()
+    df_data = {
+        "article_id": [a.id for a in articles],
+        "external_id": [a.external_id for a in articles],
+        "published_at": [a.published_at for a in articles],
+        "landing_page_path": [a.path for a in articles],
+        "site": [a.site for a in articles],
     }
-    article_df["landing_page_path_tmp"] = article_df["external_id"].apply(
-        lambda x: original_path_lookup.get(x)
-    )
-    article_df["landing_page_path_tmp"] = article_df["landing_page_path_tmp"].fillna(
-        article_df["landing_page_path"]
-    )
-    article_df["landing_page_path"] = article_df["landing_page_path_tmp"]
-    article_df = article_df.drop(["landing_page_path_tmp"], axis=1)
+    article_df = pd.DataFrame(df_data)
+    return article_df
 
-    article_df = article_df.set_index("landing_page_path")
-    article_df.index = article_df.index.astype("object")
 
+def articles_to_df(articles: List["Article"]) -> pd.DataFrame:
+    df_data = {
+        "article_id": [a.id for a in articles],
+        "external_id": [a.external_id for a in articles],
+        "published_at": [a.published_at for a in articles],
+        "landing_page_path": [a.path for a in articles],
+        "site": [a.site for a in articles],
+    }
+    article_df = pd.DataFrame(df_data)
     return article_df
 
 

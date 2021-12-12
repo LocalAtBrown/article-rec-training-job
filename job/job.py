@@ -13,7 +13,7 @@ from job.steps import (
     delete_old_models,
     warehouse,
 )
-from job.helpers import get_site, articles_to_df
+from job.helpers import get_site
 from db.mappings.model import Type
 from db.helpers import create_model, set_current_model, get_articles_by_path
 from lib.metrics import write_metric, Unit
@@ -42,25 +42,44 @@ def fetch_and_upload_data(
     """
     data_df = fetch_data.fetch_data(site, date, days)
 
-    articles = get_articles_by_path(
+    articles_by_path = get_articles_by_path(
         site.name, data_df["landing_page_path"].unique().tolist()
     )
-    article_df = articles_to_df(articles)
+    article_df_by_path = scrape_metadata.scrape_metadata(
+        site, [a.external_id for a in articles_by_path]
+    )
 
-    missing_article_paths = get_missing_paths(data_df, article_df)
+    article_df_by_path = article_df_by_path.set_index("landing_page_path")
+    data_df_by_path = data_df.join(
+        article_df_by_path, on="landing_page_path", how="inner"
+    )
+    article_df_by_path = article_df_by_path.reset_index()
+    article_df_by_path = article_df_by_path.set_index("external_id")
+    article_df_by_path.index = article_df_by_path.index.astype("object")
+    # article_df_by_path, data_df_by_path = get_articles_by_path(data_df)
 
+    missing_article_paths = get_missing_paths(data_df, article_df_by_path)
     missing_external_id_df = preprocess.extract_external_ids(
         site, missing_article_paths
     )
-
-    article_df = scrape_metadata.scrape_metadata(
-        site, article_df, missing_external_id_df
+    # extra step to subtract any external ids in article_df_by_path from missing_external_id_df
+    data_df_by_external_id = data_df.merge(
+        missing_external_id_df, on="landing_page_path", how="inner"
     )
+    article_df_by_external_id = scrape_metadata.scrape_metadata(
+        site, missing_external_id_df["external_id"].unique().tolist()
+    )
+    article_df_by_external_id = article_df_by_external_id.set_index("external_id")
+    article_df_by_external_id.index = article_df_by_external_id.index.astype("object")
+    data_df_by_external_id = data_df_by_external_id.join(
+        article_df_by_external_id, on="external_id", lsuffix="_original", how="inner"
+    )
+    # article_df_by_external_id, data_df_by_external_id = get_articles_by_external_id(
+    #     data_df, article_df_by_path
+    # )
 
-    data_df = data_df.join(article_df, on="landing_page_path", how="inner")
-
-    article_df = article_df.set_index("external_id")
-    article_df.index = article_df.index.astype("object")
+    article_df = article_df_by_path.append(article_df_by_external_id)
+    data_df = data_df_by_path.append(data_df_by_external_id)
 
     warehouse.update_dwell_times(data_df, date, site)
     return data_df, article_df
