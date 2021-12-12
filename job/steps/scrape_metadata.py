@@ -71,18 +71,6 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     return article_df
 
 
-def articles_to_df(articles: List["Article"]) -> pd.DataFrame:
-    df_data = {
-        "article_id": [a.id for a in articles],
-        "external_id": [a.external_id for a in articles],
-        "published_at": [a.published_at for a in articles],
-        "landing_page_path": [a.path for a in articles],
-        "site": [a.site for a in articles],
-    }
-    article_df = pd.DataFrame(df_data)
-    return article_df
-
-
 def should_refresh(article: Article) -> bool:
     # refresh metadata without a published time recorded yet
     if not article.published_at:
