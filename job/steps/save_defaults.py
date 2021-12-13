@@ -3,15 +3,14 @@ import pandas as pd
 import numpy as np
 import datetime
 
-from job.helpers import get_weights
-from db.mappings.model import Type
-from db.helpers import create_model, set_current_model, create_rec
 from job.steps import preprocess
 from lib.config import config
 from sites.site import Site
-from lib.metrics import write_metric, Unit
-from db.mappings.recommendation import Rec
+
+from db.helpers import create_model, set_current_model
 from db.mappings.base import db_proxy
+from db.mappings.model import Type
+from db.mappings.recommendation import Rec
 
 MAX_RECS = config.get("MAX_RECS")
 
