@@ -64,27 +64,32 @@ def run():
         model_id = create_model(type=Type.ARTICLE.value, site=site.name)
         logging.info(f"Created model with id {model_id}")
         EXPERIMENT_DT = datetime.now().date()
+
+        ## Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
         data_df, article_df = fetch_and_upload_data(site, EXPERIMENT_DT)
 
-        data_df = preprocess.filter_activities(data_df)
-        data_df = preprocess.filter_articles(data_df)
-        article_df = article_df.reset_index()
-        save_defaults.save_defaults(data_df, article_df, site.name)
+        ## Step 2: Train models by pulling data from the warehouse and uploading
+        ## new recommendation objects
+        top_articles = warehouse.get_default_recs(site=site)
+        save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT)
 
-        interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+        interactions_data = warehouse.get_dwell_times(
+            site, days=config.get("DAYS_OF_DATA")
+        )
 
-        model, dates_df = train_model.train_model(X=interactions_data, 
-                                                params=site.training_params, 
-                                                time=EXPERIMENT_DT)
-        
+        model, dates_df = train_model.train_model(
+            X=interactions_data, params=site.training_params, time=EXPERIMENT_DT
+        )
+
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
         save_predictions.save_predictions(
-            model=model, model_id=model_id, 
-            spotlight_ids=dates_df["item_id"].values, 
+            model=model,
+            model_id=model_id,
+            spotlight_ids=dates_df["item_id"].values,
             external_item_ids=dates_df["external_id"].values,
             article_ids=dates_df["article_id"].values,
-            date_decays=dates_df["date_decays"].values
+            date_decays=dates_df["date_decays"].values,
         )
         set_current_model(model_id, Type.ARTICLE.value, site.name)
 

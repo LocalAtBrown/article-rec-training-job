@@ -61,18 +61,21 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> pd.DataFr
     return external_id_df
 
 
-
 def time_decay(
-    data_df: pd.DataFrame, experiment_date: datetime.date, half_life: float
+    data_df: pd.DataFrame,
+    experiment_date: datetime.date,
+    half_life: float,
+    date_col="session_date",
+    duration_col="duration",
 ) -> pd.DataFrame:
     """
     Applies basic exponential decay based on the difference between the "date" column
     and the current date argument to the dwell time
     """
-    decay_factor = decay_fn(experiment_date, data_df["session_date"], half_life)
-    data_df["duration"] *= decay_factor
-    
+    decay_factor = decay_fn(experiment_date, data_df[date_col], half_life)
+    data_df[duration_col] *= decay_factor
     return data_df
+
 
 def filter_flyby_users(data_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -144,7 +147,6 @@ def common_preprocessing(data_df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Preprocessing: filtering flyby users and articles...")
     filtered_df = filter_articles(filtered_df)
     return filtered_df
-
 
 
 def fix_dtypes(activity_df: pd.DataFrame) -> pd.DataFrame:
