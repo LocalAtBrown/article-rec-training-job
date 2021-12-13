@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import re
 import logging
 from urllib.parse import urlparse
@@ -6,7 +6,11 @@ from requests.models import Response
 import time
 from bs4 import BeautifulSoup
 
-from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
+from sites.helpers import (
+    safe_get,
+    ArticleScrapingError,
+    transform_data_google_tag_manager,
+)
 from sites.site import Site
 
 """
@@ -18,10 +22,15 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 PARAMS = {
- "hl": 8,
- "embedding_dim": 96,
- "epochs": 10 
+    "hl": 8,
+    "embedding_dim": 96,
+    "epochs": 10,
 }
+
+
+def bulk_fetch(start_date: str, end_date: str) -> List[Dict[str, Any]]:
+    pass
+
 
 def extract_external_id(path: str) -> str:
     article_url = f"https://{DOMAIN}{path}"
@@ -44,6 +53,7 @@ def extract_external_id(path: str) -> str:
         return str(int(contentID))
     else:
         return None
+
 
 def get_title(res: dict) -> str:
     title = res["headline"]
