@@ -1,48 +1,42 @@
 from datetime import datetime, timedelta
 import unittest
+from sites.sites import Sites
 
 import pandas as pd
 
-from job.steps.save_defaults import calculate_default_recs
+from job.steps.save_defaults import save_defaults
 from job.steps.preprocess import common_preprocessing
+from sites.washington_city_paper import WCP_SITE
 from tests.base import BaseTest
+from db.mappings.model import Model, Type, Status
+from db.mappings.recommendation import Rec
 
 
-def generate_row(client_id, external_id, delta_secs=0):
+def generate_row(article_id, publish_date, score):
     return {
-        "client_id": client_id,
-        "external_id": external_id,
-        "landing_page_path": external_id,
-        "event_category": "snowplow_amp_page_ping",
-        "event_action": "impression",
-        "session_date": datetime.now().date(),
-        "activity_time": datetime.now() + timedelta(seconds=delta_secs),
+        "article_id": article_id,
+        "score": score,
+        "publish_date": publish_date,
     }
 
 
 class TestSaveDefaults(BaseTest):
-    def test_calculate_default_recs(self) -> None:
-        basit = "client.a"
-        kai = "client.b"
+    def test_save_defaults(self) -> None:
+        exp_date = datetime.now().date()
+        site = Sites.WCP
         article_a = 123
         article_b = 456
 
         data = [
-            # basit and kai both read article a for 2 minutes
-            generate_row(basit, article_a),
-            generate_row(basit, article_a, 120),
-            generate_row(kai, article_a),
-            generate_row(kai, article_a, 120),
-            # kai read article b for 1 minute, basit read article b for 30 seconds
-            generate_row(kai, article_b, 120),
-            generate_row(kai, article_b, 150),
-            generate_row(kai, article_b, 180),
-            generate_row(basit, article_b, 120),
-            generate_row(basit, article_b, 150),
+            generate_row(article_a, exp_date, 1),
+            generate_row(article_b, exp_date, 1),
         ]
 
         df = pd.DataFrame(data)
-        prepared_df = common_preprocessing(df)
-        top_times_per_view = calculate_default_recs(prepared_df)
-        # article a should have 2 minutes per interaction, article b should have 45 seconds per interaction
-        assert all(top_times_per_view.index == [article_a, article_b])
+        model_id = save_defaults(df, site, exp_date)
+
+        default_recs = Rec.select().where(Rec.model == model_id)
+        assert len(default_recs) == 2
+        assert all([r.source_entity_id == "default" for r in default_recs])
+        assert all([r.score == 1 for r in default_recs])
+        print(default_recs)
