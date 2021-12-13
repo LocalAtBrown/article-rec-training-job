@@ -18,15 +18,16 @@ FIELDS = [
     "contexts_dev_amp_snowplow_amp_id_1",
 ]
 PARAMS = {
- "hl": 15.0,
- "embedding_dim": 72,
- "epochs": 8 
+    "hl": 15.0,
+    "embedding_dim": 72,
+    "epochs": 8,
 }
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
+
 
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -60,6 +61,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["event_action"] = transformed_df["event_action"].astype("category")
 
     return transformed_df
+
 
 def extract_external_id(path: str) -> str:
     result = PATH_PROG.match(path)

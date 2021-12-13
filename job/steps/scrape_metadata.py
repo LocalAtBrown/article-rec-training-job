@@ -26,7 +26,6 @@ BACKFILL_ISO_DATE = "2021-09-08"
 def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
     """
     Find articles on news website from list of paths, then associate with corresponding identifiers.
-
     :param site: Site object enabling retrieval of external ID
     :param external_ids: Article id's from external news site
     :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
@@ -68,8 +67,7 @@ def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
         "landing_page_path": [a.path for a in articles],
         "site": [a.site for a in articles],
     }
-    article_df = pd.DataFrame(df_data).set_index("external_id")
-    article_df.index = article_df.index.astype("object")
+    article_df = pd.DataFrame(df_data)
     return article_df
 
 
@@ -213,5 +211,7 @@ def validate_article(
     return site.validate_article(path)
 
 
-def scrape_article_metadata(site: Site, page: Response, soup:Optional[BeautifulSoup]) -> dict:
+def scrape_article_metadata(
+    site: Site, page: Response, soup: Optional[BeautifulSoup]
+) -> dict:
     return site.scrape_article_metadata(page, soup)

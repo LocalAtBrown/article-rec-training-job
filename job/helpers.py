@@ -13,7 +13,7 @@ from sites.site import Site
 def decay_fn(
     experiment_date: datetime.date, df_column: pd.Series, half_life: float
 ) -> pd.Series:
-    """half life decay a pandas Series"""
+    """ half life decay a pandas Series"""
     return 0.5 ** ((experiment_date - df_column).dt.days / half_life)
 
 

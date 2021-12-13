@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import time
+from typing import List
 
 from job.steps import (
     fetch_data,
@@ -14,12 +15,52 @@ from job.steps import (
 )
 from job.helpers import get_site
 from db.mappings.model import Type
-from db.helpers import create_model, set_current_model
+from db.helpers import create_model, set_current_model, get_articles_by_path
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.sites import Sites
 from sites.site import Site
 import pandas as pd
+
+
+def get_missing_paths(data_df: pd.DataFrame, article_df: pd.DataFrame) -> List[str]:
+    existing_articles = article_df["landing_page_path"].unique().tolist()
+    missing_articles = data_df[~data_df["landing_page_path"].isin(existing_articles)]
+    missing_article_paths = missing_articles["landing_page_path"].unique().tolist()
+    return missing_article_paths
+
+
+def hydrate_by_path(site, data_df):
+    logging.info("Fetching article metadata by path...")
+    paths = data_df["landing_page_path"].unique().tolist()
+    articles = get_articles_by_path(site.name, paths)
+    external_ids = [a.external_id for a in articles]
+    article_df = scrape_metadata.scrape_metadata(site, external_ids)
+    article_df = article_df.set_index("landing_page_path")
+    data_df = data_df.join(article_df, on="landing_page_path", how="inner")
+    article_df = article_df.reset_index()
+    article_df = article_df.set_index("external_id")
+    article_df.index = article_df.index.astype("object")
+    return article_df, data_df
+
+
+def hydrate_by_external_id(site, data_df, article_df_by_path):
+    logging.info("Fetching article metadata by external id...")
+    missing_article_paths = get_missing_paths(data_df, article_df_by_path)
+    external_id_df = preprocess.extract_external_ids(site, missing_article_paths)
+    found_external_ids = article_df_by_path.index.tolist()
+    external_id_df = external_id_df[
+        ~external_id_df["external_id"].isin(found_external_ids)
+    ]
+    data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
+    external_ids = external_id_df["external_id"].unique().tolist()
+    article_df = scrape_metadata.scrape_metadata(site, external_ids)
+    article_df = article_df.set_index("external_id")
+    article_df.index = article_df.index.astype("object")
+    data_df = data_df.join(
+        article_df, on="external_id", lsuffix="_original", how="inner"
+    )
+    return article_df, data_df
 
 
 def fetch_and_upload_data(
@@ -33,19 +74,15 @@ def fetch_and_upload_data(
     Return df of data, and articles
     """
     data_df = fetch_data.fetch_data(site, date, days)
-    external_id_df = preprocess.extract_external_ids(
-        site, data_df["landing_page_path"].unique().tolist()
+
+    article_df_by_path, data_df_by_path = hydrate_by_path(site, data_df)
+
+    article_df_by_external_id, data_df_by_external_id = hydrate_by_external_id(
+        site, data_df, article_df_by_path
     )
 
-    data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-
-    article_df = scrape_metadata.scrape_metadata(
-        site, data_df["external_id"].unique().tolist()
-    )
-
-    data_df = data_df.join(
-        article_df, on="external_id", lsuffix="_original", how="inner"
-    )
+    article_df = article_df_by_path.append(article_df_by_external_id)
+    data_df = data_df_by_path.append(data_df_by_external_id)
 
     warehouse.update_dwell_times(data_df, date, site)
     return data_df, article_df
