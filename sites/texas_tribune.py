@@ -32,10 +32,17 @@ PARAMS = {
 def bulk_fetch(
     start_date: datetime.date, end_date: datetime.date
 ) -> List[Dict[str, Any]]:
+    API_URL = f"https://{DOMAIN}/api/v2/articles"
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
     start_date = start_date.strftime(DATE_FORMAT)
     end_date = end_date.strftime(DATE_FORMAT)
-    logging.info(f"Fetching articles for {start_date}-{end_date}")
+
+    logging.info(f"Fetching articles from {start_date} to {end_date}")
+    # texas tribune publishes 5-10 articles per day
+    params = {"start_date": start_date, "end_date": end_date, "limit": 100}
+    res = safe_get(API_URL, params=params)
+    json_res = res.json()
+    return json_res["results"]
 
 
 def extract_external_id(path: str) -> str:

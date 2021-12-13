@@ -21,8 +21,7 @@ def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
     for _ in range(0, days):
         end_date = start_date + DELTA
         try:
-            # TODO: call site.bulk_fetch for a days' worth of articles
-            results = site.bulk_fetch(start_date, end_date)
+            res = site.bulk_fetch(start_date, end_date)
         except NotImplementedError:
             logging.error(f"`bulk_fetch` not implemented for site: {site.name}")
             return
