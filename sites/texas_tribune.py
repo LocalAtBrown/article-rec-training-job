@@ -47,11 +47,41 @@ def bulk_fetch(
 
 
 def extract_external_id(path: str) -> str:
-    article_url = f"https://{DOMAIN}{path}"
+    logging.info(f"Extracting external_id for {path}")
+    NON_ARTICLE_PREFIXES = [
+        "/districts",
+        "/employees",
+        "/directory",
+        "/newsletters",
+        "/states",
+        "/search",
+        "/departments",
+        "/about",
+        "/series",
+        "/all",
+        "/departments",
+        "/about",
+        "/program",
+        "/events",
+        "/library",
+        "/people",
+        "/donate",
+        "/topics",
+        "/organizations",
+        "/jobs",
+        "/support-us",
+        "/session",
+    ]
+    for prefix in NON_ARTICLE_PREFIXES:
+        if path.startswith(prefix):
+            msg = f"Skipping non-article path: {path}"
+            logging.error(msg)
+            raise ArticleScrapingError(msg)
 
+    article_url = f"https://{DOMAIN}{path}"
     try:
         page = safe_get(article_url)
-        time.sleep(10)
+        time.sleep(1)
     except Exception as e:
         msg = f"Error fetching article url: {article_url}"
         logging.exception(msg)
@@ -103,6 +133,7 @@ def parse_metadata(api_info: Dict[str, Any]) -> Dict[str, Any]:
         try:
             val = func(api_info)
         except Exception as e:
+            msg = "error parsing metadata for article"
             raise ArticleScrapingError(msg) from e
         metadata[prop] = val
 
@@ -110,11 +141,11 @@ def parse_metadata(api_info: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
-    logging.info(f"Scraping metadata from url: {page.url}, type is {type(page)}")
+    logging.info(f"Fetching metadata from url: {page.url}, type is {type(page)}")
     try:
         api_info = page.json()
     except Exception as e:
-        msg = f"error json parsing for article url: {page.url}"
+        msg = f"error parsing json res for article url: {page.url}"
         logging.exception(msg)
         raise ArticleScrapingError(msg) from e
     metadata = parse_metadata(api_info)
@@ -131,7 +162,7 @@ def validate_article(
 
     try:
         res = safe_get(api_url)
-        time.sleep(10)
+        time.sleep(1)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
         logging.exception(msg)
