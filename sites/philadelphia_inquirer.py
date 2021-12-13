@@ -24,7 +24,11 @@ API_URL = "https://api.pmn.arcpublishing.com/content/v4"
 API_KEY = config.get("INQUIRER_TOKEN")
 API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
-PARAMS = {"hl": 8, "embedding_dim": 144, "epochs": 10}
+PARAMS = {
+    "hl": 8,
+    "embedding_dim": 144,
+    "epochs": 10,
+}
 
 
 def bulk_fetch(
