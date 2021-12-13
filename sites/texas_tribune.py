@@ -27,6 +27,30 @@ PARAMS = {
     "embedding_dim": 96,
     "epochs": 10,
 }
+NON_ARTICLE_PREFIXES = [
+    "/districts",
+    "/employees",
+    "/directory",
+    "/newsletters",
+    "/states",
+    "/search",
+    "/departments",
+    "/about",
+    "/series",
+    "/all",
+    "/departments",
+    "/about",
+    "/program",
+    "/events",
+    "/library",
+    "/people",
+    "/donate",
+    "/topics",
+    "/organizations",
+    "/jobs",
+    "/support-us",
+    "/session",
+]
 
 
 def bulk_fetch(
@@ -48,30 +72,6 @@ def bulk_fetch(
 
 def extract_external_id(path: str) -> str:
     logging.info(f"Extracting external_id for {path}")
-    NON_ARTICLE_PREFIXES = [
-        "/districts",
-        "/employees",
-        "/directory",
-        "/newsletters",
-        "/states",
-        "/search",
-        "/departments",
-        "/about",
-        "/series",
-        "/all",
-        "/departments",
-        "/about",
-        "/program",
-        "/events",
-        "/library",
-        "/people",
-        "/donate",
-        "/topics",
-        "/organizations",
-        "/jobs",
-        "/support-us",
-        "/session",
-    ]
     for prefix in NON_ARTICLE_PREFIXES:
         if path.startswith(prefix):
             msg = f"Skipping non-article path: {path}"
