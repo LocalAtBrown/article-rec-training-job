@@ -19,8 +19,8 @@ FIELDS = [
 ]
 PARAMS = {
     "hl": 15.0,
-    "embedding_dim": 72,
-    "epochs": 8,
+    "embedding_dim": 500,
+    "epochs": 2,
 }
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
