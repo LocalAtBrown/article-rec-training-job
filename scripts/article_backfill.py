@@ -1,5 +1,5 @@
 """
-this script allows you to backfill the data warehouse
+this script allows you to backfill our article table for a given site
 """
 
 import datetime
@@ -12,21 +12,23 @@ from db.helpers import db_proxy
 from lib.config import config
 from sites.site import Site
 from db.mappings.article import Article
+from db.helpers import update_article, create_article
 
 DELTA = datetime.timedelta(days=1)
 
 
 def update_or_create(site: Site, metadata: Dict[str, Any]):
     metadata["site"] = site.name
-    # TODO: move update or create to db/helpers.py
     try:
         article = Article.get(
             (Article.site == site.name)
             & (Article.external_id == metadata["external_id"])
         )
-        # TODO: update article here
+        logging.info(f'Updating article with external_id: {metadata["external_id"]}')
+        update_article(article.id, **metadata)
     except Article.DoesNotExist:
-        Article.create(**metadata)
+        logging.info(f'Creating article with external_id: {metadata["external_id"]}')
+        article_id = create_article(**metadata)
 
 
 def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
@@ -41,8 +43,9 @@ def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
             logging.error(f"`bulk_fetch` not implemented for site: {site.name}")
             return
 
+        logging.info(f"Updating or creating {len(res)} articles...")
         for metadata in res:
-            update_or_create(metadata)
+            update_or_create(site, metadata)
 
         db_proxy.close()
         db_proxy.connect()

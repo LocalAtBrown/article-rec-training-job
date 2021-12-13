@@ -87,7 +87,7 @@ def get_path(page: dict) -> str:
 
 
 def get_external_id(page: dict) -> str:
-    external_id = res["id"]
+    external_id = page["id"]
     return external_id
 
 
