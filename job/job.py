@@ -66,7 +66,7 @@ def run():
         EXPERIMENT_DT = datetime.now().date()
 
         ## Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
-        data_df, article_df = fetch_and_upload_data(site, EXPERIMENT_DT)
+        fetch_and_upload_data(site, EXPERIMENT_DT, days=1)
 
         ## Step 2: Train models by pulling data from the warehouse and uploading
         ## new recommendation objects
