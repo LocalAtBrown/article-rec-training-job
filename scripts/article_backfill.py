@@ -26,24 +26,6 @@ def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
             logging.error(f"`bulk_fetch` not implemented for site: {site.name}")
             return
 
-        # TODO: for each article in the payload, extract the metadata
-        #
-        # port this code in sites/texas_tribune.py to its own func
-        # metadata = {}
-        # scraper_funcs = [
-        #     ("title", get_title),
-        #     ("published_at", get_published_at),
-        #     ("path", get_path),
-        # ]
-        # for prop, func in scraper_funcs:
-        # try:
-        #     val = func(api_info)
-        # except Exception as e:
-        #     msg = f"Error scraping {prop} for article url: {page.url}"
-        #     logging.exception(msg)
-        #     raise ArticleScrapingError(msg) from e
-        # metadata[prop] = val
-
         # TODO: for each extracted metadata, create or update the article in our db
         #
         # 1- port this code in steps/scrape_metadata.py to its own func

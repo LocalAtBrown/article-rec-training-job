@@ -42,7 +42,8 @@ def bulk_fetch(
     params = {"start_date": start_date, "end_date": end_date, "limit": 100}
     res = safe_get(API_URL, params=params)
     json_res = res.json()
-    return json_res["results"]
+    metadata = [parse_metadata(article) for article in json_res["results"]]
+    return metadata
 
 
 def extract_external_id(path: str) -> str:
@@ -85,6 +86,23 @@ def get_path(page: dict) -> str:
     return urlparse(page["url"]).path
 
 
+def parse_metadata(api_info: Dict[str, Any]) -> Dict[str, Any]:
+    metadata = {}
+    parsers = [
+        ("title", get_title),
+        ("published_at", get_published_at),
+        ("path", get_path),
+    ]
+    for prop, func in parsers:
+        try:
+            val = func(api_info)
+        except Exception as e:
+            raise ArticleScrapingError(msg) from e
+        metadata[prop] = val
+
+    return metadata
+
+
 def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
     logging.info(f"Scraping metadata from url: {page.url}, type is {type(page)}")
     try:
@@ -93,22 +111,7 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
         msg = f"error json parsing for article url: {page.url}"
         logging.exception(msg)
         raise ArticleScrapingError(msg) from e
-    metadata = {}
-    scraper_funcs = [
-        ("title", get_title),
-        ("published_at", get_published_at),
-        ("path", get_path),
-    ]
-
-    for prop, func in scraper_funcs:
-        try:
-            val = func(api_info)
-        except Exception as e:
-            msg = f"Error scraping {prop} for article url: {page.url}"
-            logging.exception(msg)
-            raise ArticleScrapingError(msg) from e
-        metadata[prop] = val
-
+    metadata = parse_metadata(api_info)
     return metadata
 
 
