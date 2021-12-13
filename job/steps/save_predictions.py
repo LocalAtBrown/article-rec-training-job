@@ -27,13 +27,12 @@ def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
 def weighted_cosine(a:np.ndarray, b:np.ndarray) -> float:
     # dot product of a and b (cosine similarity) scaled by the time_decay of b
     # note: embeddings are already l2 normalized (not including decay constant in last index)
-    # note: we use 0.99999 because float multiplication does result in some rounding error
-    # I've tested this is a suitable number of decimals
     # :a embedding vector for article. last entry is decay constant.
     # :b embedding vector for article. last entry is decay constant.
     # :return [0,1] distance score, where 0 is closer
     decay_constant = b[-1]
     distance = a[:-1] @ b[:-1]
+    # note: we use 0.99999 because float multiplication does result in some rounding error
     if distance > 0.99999: return 0
     return  1 - (decay_constant * distance)
 
