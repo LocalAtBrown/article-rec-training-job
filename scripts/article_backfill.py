@@ -5,13 +5,28 @@ this script allows you to backfill the data warehouse
 import datetime
 import logging
 import argparse
+from typing import Dict, Any
 
 from job.helpers import get_site
 from db.helpers import db_proxy
 from lib.config import config
 from sites.site import Site
+from db.mappings.article import Article
 
 DELTA = datetime.timedelta(days=1)
+
+
+def update_or_create(site: Site, metadata: Dict[str, Any]):
+    metadata["site"] = site.name
+    # TODO: move update or create to db/helpers.py
+    try:
+        article = Article.get(
+            (Article.site == site.name)
+            & (Article.external_id == metadata["external_id"])
+        )
+        # TODO: update article here
+    except Article.DoesNotExist:
+        Article.create(**metadata)
 
 
 def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
@@ -26,36 +41,8 @@ def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
             logging.error(f"`bulk_fetch` not implemented for site: {site.name}")
             return
 
-        # TODO: for each extracted metadata, create or update the article in our db
-        #
-        # 1- port this code in steps/scrape_metadata.py to its own func
-        # external_ids = set(external_ids)
-        # articles = get_articles_by_external_ids(site, external_ids)
-        # refresh_articles = [a for a in articles if should_refresh(a)]
-        # found_external_ids = {a.external_id for a in articles}
-        #
-        # 2 - port this code in steps/scrape_metadata.py to its own func
-        # for key, value in metadata.items():
-        #     if key in Article._meta.fields.keys():
-        #         setattr(article, key, value)
-        #
-        # 3 - port this code in steps/scrape_metadata.py to its own func (same w to_create)
-        #
-        # to_update = []
-        # for a in results:
-        #     if a.published_at is not None:
-        #         to_update.append(a)
-        #     else:
-        #         logging.warning(
-        #             f"No publish date, skipping article with external_id: {a.external_id}."
-        #         )
-        # # Use the peewee bulk update method. Update every field that isn't
-        # # in the RESERVED_FIELDS list
-        # RESERVED_FIELDS = {"id", "created_at", "updated_at"}
-        # fields = list(Article._meta.fields.keys() - RESERVED_FIELDS)
-        # logging.info(f"Bulk updating {len(to_update)} records")
-        # with db_proxy.atomic():
-        #     Article.bulk_update(to_update, fields, batch_size=50)
+        for metadata in res:
+            update_or_create(metadata)
 
         db_proxy.close()
         db_proxy.connect()

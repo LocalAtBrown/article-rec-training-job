@@ -86,12 +86,18 @@ def get_path(page: dict) -> str:
     return urlparse(page["url"]).path
 
 
+def get_external_id(page: dict) -> str:
+    external_id = res["id"]
+    return external_id
+
+
 def parse_metadata(api_info: Dict[str, Any]) -> Dict[str, Any]:
     metadata = {}
     parsers = [
         ("title", get_title),
         ("published_at", get_published_at),
         ("path", get_path),
+        ("external_id", get_external_id),
     ]
     for prop, func in parsers:
         try:
