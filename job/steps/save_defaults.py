@@ -1,57 +1,49 @@
 import logging
 import pandas as pd
+import numpy as np
+import datetime
 
-from job.helpers import get_weights
-from db.mappings.model import Type
-from db.helpers import create_model, set_current_model, create_rec
+from job.steps import preprocess
 from lib.config import config
-from lib.metrics import write_metric, Unit
+from sites.site import Site
+
+from db.helpers import create_model, set_current_model
+from db.mappings.base import db_proxy
+from db.mappings.model import Type
+from db.mappings.recommendation import Rec
+
 MAX_RECS = config.get("MAX_RECS")
 
 
-# TODO: consider changing default to content similarity calculation
-def calculate_default_recs(prepared_df: pd.DataFrame) -> pd.Series:
-    # TODO consider changing this to a larger time span (1 day of data is ~100k)
-    TOTAL_INTERACTIONS = 5000
-    timed_interactions = prepared_df[~prepared_df.duration.isna()]
-    recent_interactions = timed_interactions.nlargest(
-        n=TOTAL_INTERACTIONS, columns=["activity_time"]
-    )
-    times = (
-        recent_interactions[["external_id", "duration"]]
-        .groupby("external_id")
-        .sum()
-        .sort_index()
-    )
-    pageviews = (
-        recent_interactions[["external_id", "client_id"]]
-        .groupby("external_id")
-        .nunique("client_id")
-        .sort_index()
-    )
-    times_per_view = times.duration / pageviews.client_id
-    top_times_per_view = times_per_view.sort_values(ascending=False)
-    return top_times_per_view
-
-
 def save_defaults(
-    prepared_df: pd.DataFrame, article_df: pd.DataFrame, site_name: str
+    top_articles: pd.DataFrame, site: Site, experiment_date: datetime.datetime.date
 ) -> None:
-    top_times_per_view = calculate_default_recs(prepared_df)
-    weights = get_weights(top_times_per_view.index, article_df)
-    # the most read article will have a perfect score of 1.0, all others will be a fraction of that
-    scores = weights * top_times_per_view / max(top_times_per_view)
-    top_scores = scores.nlargest(MAX_RECS)
-    model_id = create_model(type=Type.POPULARITY.value, site=site_name)
-    logging.info("Saving default recs to db...")
-    for external_id, score in zip(top_times_per_view.index, top_scores):
-        matching_articles = article_df[article_df["external_id"] == external_id]
-        article_id = matching_articles["article_id"].tolist()[0]
-        rec_id = create_rec(
-            source_entity_id="default",
-            model_id=model_id,
-            recommended_article_id=article_id,
-            score=score,
-        )
+    decayed_df = preprocess.time_decay(
+        top_articles,
+        experiment_date=experiment_date,
+        half_life=10,
+        date_col="publish_date",
+        duration_col="score",
+    )
+    top_articles["score"] /= np.max(top_articles["score"])
+    top_articles = top_articles.nlargest(n=MAX_RECS, columns="score")
 
-    set_current_model(model_id, Type.POPULARITY.value, site_name)
+    model_id = create_model(type=Type.POPULARITY.value, site=site.name)
+
+    to_create = []
+    for _, row in decayed_df.iterrows():
+        to_create.append(
+            Rec(
+                source_entity_id="default",
+                model_id=model_id,
+                recommended_article_id=row.article_id,
+                score=row.score,
+            )
+        )
+    logging.info(f"Saving {len(to_create)} default recs to db...")
+
+    with db_proxy.atomic():
+        Rec.bulk_create(to_create, batch_size=50)
+
+    set_current_model(model_id, Type.POPULARITY.value, model_site=site.name)
+    return model_id

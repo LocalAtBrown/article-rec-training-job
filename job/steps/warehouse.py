@@ -140,3 +140,37 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
                 "published_at",
             ],
         )
+
+
+def get_default_recs(site: Site, days=7, limit=50):
+    """
+    Pull the articles that were the most popular in the last {days} days
+    """
+    table = get_table("dwelltimes")
+    query = f"""
+        with total_times as (
+            select 
+                article_id
+                , sum(duration) as total_duration
+                , count(distinct client_id) n_users 
+            from {table} 
+            where
+                -- filter for session dates greater than `days` days ago
+                timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1
+                and {table}.site = '{site.name}'
+            group by article_id
+        )
+        select 
+            article_id,
+            cast(published_at as date) as publish_date,
+            total_duration as score
+        from total_times 
+        join articlerecdb.article 
+            on articlerecdb.article.id = article_id
+        order by 3 desc limit {limit}
+    """
+    conn = get_connection()
+    with conn.cursor() as cursor:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        return pd.DataFrame(results, columns=["article_id", "publish_date", "score"])
