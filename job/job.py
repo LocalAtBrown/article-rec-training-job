@@ -31,6 +31,7 @@ def get_missing_paths(data_df: pd.DataFrame, article_df: pd.DataFrame) -> List[s
 
 
 def hydrate_by_path(site, data_df):
+    logging.info("Fetching article metadata by path...")
     paths = data_df["landing_page_path"].unique().tolist()
     articles = get_articles_by_path(site.name, paths)
     external_ids = [a.external_id for a in articles]
@@ -44,6 +45,7 @@ def hydrate_by_path(site, data_df):
 
 
 def hydrate_by_external_id(site, data_df, article_df_by_path):
+    logging.info("Fetching article metadata by external id...")
     missing_article_paths = get_missing_paths(data_df, article_df_by_path)
     external_id_df = preprocess.extract_external_ids(site, missing_article_paths)
     found_external_ids = article_df_by_path.index.tolist()
