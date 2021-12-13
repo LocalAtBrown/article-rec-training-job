@@ -39,12 +39,6 @@ kar run
 kar run bash
 ```
 
-4. Or, run the backfill task for the data warehouse
-
-```
-kar backfill --start-date 2021-12-01 --days 10
-```
-
 ## Running Tests
 
 1. Build container from the Dockerfile
@@ -57,6 +51,26 @@ kar build
 
 ```
 kar test
+```
+
+## Running Backfills
+
+1. Build container from the Dockerfile
+
+```
+kar build
+```
+
+2. Run the backfill task for the data warehouse
+
+```
+kar backfill --start-date 2021-12-01 --days 10
+```
+
+5. Or, run the backfill task for the article table
+
+```
+kar article-backfill --site texas-tribune --start-date 2021-12-01 --days 10
 ```
 
 ## Deploying
