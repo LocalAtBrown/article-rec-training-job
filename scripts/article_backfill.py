@@ -14,14 +14,18 @@ from sites.site import Site
 DELTA = datetime.timedelta(days=1)
 
 
-def backfill(site: Site, date: datetime.datetime.date, days: int) -> None:
+def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
     log_level = config.get("LOG_LEVEL")
     logging.getLogger().setLevel(logging.getLevelName(log_level))
 
-    # TODO: raise error if bulk_fetch func not implemented for site
-
     for _ in range(0, days):
-        # TODO: call site.bulk_fetch for a days' worth of articles
+        end_date = start_date + DELTA
+        try:
+            # TODO: call site.bulk_fetch for a days' worth of articles
+            results = site.bulk_fetch(start_date, end_date)
+        except NotImplementedError:
+            logging.error(f"`bulk_fetch` not implemented for site: {site.name}")
+            return
 
         # TODO: for each article in the payload, extract the metadata
         #
@@ -74,7 +78,7 @@ def backfill(site: Site, date: datetime.datetime.date, days: int) -> None:
 
         db_proxy.close()
         db_proxy.connect()
-        date += DELTA
+        start_date = end_date
 
 
 if __name__ == "__main__":
@@ -84,7 +88,7 @@ if __name__ == "__main__":
         "--start-date",
         dest="start_date",
         type=datetime.date.fromisoformat,
-        default=datetime.date.today(),
+        default=datetime.date.today() - datetime.timedelta(days=7),
         help="start date for backfill",
     )
     parser.add_argument(

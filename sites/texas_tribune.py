@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 import re
 import logging
 from urllib.parse import urlparse
@@ -28,8 +29,13 @@ PARAMS = {
 }
 
 
-def bulk_fetch(start_date: str, end_date: str) -> List[Dict[str, Any]]:
-    pass
+def bulk_fetch(
+    start_date: datetime.date, end_date: datetime.date
+) -> List[Dict[str, Any]]:
+    DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
+    start_date = start_date.strftime(DATE_FORMAT)
+    end_date = end_date.strftime(DATE_FORMAT)
+    logging.info(f"Fetching articles for {start_date}-{end_date}")
 
 
 def extract_external_id(path: str) -> str:
@@ -126,4 +132,5 @@ TT_SITE = Site(
     extract_external_id,
     scrape_article_metadata,
     validate_article,
+    bulk_fetch,
 )
