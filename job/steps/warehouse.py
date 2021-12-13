@@ -151,6 +151,7 @@ def get_default_recs(site: Site, days=7, limit=50):
         with total_times as (
             select 
                 article_id
+                , max(published_at) as publish_date
                 , sum(duration) as total_duration
                 , count(distinct client_id) n_users 
             from {table} 
@@ -162,11 +163,9 @@ def get_default_recs(site: Site, days=7, limit=50):
         )
         select 
             article_id,
-            cast(published_at as date) as publish_date,
+            publish_date,
             total_duration as score
         from total_times 
-        join articlerecdb.article 
-            on articlerecdb.article.id = article_id
         order by 3 desc limit {limit}
     """
     conn = get_connection()
