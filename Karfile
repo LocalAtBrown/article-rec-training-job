@@ -35,5 +35,11 @@ task-test() {
 #@backfill
 #+Run backfill command in docker container.
 task-backfill() {
-    docker run $DOCKER_OPTS -it $REPOSITORY python /app/backfill_task.py $@
+    docker run $DOCKER_OPTS -it $REPOSITORY python /app/scripts/backfill_task.py $@
+}
+
+#@article-backfill
+#+Run article backfill command in docker container.
+task-article-backfill() {
+    docker run $DOCKER_OPTS -it $REPOSITORY python /app/scripts/article_backfill.py $@
 }

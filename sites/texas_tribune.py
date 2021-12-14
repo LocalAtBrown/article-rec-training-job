@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 import re
 import logging
 from urllib.parse import urlparse
@@ -6,7 +7,11 @@ from requests.models import Response
 import time
 from bs4 import BeautifulSoup
 
-from sites.helpers import safe_get, ArticleScrapingError, transform_data_google_tag_manager
+from sites.helpers import (
+    safe_get,
+    ArticleScrapingError,
+    transform_data_google_tag_manager,
+)
 from sites.site import Site
 
 """
@@ -18,17 +23,65 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 PARAMS = {
- "hl": 8,
- "embedding_dim": 96,
- "epochs": 10 
+    "hl": 8,
+    "embedding_dim": 96,
+    "epochs": 10,
 }
+NON_ARTICLE_PREFIXES = [
+    "/districts",
+    "/employees",
+    "/directory",
+    "/newsletters",
+    "/states",
+    "/search",
+    "/departments",
+    "/about",
+    "/series",
+    "/all",
+    "/departments",
+    "/about",
+    "/program",
+    "/events",
+    "/library",
+    "/people",
+    "/donate",
+    "/topics",
+    "/organizations",
+    "/jobs",
+    "/support-us",
+    "/session",
+]
+
+
+def bulk_fetch(
+    start_date: datetime.date, end_date: datetime.date
+) -> List[Dict[str, Any]]:
+    API_URL = f"https://{DOMAIN}/api/v2/articles"
+    DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
+    start_date = start_date.strftime(DATE_FORMAT)
+    end_date = end_date.strftime(DATE_FORMAT)
+
+    logging.info(f"Fetching articles from {start_date} to {end_date}")
+    # texas tribune publishes 5-10 articles per day
+    params = {"start_date": start_date, "end_date": end_date, "limit": 100}
+    res = safe_get(API_URL, params=params)
+    json_res = res.json()
+    metadata = [parse_metadata(article) for article in json_res["results"]]
+    return metadata
+
 
 def extract_external_id(path: str) -> str:
-    article_url = f"https://{DOMAIN}{path}"
+    logging.info(f"Extracting external_id for {path}")
+    for prefix in NON_ARTICLE_PREFIXES:
+        if path.startswith(prefix):
+            msg = f"Skipping non-article path: {path}"
+            logging.error(msg)
+            raise ArticleScrapingError(msg)
 
+    article_url = f"https://{DOMAIN}{path}"
     try:
         page = safe_get(article_url)
-        time.sleep(10)
+        time.sleep(1)
     except Exception as e:
         msg = f"Error fetching article url: {article_url}"
         logging.exception(msg)
@@ -44,6 +97,7 @@ def extract_external_id(path: str) -> str:
         return str(int(contentID))
     else:
         return None
+
 
 def get_title(res: dict) -> str:
     title = res["headline"]
@@ -62,30 +116,39 @@ def get_path(page: dict) -> str:
     return urlparse(page["url"]).path
 
 
-def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
-    logging.info(f"Scraping metadata from url: {page.url}, type is {type(page)}")
-    try:
-        api_info = page.json()
-    except Exception as e:
-        msg = f"error json parsing for article url: {page.url}"
-        logging.exception(msg)
-        raise ArticleScrapingError(msg) from e
+def get_external_id(page: dict) -> str:
+    external_id = page["id"]
+    return external_id
+
+
+def parse_metadata(api_info: Dict[str, Any]) -> Dict[str, Any]:
     metadata = {}
-    scraper_funcs = [
+    parsers = [
         ("title", get_title),
         ("published_at", get_published_at),
         ("path", get_path),
+        ("external_id", get_external_id),
     ]
-
-    for prop, func in scraper_funcs:
+    for prop, func in parsers:
         try:
             val = func(api_info)
         except Exception as e:
-            msg = f"Error scraping {prop} for article url: {page.url}"
-            logging.exception(msg)
+            msg = "error parsing metadata for article"
             raise ArticleScrapingError(msg) from e
         metadata[prop] = val
 
+    return metadata
+
+
+def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
+    logging.info(f"Fetching metadata from url: {page.url}, type is {type(page)}")
+    try:
+        api_info = page.json()
+    except Exception as e:
+        msg = f"error parsing json res for article url: {page.url}"
+        logging.exception(msg)
+        raise ArticleScrapingError(msg) from e
+    metadata = parse_metadata(api_info)
     return metadata
 
 
@@ -99,7 +162,7 @@ def validate_article(
 
     try:
         res = safe_get(api_url)
-        time.sleep(10)
+        time.sleep(1)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
         logging.exception(msg)
@@ -116,4 +179,5 @@ TT_SITE = Site(
     extract_external_id,
     scrape_article_metadata,
     validate_article,
+    bulk_fetch,
 )
