@@ -55,9 +55,10 @@ def _test_orders(n_recs:int, nearest_indices:np.ndarray, distances:np.ndarray, a
         Here is why:
             Looking at spotlight_id = 1, we see two users implicity rated: user_id 1 and user_id 3. 
             We also see that users 1 and 3 also consumed spotlight_id 3 and gave similar, high durations 
-            We also see that user_id 3 also consumed ids 2 and 4. 2  was low rated, 4 got a high duration and slightly above 3
+            We also see that user_id 3 also consumed ids 2 and 4. 2  was low rated, 4 got a high duration and slightly below 3
+            However, we see that another user, 2, who consumed 3 and shared patterns with 1, gave 3 a lower rating
             So because of their user consumption connections, spotlight_ids 3 and 4 are our recs 
-            4 is higher rated by 3. So it is our top pick.
+            4 has more consistent ratings than 3. So it is our top pick.
             We map back to 14 and 13 because our spotlight ids match index-wise to the LNL db ids (article_ids)
             The get_nearest function performs the mapping
     """
