@@ -1,6 +1,7 @@
 import logging
 import time
 from copy import deepcopy
+import pdb
 
 import numpy as np
 import pandas as pd
@@ -30,8 +31,12 @@ class Trainer:
                         warehouse_transform:Optional[Callable],
                         params:Optional[dict]=None
                         ):
-        """
-            params and hparams should be separated out in the future
+        """Trainer class to perform ML tasks supporting Spotlight model training
+            :warehouse_df: Data from Redshift Warehouse to train on
+            :experiment_time: Base timeframe to train against 
+            :warehouse_transform: Function to transform warehouse data into format for Spotlight Interactions data object
+            :params: Dictionary of parameters and hyperparameters
+            Note: params and hparams should be separated out in the future
         """
         super().__init__()
         self.params = self._update_params(params)
@@ -46,6 +51,7 @@ class Trainer:
         self._generate_model()
    
     def _update_params(self, params:None) -> dict:
+        """Update the internal params"""
         _params = deepcopy(DEFAULT_PARAMS)
         _params.update(params)
         return _params
@@ -65,6 +71,7 @@ class Trainer:
                            timestamps=warehouse_df['timestamp'].values)
 
     def _generate_model(self)-> None:
+        """Initialize model of the Trainer"""
         if self.params["model"] == "IMF":
             self.model = ImplicitFactorizationModel(n_iter=self.params["epochs"], 
                                                 embedding_dim=self.params["embedding_dim"])
@@ -77,35 +84,54 @@ class Trainer:
         return normalize(embedding_matrix, axis=1, norm='l2')
 
     def _generate_normalized_embeddings(self) -> None:
-        """ Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
+        """Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
         spotlight_ids = self.dates_df["item_id"].values
         return self._normalize_embeddings(np.array([self.model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
     def _fit(self, training_dataset:Interactions) -> None:
+        """Fit the spotlight model to an Interactions dataset
+        :training_dataset: Spotlight Interactions object"""
         self.model.fit(training_dataset, verbose=True)
 
     def _tune(self) -> None:
+        """Perform grid seach over tune_params and tune_range lists
+            tune_params: Hyperparameters to tune
+            tune_range: Range of values to tune over. Third item in the list is the step
+            
+            Model will be evaluated by MRR on a test set.
+            Best hyperparameters will be used to train the model
+        """
+        if "tune_params" not in self.params or "tune_range" not in self.params:
+            logging.info("Tuning cannot be performed without range and parameter")
+            return
+
+        if len(self.params["tune_params"]) != len(self.params["tune_range"]):
+            logging.info("Must have same number of parameters as ranges")
+            return
+
         train, test = random_train_test_split(self.spotlight_dataset) 
         best_mrr = -float('inf')
         best_params = deepcopy(self.params) 
+        logging.info(f"Starting hyperparameter tuning job on {self.params['tune_params']}")
+        for i, tune_param in enumerate(self.params["tune_params"]):
+            for tune_val in range(*self.params["tune_range"][i]):
+                self.params[tune_param] = tune_val
+                self._generate_model()
+                self._fit(train)
+                mrr_val = np.mean(mrr_score(self.model, test))
+                logging.info(f"Tested hyperparameters: {self.params} MRR: {mrr_val}")
 
-        for tune_val in range(self.params[""]):
-            self.params[self.params["tune_parameter"]] = tune_val
-            self._fit(train)
-            mrr_val = mrr_score(test) 
-            # write metric
-
-            if mrr_val > best_mrr:
-                best_mrr = mrr_val
-                best_params = deepcopy(self.params)
-                # write metric
+                if mrr_val > best_mrr:
+                    best_mrr = mrr_val
+                    best_params = deepcopy(self.params)
         
-        # write findings
-        self._update_params(best_params)
+        logging.info(f"Final hyperparameters: {best_params} MRR: {best_mrr}")
+        self.params = self._update_params(best_params)
+        self._generate_model()
         self._fit(self.spotlight_dataset)
 
-
     def fit(self) -> None:
+        """Fit a Spotlight model with or without grid tuning"""
         start_ts = time.time()
         if self.params["tune"]:
             self._tune() 
@@ -113,9 +139,13 @@ class Trainer:
             self._fit(self.spotlight_dataset)
         latency = time.time() - start_ts
         write_metric("model_training_time", latency, unit=Unit.SECONDS)
-
-    def get_dates_df(self) -> pd.DataFrame:
+    
+    @property
+    def model_dates_df(self) -> pd.DataFrame:
+        """Return dataframe with date decay values for each article"""
         return self.dates_df
-
-    def get_embeddings(self) -> np.ndarray:
+    
+    @property
+    def model_embeddings(self) -> np.ndarray:
+        """Return article embeddings"""
         return self._generate_normalized_embeddings()

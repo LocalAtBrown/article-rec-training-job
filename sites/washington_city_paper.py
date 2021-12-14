@@ -21,7 +21,11 @@ PARAMS = {
     "hl": 15.0,
     "embedding_dim": 500,
     "epochs": 2,
+     "tune": False,
+     "tune_params": ["embedding_dim"],
+     "tune_range": [[100,600,100]]
 }
+
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'

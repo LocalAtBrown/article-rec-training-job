@@ -89,6 +89,29 @@ Each log group contains separate log streams for each client
 
 - [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-evaluations;start=PT168H)
 
+## Hyperparamter tuning
+
+Hyperparamter tuning is supported to find the model parameters that optimize the mean reciprocal rank of the model over a holdout test set.
+
+To run a tuning job, modify the PARAMS object in the site you plan to run a job on. An exmaple is shown below:
+
+```
+PARAMS = {
+    "hl": 15.0,
+    "embedding_dim": 500,
+    "epochs": 2,
+     "tune": True,
+     "tune_params": ["embedding_dim"],
+     "tune_range": [[100,600,100]]
+}
+```
+
+The tuner will grid search over all hyperparameter added to the `tune_params` key-value store. It will then search over the range in the corresponding index in the `tune_range` key-value store. The last value of the range is used as a step.
+
+The tuner will output the best parameters to the logs and finally train the model on the best parameters it has found.
+
+
+
 ## Other Resources
 
 ### Misc Documentation

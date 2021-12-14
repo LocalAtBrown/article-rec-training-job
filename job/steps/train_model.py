@@ -37,4 +37,4 @@ def train_model(X:pd.DataFrame, params:dict, experiment_time=pd.datetime) -> (Tr
     """
     model = Trainer(X, experiment_time, _spotlight_transform, params)
     model.fit()
-    return (model.get_embeddings(), model.get_dates_df())
+    return (model.model_embeddings, model.model_dates_df)
