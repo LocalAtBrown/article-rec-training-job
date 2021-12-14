@@ -26,6 +26,9 @@ PARAMS = {
     "hl": 8,
     "embedding_dim": 400,
     "epochs": 2,
+    "tune": False,
+     "tune_params": ["epochs", "embedding_dim"],
+     "tune_range": [[1,6,1],[100,800,100]]
 }
 NON_ARTICLE_PREFIXES = [
     "/districts",

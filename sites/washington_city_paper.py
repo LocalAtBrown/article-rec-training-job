@@ -19,12 +19,12 @@ FIELDS = [
     "contexts_dev_amp_snowplow_amp_id_1",
 ]
 PARAMS = {
-    "hl": 15.0,
-    "embedding_dim": 500,
+    "hl": 8,
+    "embedding_dim": 400,
     "epochs": 2,
-     "tune": False,
-     "tune_params": ["embedding_dim"],
-     "tune_range": [[100,600,100]]
+    "tune": False,
+     "tune_params": ["epochs", "embedding_dim"],
+     "tune_range": [[1,6,1],[100,800,100]]
 }
 
 # supported url path formats:

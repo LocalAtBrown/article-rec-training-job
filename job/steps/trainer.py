@@ -119,14 +119,19 @@ class Trainer:
         for i, tune_param in enumerate(self.params["tune_params"]):
             for tune_val in range(*self.params["tune_range"][i]):
                 self.params[tune_param] = tune_val
-                self._generate_model()
-                self._fit(train)
-                mrr_val = np.mean(mrr_score(self.model, test))
-                logging.info(f"Tested hyperparameters: {self.params} MRR: {mrr_val}")
 
-                if mrr_val > best_mrr:
-                    best_mrr = mrr_val
-                    best_params = deepcopy(self.params)
+                for j, tune_param2 in enumerate(self.params["tune_params"][i + 1:]):
+                    for tune_val2 in range(*self.params["tune_range"][j + i + 1]):
+                        self.params[tune_param2] = tune_val2
+
+                        self._generate_model()
+                        self._fit(train)
+                        mrr_val = np.mean(mrr_score(self.model, test))
+                        logging.info(f"Tested hyperparameters: {self.params} MRR: {mrr_val}")
+
+                        if mrr_val > best_mrr:
+                            best_mrr = mrr_val
+                            best_params = deepcopy(self.params)
         
         logging.info(f"Final hyperparameters: {best_params} MRR: {best_mrr}")
         self.params = self._update_params(best_params)
