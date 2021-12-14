@@ -33,12 +33,11 @@ class Trainer:
         """
             params and hparams should be separated out in the future
         """
+        super().__init__()
         self.params = self._update_params(params)
         self.experiment_time = pd.to_datetime(experiment_time)
-        self.embeddings = None
 
         if warehouse_transform:
-            print("TRANSFORM")
             warehouse_df = warehouse_transform(warehouse_df)
 
         self.spotlight_dataset = self._generate_interactions(warehouse_df)
@@ -82,15 +81,36 @@ class Trainer:
         spotlight_ids = self.dates_df["item_id"].values
         return self._normalize_embeddings(np.array([self.model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
-    def _fit(self) -> None:
-        self.model.fit(self.spotlight_dataset, verbose=True)
+    def _fit(self, training_dataset:Interactions) -> None:
+        self.model.fit(training_dataset, verbose=True)
+
+    def _tune(self) -> None:
+        train, test = random_train_test_split(self.spotlight_dataset) 
+        best_mrr = -float('inf')
+        best_params = deepcopy(self.params) 
+
+        for tune_val in range(self.params[""]):
+            self.params[self.params["tune_parameter"]] = tune_val
+            self._fit(train)
+            mrr_val = mrr_score(test) 
+            # write metric
+
+            if mrr_val > best_mrr:
+                best_mrr = mrr_val
+                best_params = deepcopy(self.params)
+                # write metric
+        
+        # write findings
+        self._update_params(best_params)
+        self._fit(self.spotlight_dataset)
+
 
     def fit(self) -> None:
         start_ts = time.time()
         if self.params["tune"]:
             self._tune() 
         else:
-            self._fit()
+            self._fit(self.spotlight_dataset)
         latency = time.time() - start_ts
         write_metric("model_training_time", latency, unit=Unit.SECONDS)
 

@@ -28,7 +28,6 @@ PARAMS = {
  "hl": 8,
  "embedding_dim": 400,
  "epochs": 2,
- "model":"IMF"
 }
 
 def extract_external_id(path: str) -> Optional[str]:
