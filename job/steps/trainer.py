@@ -22,7 +22,8 @@ DEFAULT_PARAMS = {
         "epochs": 2,
         "embedding_dim": 350,
         "model": "IMF",
-        "tune": False
+        "tune": False,
+        "random_state": np.random.RandomState(42)
         }
 
 class Trainer:
@@ -74,9 +75,11 @@ class Trainer:
         """Initialize model of the Trainer"""
         if self.params["model"] == "IMF":
             self.model = ImplicitFactorizationModel(n_iter=self.params["epochs"], 
+                                                random_state=self.params["random_state"],
                                                 embedding_dim=self.params["embedding_dim"])
         elif self.params["model"] == "Sequential":
             self.model = ImplicitSequenceModel(n_iter=self.params["epochs"],
+                                                random_state=self.params["random_state"],
                                                 embedding_dim=self.params["embedding_dim"])
     
     def _normalize_embeddings(self, embedding_matrix:np.ndarray) -> np.ndarray:

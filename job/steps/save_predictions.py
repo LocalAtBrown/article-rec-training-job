@@ -32,6 +32,7 @@ def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) 
                             algorithm='brute').fit(weighted_embeddings) 
 
     return nbrs.kneighbors(weighted_embeddings)
+
 def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray) -> (np.ndarray, np.ndarray):
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[nearest_indices[spotlight_id - 1][1:]], distances[spotlight_id - 1][1:])
