@@ -10,6 +10,7 @@ Site = namedtuple(
         "extract_external_id",
         "scrape_article_metadata",
         "validate_article",
+        "bulk_fetch",
     ],
 )
 

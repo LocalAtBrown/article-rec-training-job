@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from retrying import retry
 import logging
 from urllib.parse import urlparse
@@ -12,26 +12,33 @@ from sites.helpers import ArticleFetchError, transform_data_google_tag_manager, 
 from sites.site import Site
 
 """
-ARC API documentation 
+ARC API documentation
 https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451a345bb0d2&p=209fa6fada864bc0a1555622bb559181
 """
 
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
-FIELDS = [ "collector_tstamp", "page_urlpath", "domain_userid"]
+FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 
 API_URL = "https://api.pmn.arcpublishing.com/content/v4"
 API_KEY = config.get("INQUIRER_TOKEN")
 API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
 PARAMS = {
- "hl": 8,
- "embedding_dim": 400,
- "epochs": 2,
+    "hl": 8,
+    "embedding_dim": 400,
+    "epochs": 2,
 }
 
+
+def bulk_fetch(
+    start_date: datetime.date, end_date: datetime.date
+) -> List[Dict[str, Any]]:
+    raise NotImplementedError
+
+
 def extract_external_id(path: str) -> Optional[str]:
-    """ Request content ID from a url from ARC API
+    """Request content ID from a url from ARC API
 
     :path:an Inquirer url
     :return contentID: Unique ID of url
@@ -40,7 +47,7 @@ def extract_external_id(path: str) -> Optional[str]:
         "website_url": path,
         "published": "true",
         "website": API_SITE,
-        "included_fields": "_id"
+        "included_fields": "_id",
     }
 
     if "/author/" in path:
@@ -58,26 +65,31 @@ def extract_external_id(path: str) -> Optional[str]:
 
     return None
 
-def get_date(res_val:dict) -> str:
-    """ ARC response date parser. PI response includes timezone
+
+def get_date(res_val: dict) -> str:
+    """ARC response date parser. PI response includes timezone
 
     :res_val: JSON payload from ARC API
     :return: Isoformat date string
     """
-    res_val = datetime.strptime(res_val["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
+    res_val = datetime.strptime(
+        res_val["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ"
+    ).isoformat()
     return res_val
 
-def get_path(res_val:dict) -> str:
-    """ ARC response canonical path parser
+
+def get_path(res_val: dict) -> str:
+    """ARC response canonical path parser
 
     :res_val: JSON payload from ARC API
     :return: Canonical URL Path for external_ID
     E.g.,: /news/philadelphia-mayor-jim-kenney-johnny-doc-bobby-henon-convicted-20211116.html
     """
-    return res_val["canonical_url"] 
+    return res_val["canonical_url"]
 
-def get_headline(res_val:dict) -> str:
-    """ ARC response headline parser
+
+def get_headline(res_val: dict) -> str:
+    """ARC response headline parser
 
     :res_val: JSON payload from ARC API
     :return: meta_title (if available) or basic title
@@ -88,9 +100,10 @@ def get_headline(res_val:dict) -> str:
 
     return res_val["basic"]
 
+
 def parse_article_metadata(page: Response, external_id: str) -> dict:
-    """ ARC API JSON parser
-    
+    """ARC API JSON parser
+
     :page: JSON Payload from ARC for an external_id
     :external_id: Unique identifier for URL
     :return: Relevant metadata from an API response
@@ -100,10 +113,10 @@ def parse_article_metadata(page: Response, external_id: str) -> dict:
     metadata = {}
     parse_keys = [
         ("title", get_headline),
-        ("published_at", get_date), # example published_at: '2021-11-17T00:44:12.319Z'
-        ("path", get_path)
+        ("published_at", get_date),  # example published_at: '2021-11-17T00:44:12.319Z'
+        ("path", get_path),
     ]
-    
+
     res = page.json()
 
     for prop, func in parse_keys:
@@ -118,8 +131,9 @@ def parse_article_metadata(page: Response, external_id: str) -> dict:
 
     return metadata
 
+
 def validate_not_excluded(res: Response) -> Optional[str]:
-    """ ARC API response validator
+    """ARC API response validator
 
     :res: ARC API JSON response payload
     :return: None if no errors; otherwise string describing validation issue
@@ -129,7 +143,9 @@ def validate_not_excluded(res: Response) -> Optional[str]:
     except Exception as e:
         return e
 
-    if "headlines" not in res or ("headlines" in res and "basic" not in res["headlines"]):
+    if "headlines" not in res or (
+        "headlines" in res and "basic" not in res["headlines"]
+    ):
         return "Article missing headline"
 
     if "canonical_url" not in res:
@@ -137,26 +153,26 @@ def validate_not_excluded(res: Response) -> Optional[str]:
 
     if "publish_date" not in res:
         return "Article publish date missing"
-    
-    try: 
-        datetime.strptime(res["publish_date"],'%Y-%m-%dT%H:%M:%S.%fZ').isoformat()
+
+    try:
+        datetime.strptime(res["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
     except Exception as e:
         return e
 
-    return None 
+    return None
 
 
 def validate_article(external_id: str) -> (Response, str, Optional[str]):
-    """ ARC API validation handler  
+    """ARC API validation handler
 
-    :external_id: Unique identifier for a URL  
+    :external_id: Unique identifier for a URL
     :return: JSON payload, external_id and an optional error message
     """
     params = {
         "_id": external_id,
         "website": API_SITE,
         "published": "true",
-        "included_fields": "headlines,publish_date,_id,canonical_url"
+        "included_fields": "headlines,publish_date,_id,canonical_url",
     }
 
     logging.info(f"Validating article url: {external_id}")
@@ -184,4 +200,13 @@ def validate_article(external_id: str) -> (Response, str, Optional[str]):
     return res, external_id, error_msg
 
 
-PI_SITE = Site(NAME, FIELDS, PARAMS, transform_data_google_tag_manager, extract_external_id, parse_article_metadata, validate_article)
+PI_SITE = Site(
+    NAME,
+    FIELDS,
+    PARAMS,
+    transform_data_google_tag_manager,
+    extract_external_id,
+    parse_article_metadata,
+    validate_article,
+    bulk_fetch,
+)

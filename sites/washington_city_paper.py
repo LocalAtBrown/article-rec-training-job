@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 import re
 import logging
 from urllib.parse import urlparse
@@ -31,6 +32,12 @@ PARAMS = {
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
 PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
+
+
+def bulk_fetch(
+    start_date: datetime.date, end_date: datetime.date
+) -> List[Dict[str, Any]]:
+    raise NotImplementedError
 
 
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -170,4 +177,5 @@ WCP_SITE = Site(
     extract_external_id,
     scrape_article_metadata,
     validate_article,
+    bulk_fetch,
 )
