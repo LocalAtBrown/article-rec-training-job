@@ -4,9 +4,6 @@ from typing import List
 
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import normalize
-import torch
-from spotlight.factorization.implicit import ImplicitFactorizationModel
 
 from db.helpers import create_rec
 from db.mappings.recommendation import Rec
@@ -14,15 +11,6 @@ from lib.config import config
 from lib.metrics import write_metric, Unit
 
 MAX_RECS = config.get("MAX_RECS")
-
-def normalize_embeddings(embedding_matrix:np.ndarray) -> np.ndarray:
-    """l2 normalize all embeddings along row dimension of matrix"""
-    return normalize(embedding_matrix, axis=1, norm='l2')
-
-
-def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
-    """ Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
-    return normalize_embeddings(np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
 def weighted_cosine(a:np.ndarray, b:np.ndarray) -> float:
     # dot product of a and b (cosine similarity) scaled by the time_decay of b
@@ -48,14 +36,14 @@ def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarr
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[nearest_indices[spotlight_id - 1][1:]], distances[spotlight_id - 1][1:])
 
-def save_predictions(model:ImplicitFactorizationModel, model_id:int, 
+def save_predictions(embeddings:np.ndarray, model_id:int, 
                     spotlight_ids:np.ndarray, 
                     external_item_ids:np.ndarray, 
                     article_ids:np.ndarray,
                     date_decays:np.ndarray) -> None:
     """Save predictions to the db
     
-    :model: Spotlight model  
+    :embeddings: article embeddings  
     :model_id: unique id of model 
     :spotlight_ids: Spotlight 1-indexed item IDs
     :external_item_ids: Unique article ID from publisher
@@ -63,7 +51,6 @@ def save_predictions(model:ImplicitFactorizationModel, model_id:int,
     :date_decays: decay factors for each article [0,1]
     """
     start_ts = time.time()
-    embeddings = get_model_embeddings(model, spotlight_ids)
     distances, nearest_indices = get_similarities(embeddings, date_decays, MAX_RECS + 1)
     knn_latency = time.time() - start_ts
     logging.info(f"Total latency to find K-Nearest Neighbors: {knn_latency}")
