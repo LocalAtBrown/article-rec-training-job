@@ -25,7 +25,13 @@ def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
     return normalize_embeddings(np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
 def get_cosines(embeddings:np.ndarray):
-    """get [0,1] normalized cosine similarity for all vectors"""
+    """get [0,1] normalized cosine similarity for all vectors
+
+    We ultimately need the values on a [0,1] scale, where 1 is closer. 
+    The reason why is because the decay is multiplied by the similarity. 
+    If more-distant articles are given larger values, then when the decay 
+    is applied (with multiplication), they will become closer if a greater decay is applied.
+    """
     similarities = distance.cdist(
         embeddings, embeddings, metric="cosine")
     return ((((similarities - 1) * -1) + 1) / 2)
