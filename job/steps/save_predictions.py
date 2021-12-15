@@ -24,31 +24,27 @@ def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
     """ Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
     return normalize_embeddings(np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
-def get_cosines(embeddings:np.ndarray):
-    """get [0,1] normalized cosine similarity for all vectors
-
-    We ultimately need the values on a [0,1] scale, where 1 is closer. 
-    The reason why is because the decay is multiplied by the similarity. 
-    If more-distant articles are given larger values, then when the decay 
-    is applied (with multiplication), they will become closer if a greater decay is applied.
+def get_cosines(embeddings:np.ndarray) -> np.ndarray:
+    """Format values on a [0,2] scale, where 0 is closer, 
+        to values on a [0,1] scale, where 1 is closer.
     """
-    similarities = distance.cdist(
+    distances = distance.cdist(
         embeddings, embeddings, metric="cosine")
-    return ((((similarities - 1) * -1) + 1) / 2)
+    return (2 - distances) / 2 
 
-def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int):
+def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) -> (np.ndarray, np.ndarray):
     """ Get most similar articles"""
     similarities = get_cosines(embeddings)
     decayed_matrix = apply_decay(similarities, date_decays)
     return get_similar_indices(decayed_matrix, n_recs)
 
-def apply_decay(embedding_matrix, decays_by_index):
+def apply_decay(embedding_matrix, decays_by_index) -> np.ndarray:
     """ multiply every column by its corresponding decay weight. set the diagonal equal to 1. every row's index corresponds to that recommendation."""
     decayed_matrix = embedding_matrix * decays_by_index.reshape((1,decays_by_index.size))
     np.fill_diagonal(decayed_matrix, 1.0)
     return decayed_matrix
 
-def get_similar_indices(decayed_matrix, n_recs):
+def get_similar_indices(decayed_matrix, n_recs) -> (np.ndarray, np.ndarray):
     """ Get the nearest n_rec indices; get the corresponding weights"""
     sorted_recs = decayed_matrix.argsort()[:, ::-1][:, :n_recs]
     return (np.array([decayed_matrix[i][v] for i,v in enumerate(sorted_recs)]), sorted_recs)
