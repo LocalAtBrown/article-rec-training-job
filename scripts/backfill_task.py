@@ -22,7 +22,7 @@ def backfill(site: Site, date: datetime.datetime.date, days: int) -> None:
         fetch_and_upload_data(site, date, days=1)
         db_proxy.close()
         db_proxy.connect()
-        date += DELTA
+        date -= DELTA
 
 
 if __name__ == "__main__":
