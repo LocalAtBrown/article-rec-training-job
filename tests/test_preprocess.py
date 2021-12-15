@@ -28,7 +28,6 @@ def test_time_activities():
     def time_activities_(df):
         # Helper function to shape the df conveniently
         df = preprocess.time_activities(df)
-        print(df)
         return df.reset_index()[["client_id", "landing_page_path", "duration"]]
 
     # Test basic aggregation
