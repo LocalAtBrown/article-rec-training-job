@@ -49,22 +49,21 @@ def update_dwell_times(df: pd.DataFrame, date: datetime.date, site: Site):
     ].copy()
     df = set_dwell_seconds(df)
     df["published_at"] = df["published_at"].dt.date
-
-    conn = get_connection()
+    df["article_id"] = df["article_id"].astype(int)
 
     staging_table = get_table("staging")
     dwell_time_table = get_table("dwelltimes")
+    s3_path = f"{config.get('REDSHIFT_CACHE_BUCKET')}/load/{site.name}/{date}.csv"
+    s3 = s3fs.S3FileSystem(anon=False)
+    with s3.open(s3_path, "w") as f:
+        df.to_csv(f, index=False)
 
+    conn = get_connection()
     with conn.cursor() as cursor:
 
         logging.info("Creating staging table...")
         cursor.execute(f"create temp table {staging_table} (like {dwell_time_table});")
         logging.info(f"Uploading {len(df)} rows for {date}...")
-        s3 = s3fs.S3FileSystem(anon=False)
-
-        s3_path = f"{config.get('REDSHIFT_CACHE_BUCKET')}/load/{site.name}/{date}.csv"
-        with s3.open(s3_path, "w") as f:
-            df.to_csv(f, index=False)
 
         cursor.execute(
             f"""
