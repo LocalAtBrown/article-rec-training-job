@@ -9,6 +9,7 @@ from typing import Optional, Callable
 from sklearn.preprocessing import normalize
 import torch
 from spotlight.factorization.implicit import ImplicitFactorizationModel
+from spotlight.factorization.explicit import ExplicitFactorizationModel
 from spotlight.sequence.implicit import ImplicitSequenceModel
 from spotlight.interactions import Interactions
 from spotlight.cross_validation import random_train_test_split
@@ -21,7 +22,7 @@ DEFAULT_PARAMS = {
         "hl": 10,
         "epochs": 2,
         "embedding_dim": 350,
-        "model": "IMF",
+        "model": "EMF",
         "tune": False,
         "random_state": np.random.RandomState(42)
         }
@@ -75,6 +76,10 @@ class Trainer:
         """Initialize model of the Trainer"""
         if self.params["model"] == "IMF":
             self.model = ImplicitFactorizationModel(n_iter=self.params["epochs"], 
+                                                random_state=self.params["random_state"],
+                                                embedding_dim=self.params["embedding_dim"])
+        elif self.params["model"] == "EMF":
+            self.model = ExplicitFactorizationModel(n_iter=self.params["epochs"], 
                                                 random_state=self.params["random_state"],
                                                 embedding_dim=self.params["embedding_dim"])
         elif self.params["model"] == "Sequential":
