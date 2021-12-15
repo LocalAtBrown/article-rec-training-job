@@ -5,7 +5,6 @@ from sites.sites import Sites
 import pandas as pd
 
 from job.steps.save_defaults import save_defaults
-from job.steps.preprocess import common_preprocessing
 from sites.washington_city_paper import WCP_SITE
 from tests.base import BaseTest
 from db.mappings.model import Model, Type, Status
