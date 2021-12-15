@@ -7,8 +7,13 @@ from typing import Any
 import boto3
 from botocore.exceptions import NoCredentialsError
 
-STAGE = os.environ["STAGE"]
-REGION = os.getenv("REGION", "us-east-1")
+ENV_SITE = "SITE"
+ENV_STAGE = "STAGE"
+ENV_REGION = "REGION"
+
+STAGE = os.environ[ENV_STAGE]
+REGION = os.getenv(ENV_REGION, "us-east-1")
+
 ROOT_DIR = str(Path(__file__).parent.parent.resolve())
 INPUT_FILEPATH = f"{ROOT_DIR}/env.json"
 CLIENT = boto3.client("ssm", REGION)
@@ -18,7 +23,7 @@ class Config:
     def __init__(self):
         self._config = self.load_env()
         # override site name on dev and prod with env var specified in cdk
-        self._config["SITE_NAME"] = os.getenv("SITE_NAME", self.get("SITE_NAME"))
+        self._config["SITE_NAME"] = os.getenv(ENV_SITE, self.get("SITE_NAME"))
 
     def get_secret(self, secret_key: str) -> Any:
         res = CLIENT.get_parameter(Name=secret_key, WithDecryption=True)

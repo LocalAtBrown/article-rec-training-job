@@ -38,6 +38,31 @@ def get_similar_indices(decayed_matrix, n_recs):
     sorted_recs = decayed_matrix.argsort()[:, ::-1][:, :n_recs]
     return (np.array([decayed_matrix[i][v] for i,v in enumerate(sorted_recs)]), sorted_recs)
 
+def get_cosines(embeddings:np.ndarray) -> np.ndarray:
+    """Format values on a [0,2] scale, where 0 is closer, 
+        to values on a [0,1] scale, where 1 is closer.
+    """
+    distances = distance.cdist(
+        embeddings, embeddings, metric="cosine")
+    return (2 - distances) / 2 
+
+def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) -> (np.ndarray, np.ndarray):
+    """ Get most similar articles"""
+    similarities = get_cosines(embeddings)
+    decayed_matrix = apply_decay(similarities, date_decays)
+    return get_similar_indices(decayed_matrix, n_recs)
+
+def apply_decay(embedding_matrix, decays_by_index) -> np.ndarray:
+    """ multiply every column by its corresponding decay weight. set the diagonal equal to 1. every row's index corresponds to that recommendation."""
+    decayed_matrix = embedding_matrix * decays_by_index.reshape((1,decays_by_index.size))
+    np.fill_diagonal(decayed_matrix, 1.0)
+    return decayed_matrix
+
+def get_similar_indices(decayed_matrix, n_recs) -> (np.ndarray, np.ndarray):
+    """ Get the nearest n_rec indices; get the corresponding weights"""
+    sorted_recs = decayed_matrix.argsort()[:, ::-1][:, :n_recs]
+    return (np.array([decayed_matrix[i][v] for i,v in enumerate(sorted_recs)]), sorted_recs)
+
 def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray) -> (np.ndarray, np.ndarray):
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[nearest_indices[spotlight_id - 1][1:]], distances[spotlight_id - 1][1:])

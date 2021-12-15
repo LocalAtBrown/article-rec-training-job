@@ -1,9 +1,10 @@
 import datetime
 import logging
-import time
 import os
+import random
 import subprocess
 import shutil
+import time
 
 import pandas as pd
 import boto3
@@ -17,37 +18,10 @@ from lib.metrics import write_metric, Unit
 
 from job.steps.preprocess import preprocess_day
 from sites.site import get_bucket_name, Site
+from sites.sites import Sites
 
 DAYS_OF_DATA = config.get("DAYS_OF_DATA")
 s3 = boto3.client("s3")
-
-
-@retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
-def retry_s3_select(
-    site: Site,
-    object_key: str,
-    fields: List[str],
-    transformer: Callable,
-) -> pd.DataFrame:
-    path = "/downloads"
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    local_filename = f"{path}/tmp.json"
-    event_stream = s3_select(get_bucket_name(site), object_key, fields)
-
-    try:
-        event_stream_to_file(event_stream, local_filename)
-        df = pd.read_json(local_filename, lines=True)
-        df = transformer(df)
-        os.remove(local_filename)
-    except ValueError:
-        logging.exception(f"{object_key} incorrectly formatted, ignored.")
-        return pd.DataFrame()
-    except EventStreamError as e:
-        logging.exception(f"{object_key} encountered ephemeral streaming error.")
-        raise e
-
-    return df
 
 
 def fetch_data(
@@ -75,6 +49,9 @@ def fetch_data(
         for full_path, _, files in os.walk(path):
 
             for filename in files:
+
+                if site == Sites.PI and random.random() < 0.5:
+                    continue
                 file_path = os.path.join(full_path, filename)
                 tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
 
@@ -109,34 +86,3 @@ def fetch_data(
 
 def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
-
-
-def s3_select(bucket_name: str, s3_object: str, fields: List[str]):
-    logging.info(f"Fetching object {s3_object} from bucket {bucket_name}")
-    fields = [f"s.{field}" for field in fields]
-    field_str = ", ".join(fields)
-    query = f"select {field_str} from s3object s"
-    r = s3.select_object_content(
-        Bucket=bucket_name,
-        Key=s3_object,
-        ExpressionType="SQL",
-        Expression=query,
-        InputSerialization={
-            "CompressionType": "GZIP",
-            "JSON": {"Type": "LINES"},
-        },
-        OutputSerialization={
-            "JSON": {"RecordDelimiter": "\n"},
-        },
-    )
-    return r
-
-
-def event_stream_to_file(event_stream, filename):
-    with open(filename, "wb") as f:
-        # Iterate over events in the event stream as they come
-        for event in event_stream["Payload"]:
-            # If we received a records event, write the data to a file
-            if "Records" in event:
-                data = event["Records"]["Payload"]
-                f.write(data)

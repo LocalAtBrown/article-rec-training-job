@@ -42,13 +42,13 @@ def decays():
 
 def _test_similarities(embeddings:np.ndarray, n_recs:int, decays:np.ndarray):
     """ Checks that n recs are returned and the most similar rec is identical"""
-    distances, indices = get_similarities(embeddings, np.unique(decays), n_recs)
-    assert distances.shape == (4, n_recs)
-    assert all([distances[i, 0] == 1. for i in range(distances.shape[0])])
-    return distances, indices
+    similarities, indices = get_similarities(embeddings, np.unique(decays), n_recs)
+    assert similarities.shape == (4, n_recs)
+    assert all([similarities[i, 0] == 1. for i in range(similarities.shape[0])])
+    return similarities, indices
 
 
-def _test_orders(n_recs:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray):
+def _test_orders(n_recs:int, nearest_indices:np.ndarray, similarities:np.ndarray, article_ids:np.ndarray):
     """Gets the most similar recs for spotlight_id = 1, converted to article_ids (DB id format)
         The most similar recs should be 13 and 14.
 
@@ -63,25 +63,20 @@ def _test_orders(n_recs:int, nearest_indices:np.ndarray, distances:np.ndarray, a
             The get_nearest function performs the mapping
     """
     _test_spotlight_id = 1
-    rec_ids, rec_distances = get_nearest(_test_spotlight_id, nearest_indices, distances, article_ids) 
+    rec_ids, rec_similarities = get_nearest(_test_spotlight_id, nearest_indices, similarities, article_ids) 
     assert rec_ids.shape == (n_recs - 1,)
     assert (rec_ids == np.array([14,13])).all()
     return rec_ids, rec_distances 
 
 
-def test_article_recommendations(external_ids, user_ids, durations, session_dates, publish_dates, article_ids, decays):
-    n_recs = 3 
-    warehouse_df = pd.DataFrame({'client_id': user_ids,
-                                'external_id': external_ids,
-                                'article_id': article_ids,
-                                'duration': durations,
-                                'published_at': publish_dates,
-                                'session_date': session_dates})
-    params = {"epochs": 35, "embedding_dim": 16}
-    k = _spotlight_transform(warehouse_df)
-    model = Trainer(warehouse_df, datetime.now().date(), _spotlight_transform, params)
-    model.fit()
-    embeddings = model.model_embeddings
-    distances, nearest_indices = _test_similarities(embeddings, n_recs, decays)
-    nearest_recs = _test_orders(n_recs, nearest_indices, distances, np.unique(article_ids))
+def test_article_recommendations(spotlight_ids, user_ids, durations, publish_dates, article_ids, decays):
+    n_recs = 3
+    dataset = generate_interactions(pd.DataFrame({'user_id': user_ids,
+                                                'item_id': spotlight_ids,
+                                                'duration': durations,
+                                                'timestamp': publish_dates}))
+    model = build_model(dataset)
+    embeddings = get_model_embeddings(model, np.unique(spotlight_ids))
+    similarities, nearest_indices = _test_similarities(embeddings, n_recs, decays)
+    nearest_recs = _test_orders(n_recs, nearest_indices, similarities, np.unique(article_ids))
     
