@@ -1,9 +1,10 @@
 import logging
 import time
 from typing import List
+import pdb
 
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
+from scipy.spatial import distance
 from sklearn.preprocessing import normalize
 import torch
 from spotlight.factorization.implicit import ImplicitFactorizationModel
@@ -24,26 +25,29 @@ def get_model_embeddings(model, spotlight_ids:np.ndarray) -> np.ndarray:
     """ Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
     return normalize_embeddings(np.array([model._net.item_embeddings(torch.tensor([i], dtype=torch.int32)).tolist()[0] for i in spotlight_ids]))
 
-def weighted_cosine(a:np.ndarray, b:np.ndarray) -> float:
-    # dot product of a and b (cosine similarity) scaled by the time_decay of b
-    # note: embeddings are already l2 normalized (not including decay constant in last index)
-    # :a embedding vector for article. last entry is decay constant.
-    # :b embedding vector for article. last entry is decay constant.
-    # :return [0,1] distance score, where 0 is closer
-    decay_constant = b[-1]
-    distance = a[:-1] @ b[:-1]
-    # note: we use 0.99999 because float multiplication does result in some rounding error
-    if distance > 0.99999: return 0
-    return  1 - (decay_constant * distance)
+def get_cosines(embeddings:np.ndarray):
+    """get [0,1] normalized cosine similarity for all vectors"""
+    similarities = distance.cdist(
+        embeddings, embeddings, metric="cosine")
+    return ((((similarities - 1) * -1) + 1) / 2)
 
-def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int) -> (np.ndarray, np.ndarray):
-    """ Get K nearest neighbors for each article"""
-    weighted_embeddings = np.hstack([embeddings, np.expand_dims(date_decays, axis=1)]) 
-    nbrs = NearestNeighbors(n_neighbors=n_recs, 
-                            metric=weighted_cosine,
-                            algorithm='brute').fit(weighted_embeddings) 
+def get_similarities(embeddings:np.ndarray, date_decays:np.ndarray, n_recs:int):
+    """ Get most similar articles"""
+    similarities = get_cosines(embeddings)
+    decayed_matrix = apply_decay(similarities, date_decays)
+    return get_similar_indices(decayed_matrix, n_recs)
 
-    return nbrs.kneighbors(weighted_embeddings)
+def apply_decay(embedding_matrix, decays_by_index):
+    """ multiply every column by its corresponding decay weight. set the diagonal equal to 1. every row's index corresponds to that recommendation."""
+    decayed_matrix = embedding_matrix * decays_by_index.reshape((1,decays_by_index.size))
+    np.fill_diagonal(decayed_matrix, 1.0)
+    return decayed_matrix
+
+def get_similar_indices(decayed_matrix, n_recs):
+    """ Get the nearest n_rec indices; get the corresponding weights"""
+    sorted_recs = decayed_matrix.argsort()[:, ::-1][:, :n_recs]
+    return (np.array([decayed_matrix[i][v] for i,v in enumerate(sorted_recs)]), sorted_recs)
+
 def get_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray) -> (np.ndarray, np.ndarray):
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[nearest_indices[spotlight_id - 1][1:]], distances[spotlight_id - 1][1:])
@@ -76,7 +80,7 @@ def save_predictions(model:ImplicitFactorizationModel, model_id:int,
         to_save += [Rec(source_entity_id=source_external_id,
                             model_id=model_id,
                             recommended_article_id=recommended_item_id,
-                            score= 1 - distance) for (recommended_item_id, distance) in zip(*recommendations)]
+                            score= similarities) for (recommended_item_id, similarities) in zip(*recommendations)]
 
         if len(to_save) % 1000 == 0:
             logging.info(f"Created {len(to_save)} recommendations...")

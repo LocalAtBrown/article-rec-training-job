@@ -43,7 +43,7 @@ def _test_similarities(embeddings:np.ndarray, n_recs:int, decays:np.ndarray):
     """ Checks that n recs are returned and the most similar rec is identical"""
     distances, indices = get_similarities(embeddings, np.unique(decays), n_recs)
     assert distances.shape == (4, n_recs)
-    assert all([distances[i, 0] == 0. for i in range(distances.shape[0])])
+    assert all([distances[i, 0] == 1. for i in range(distances.shape[0])])
     return distances, indices
 
 
