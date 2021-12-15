@@ -22,7 +22,7 @@ DEFAULT_PARAMS = {
         "hl": 10,
         "epochs": 2,
         "embedding_dim": 350,
-        "model": "EMF",
+        "model": "IMF",
         "tune": False,
         "random_state": np.random.RandomState(42)
         }
