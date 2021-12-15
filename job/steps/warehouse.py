@@ -120,9 +120,9 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     where site = '{site.name}'
     -- fitler for session dates greater than `days` days ago
     and timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1
-    and num_users_per_article > 1
-    and num_articles_per_user > 1
-    and duration < 600
+    and num_users_per_article > 5
+    and num_articles_per_user > 3
+    and duration between 30 and 600
     and duration_per_user > 60
     """
     conn = get_connection()

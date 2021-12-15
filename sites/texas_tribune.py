@@ -24,11 +24,11 @@ NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 PARAMS = {
     "hl": 8,
-    "embedding_dim": 400,
-    "epochs": 2,
+    "embedding_dim": 200,
+    "epochs": 1,
     "tune": False,
      "tune_params": ["epochs", "embedding_dim"],
-     "tune_range": [[1,6,1],[100,800,100]]
+     "tune_range": [[1,3,1],[60,160,20]]
 }
 NON_ARTICLE_PREFIXES = [
     "/districts",
