@@ -26,7 +26,9 @@ def backfill(site: Site, date: datetime.datetime.date, days: int) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Training Job for rec system")
+    parser = argparse.ArgumentParser(
+        description="Script to backfill the redshift dwell time table from START_DATE - days to START_DATE"
+    )
 
     parser.add_argument(
         "--start-date",
