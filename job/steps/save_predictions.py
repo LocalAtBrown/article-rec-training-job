@@ -1,7 +1,6 @@
 import logging
 import time
 from typing import List
-import pdb
 
 import numpy as np
 from scipy.spatial import distance
