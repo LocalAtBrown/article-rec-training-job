@@ -50,18 +50,18 @@ def _test_similarities(embeddings:np.ndarray, n_recs:int, decays:np.ndarray):
 
 
 def _test_orders(n_recs:int, nearest_indices:np.ndarray, similarities:np.ndarray, article_ids:np.ndarray):
-    """Gets the most similar recs for spotlight_id = 1, converted to article_ids (DB id format)
+    """Gets the most similar recs for spotlight_id = 0, converted to article_ids (DB id format)
         The most similar recs should be 13 and 14.
 
         Here is why:
             Looking at spotlight_id = 0, we see two users implicity rated: user_id 1 and user_id 3. 
-            We also see that users 1 and 3 also consumed spotlight_id 3 and gave similar, high durations 
-            We also see that user_id 3 also consumed ids 2 and 4. 2  was low rated, 4 got a high duration and slightly below 3
-            However, we see that another user, 2, who consumed 3 and shared patterns with 1, gave 3 a lower rating
-            So because of their user consumption connections, spotlight_ids 3 and 4 are our recs 
-            4 has more consistent ratings than 3. So it is our top pick.
-            We map back to 14 and 13 because our spotlight ids match index-wise to the LNL db ids (article_ids)
-            The get_nearest function performs the mapping
+            We also see that users 1 and 3 also consumed spotlight_id 2  
+            We also see that user_id 3 also consumed ids 1 and 3. 
+            However, we see that another user, 2, who consumed 2 and shared patterns with 1
+            So because of their user consumption connections, spotlight_ids 2 and 3 are our recs 
+            2 and 3 share the most "implicit feedback" and are co-consumed the most. 
+            We map back to 13 and 14 (2->13, 3->14) because our spotlight ids match index-wise to the LNL db ids (article_ids)
+            The get_nearest function maps the ids 
     """
     _test_spotlight_id = 0
     rec_ids, rec_similarities = get_nearest(_test_spotlight_id, nearest_indices, similarities, article_ids) 
