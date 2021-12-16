@@ -5,7 +5,6 @@ from job.steps.trainer import Trainer
 
 def _spotlight_transform(prepared_df:pd.DataFrame) -> pd.DataFrame:
     """Transform data for Spotlight
-
     :prepared_df: Dataframe with user-article interactions
     :return: (prepared_df)
     """
@@ -14,8 +13,8 @@ def _spotlight_transform(prepared_df:pd.DataFrame) -> pd.DataFrame:
     prepared_df["session_date"] = pd.to_datetime(prepared_df["session_date"])
     prepared_df["session_date"] = prepared_df["session_date"].dt.date
     prepared_df['external_id'] = prepared_df['external_id'].astype('category')
-    prepared_df['item_id'] = prepared_df['external_id'].cat.codes + 1
-    prepared_df['user_id'] = prepared_df['client_id'].factorize()[0] + 1
+    prepared_df['item_id'] = prepared_df['external_id'].cat.codes
+    prepared_df['user_id'] = prepared_df['client_id'].factorize()[0]
     prepared_df['timestamp'] = prepared_df['session_date'].factorize()[0] + 1
 
     return prepared_df

@@ -12,13 +12,14 @@ from job.steps.trainer import Trainer
 from job.steps.train_model import _spotlight_transform
 
 
+
 @pytest.fixture(scope="module")
 def user_ids():
     return np.array([3,3,2,1,3,3,1,2])
 
 @pytest.fixture(scope="module")
 def external_ids():
-    return np.array([4,3,3,3,1,2,1,2])
+    return np.array([3,2,2,2,0,1,0,1])
 
 @pytest.fixture(scope="module")
 def durations():
@@ -53,7 +54,7 @@ def _test_orders(n_recs:int, nearest_indices:np.ndarray, similarities:np.ndarray
         The most similar recs should be 13 and 14.
 
         Here is why:
-            Looking at spotlight_id = 1, we see two users implicity rated: user_id 1 and user_id 3. 
+            Looking at spotlight_id = 0, we see two users implicity rated: user_id 1 and user_id 3. 
             We also see that users 1 and 3 also consumed spotlight_id 3 and gave similar, high durations 
             We also see that user_id 3 also consumed ids 2 and 4. 2  was low rated, 4 got a high duration and slightly below 3
             However, we see that another user, 2, who consumed 3 and shared patterns with 1, gave 3 a lower rating
@@ -62,21 +63,24 @@ def _test_orders(n_recs:int, nearest_indices:np.ndarray, similarities:np.ndarray
             We map back to 14 and 13 because our spotlight ids match index-wise to the LNL db ids (article_ids)
             The get_nearest function performs the mapping
     """
-    _test_spotlight_id = 1
+    _test_spotlight_id = 0
     rec_ids, rec_similarities = get_nearest(_test_spotlight_id, nearest_indices, similarities, article_ids) 
     assert rec_ids.shape == (n_recs - 1,)
-    assert (rec_ids == np.array([14,13])).all()
-    return rec_ids, rec_distances 
+    assert (rec_ids == np.array([13,14])).all()
+    return rec_ids, rec_similarities
 
-
-def test_article_recommendations(spotlight_ids, user_ids, durations, publish_dates, article_ids, decays):
-    n_recs = 3
-    dataset = generate_interactions(pd.DataFrame({'user_id': user_ids,
-                                                'item_id': spotlight_ids,
-                                                'duration': durations,
-                                                'timestamp': publish_dates}))
-    model = build_model(dataset)
-    embeddings = get_model_embeddings(model, np.unique(spotlight_ids))
-    similarities, nearest_indices = _test_similarities(embeddings, n_recs, decays)
-    nearest_recs = _test_orders(n_recs, nearest_indices, similarities, np.unique(article_ids))
-    
+def test_article_recommendations(external_ids, user_ids, durations, session_dates, publish_dates, article_ids, decays):
+    n_recs = 3 
+    warehouse_df = pd.DataFrame({'client_id': user_ids,
+                                'external_id': external_ids,
+                                'article_id': article_ids,
+                                'duration': durations,
+                                'published_at': publish_dates,
+                                'session_date': session_dates})
+    params = {"epochs": 35, "embedding_dim": 16, "model": "IMF"}
+    k = _spotlight_transform(warehouse_df)
+    model = Trainer(warehouse_df, datetime.now().date(), _spotlight_transform, params)
+    model.fit()
+    embeddings = model.model_embeddings
+    distances, nearest_indices = _test_similarities(embeddings, n_recs, decays)
+    nearest_recs = _test_orders(n_recs, nearest_indices, distances, np.unique(article_ids))
