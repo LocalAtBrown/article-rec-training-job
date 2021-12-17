@@ -7,7 +7,8 @@ from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.interactions import Interactions
 
 from db.mappings.base import tzaware_now
-from job.steps.save_predictions import get_similarities, get_nearest
+from job.steps.save_predictions import map_nearest
+from job.steps.knn import KNN
 from job.steps.trainer import Trainer
 from job.steps.train_model import _spotlight_transform
 
@@ -43,7 +44,9 @@ def decays():
 
 def _test_similarities(embeddings:np.ndarray, n_recs:int, decays:np.ndarray):
     """ Checks that n recs are returned and the most similar rec is identical"""
-    similarities, indices = get_similarities(embeddings, np.unique(decays), n_recs)
+    knn_index = KNN(embeddings)
+    knn_index.decay_embeddings(np.unique(decays))
+    similarities, indices = knn_index.get_similar_indices(n_recs)
     assert similarities.shape == (4, n_recs)
     assert all([similarities[i, 0] == 1. for i in range(similarities.shape[0])])
     return similarities, indices
@@ -61,10 +64,10 @@ def _test_orders(n_recs:int, nearest_indices:np.ndarray, similarities:np.ndarray
             So because of their user consumption connections, spotlight_ids 2 and 3 are our recs 
             2 and 3 share the most "implicit feedback" and are co-consumed the most. 
             We map back to 13 and 14 (2->13, 3->14) because our spotlight ids match index-wise to the LNL db ids (article_ids)
-            The get_nearest function maps the ids 
+            The map_nearest function maps the ids 
     """
     _test_spotlight_id = 0
-    rec_ids, rec_similarities = get_nearest(_test_spotlight_id, nearest_indices, similarities, article_ids) 
+    rec_ids, rec_similarities = map_nearest(_test_spotlight_id, nearest_indices, similarities, article_ids) 
     assert rec_ids.shape == (n_recs - 1,)
     assert (rec_ids == np.array([13,14])).all()
     return rec_ids, rec_similarities

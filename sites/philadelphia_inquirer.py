@@ -30,7 +30,7 @@ PARAMS = {
     "epochs": 2,
     "tune": False,
     "tune_params": ["epochs", "embedding_dim"],
-    "tune_range": [[1,3,1],[30,180,50]],
+    "tune_ranges": [[1,3,1],[30,180,50]],
     "model": "IMF",
     "loss": "adaptive_hinge"
 }

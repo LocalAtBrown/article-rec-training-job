@@ -1,7 +1,6 @@
 import logging
 import time
 from copy import deepcopy
-import pdb
 
 import numpy as np
 import pandas as pd
@@ -33,7 +32,7 @@ class Trainer:
         """
         super().__init__()
 
-        self.DEFAULT_PARAMS = {
+        self.params = {
             "hl": 10,
             "epochs": 2,
             "embedding_dim": 350,
@@ -42,7 +41,7 @@ class Trainer:
             "random_state": np.random.RandomState(42),
             "loss": "pointwise"
         }
-        self.params = self._update_params(params)
+        self._update_params(params)
         self.experiment_time = pd.to_datetime(experiment_time)
 
         if warehouse_transform:
@@ -53,11 +52,9 @@ class Trainer:
 
         self._generate_model()
    
-    def _update_params(self, params:None) -> dict:
+    def _update_params(self, params:None) -> None:
         """Update the internal params"""
-        _params = deepcopy(self.DEFAULT_PARAMS)
-        _params.update(params)
-        return _params
+        self.params.update(params)
 
     def _generate_datedecays(self, prepared_df:pd.DataFrame)-> pd.DataFrame:
         """ Build columns with date decay and external id""" 
@@ -106,18 +103,18 @@ class Trainer:
         self.model.fit(training_dataset, verbose=True)
 
     def _tune(self) -> None:
-        """Perform grid seach over tune_params and tune_range lists
+        """Perform grid seach over tune_params and tune_ranges lists
             tune_params: Hyperparameters to tune
-            tune_range: Range of values to tune over. Third item in the list is the step
+            tune_ranges: Range of values to tune over. Third item in the list is the step
             
             Model will be evaluated by MRR on a test set.
             Best hyperparameters will be used to train the model
         """
-        if "tune_params" not in self.params or "tune_range" not in self.params:
+        if "tune_params" not in self.params or "tune_ranges" not in self.params:
             logging.info("Tuning cannot be performed without range and parameter")
             return
 
-        if len(self.params["tune_params"]) != len(self.params["tune_range"]):
+        if len(self.params["tune_params"]) != len(self.params["tune_ranges"]):
             logging.info("Must have same number of parameters as ranges")
             return
 
@@ -127,10 +124,10 @@ class Trainer:
         logging.info(f"Starting hyperparameter tuning job on {self.params['tune_params']}")
 
         for i, tune_param in enumerate(self.params["tune_params"]):
-            for tune_val in range(*self.params["tune_range"][i]):
+            for tune_val in range(*self.params["tune_ranges"][i]):
                 self.params[tune_param] = tune_val
                 for j, tune_param2 in enumerate(self.params["tune_params"][i + 1:], i + 1):
-                    for tune_val2 in range(*self.params["tune_range"][j]):
+                    for tune_val2 in range(*self.params["tune_ranges"][j]):
                         self.params[tune_param2] = tune_val2
 
                         self._generate_model()
@@ -143,7 +140,7 @@ class Trainer:
                             best_params = deepcopy(self.params)
         
         logging.info(f"Final hyperparameters: {best_params} MRR: {best_mrr}")
-        self.params = self._update_params(best_params)
+        self._update_params(best_params)
         self._generate_model()
         self._fit(self.spotlight_dataset)
 

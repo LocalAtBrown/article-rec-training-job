@@ -20,13 +20,13 @@ FIELDS = [
 ]
 PARAMS = {
     "hl": 30,
-    "embedding_dim": 700,
+    "embedding_dim": 144,
     "epochs": 3,
     "model": "IMF",
     "loss": "adaptive_hinge",
     "tune": False, 
     "tune_params": ["epochs", "embedding_dim"],
-    "tune_range": [[1,10,1],[100,900,100]]
+    "tune_ranges": [[1,5,1],[40,300,20]]
 }
 
 # supported url path formats:

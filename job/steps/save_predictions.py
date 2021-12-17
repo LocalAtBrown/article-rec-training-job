@@ -33,27 +33,27 @@ def save_predictions(embeddings:np.ndarray, model_id:int,
     """
     logging.info(f"Finding nearest neighbors")
     start_ts = time.time()
+
     knn_index = KNN(embeddings)
     knn_index.decay_embeddings(date_decays)
-    distances, nearest_indices = knn_index.get_similar_indices(MAX_RECS + 1)
+    similarities, nearest_indices = knn_index.get_similar_indices(MAX_RECS + 1)
+
     knn_latency = time.time() - start_ts
     logging.info(f"Total latency to find K-Nearest Neighbors: {knn_latency}")
     to_save = []
 
     for i in spotlight_ids:
         source_external_id = external_item_ids[i]
-        recommendations = map_nearest(i, nearest_indices, distances, article_ids)
+        recommendations = map_nearest(i, nearest_indices, similarities, article_ids)
 
         to_save += [Rec(source_entity_id=source_external_id,
                             model_id=model_id,
                             recommended_article_id=recommended_item_id,
-                            score= similarities) for (recommended_item_id, similarities) in zip(*recommendations)]
+                            score= similarity) for (recommended_item_id, similarity) in zip(*recommendations)]
 
         if len(to_save) % 1000 == 0:
             logging.info(f"Created {len(to_save)} recommendations...")
     
-    db_proxy.close() 
-    db_proxy.connect()
     Rec.bulk_create(to_save, batch_size=50)
     latency = time.time() - start_ts
     write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
