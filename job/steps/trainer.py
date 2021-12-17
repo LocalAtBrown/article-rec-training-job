@@ -18,15 +18,6 @@ from spotlight.evaluation import mrr_score
 from lib.metrics import write_metric, Unit
 from job.helpers import decay_fn
 
-DEFAULT_PARAMS = {
-        "hl": 10,
-        "epochs": 2,
-        "embedding_dim": 350,
-        "model": "EMF",
-        "tune": False,
-        "random_state": np.random.RandomState(42)
-        }
-
 class Trainer:
     def __init__(self, warehouse_df:pd.DataFrame,
                         experiment_time:pd.datetime, 
@@ -41,6 +32,16 @@ class Trainer:
             Note: params and hparams should be separated out in the future
         """
         super().__init__()
+
+        self.DEFAULT_PARAMS = {
+            "hl": 10,
+            "epochs": 2,
+            "embedding_dim": 350,
+            "model": "EMF",
+            "tune": False,
+            "random_state": np.random.RandomState(42),
+            "loss": "pointwise"
+        }
         self.params = self._update_params(params)
         self.experiment_time = pd.to_datetime(experiment_time)
 
@@ -54,7 +55,7 @@ class Trainer:
    
     def _update_params(self, params:None) -> dict:
         """Update the internal params"""
-        _params = deepcopy(DEFAULT_PARAMS)
+        _params = deepcopy(self.DEFAULT_PARAMS)
         _params.update(params)
         return _params
 
@@ -76,14 +77,17 @@ class Trainer:
         """Initialize model of the Trainer"""
         if self.params["model"] == "IMF":
             self.model = ImplicitFactorizationModel(n_iter=self.params["epochs"], 
+                                                loss=self.params["loss"],
                                                 random_state=self.params["random_state"],
                                                 embedding_dim=self.params["embedding_dim"])
         elif self.params["model"] == "EMF":
             self.model = ExplicitFactorizationModel(n_iter=self.params["epochs"], 
+                                                loss=self.params["loss"],
                                                 random_state=self.params["random_state"],
                                                 embedding_dim=self.params["embedding_dim"])
         elif self.params["model"] == "Sequential":
             self.model = ImplicitSequenceModel(n_iter=self.params["epochs"],
+                                                loss=self.params["loss"],
                                                 random_state=self.params["random_state"],
                                                 embedding_dim=self.params["embedding_dim"])
     

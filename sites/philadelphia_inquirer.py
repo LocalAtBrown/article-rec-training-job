@@ -25,12 +25,14 @@ API_KEY = config.get("INQUIRER_TOKEN")
 API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
 PARAMS = {
-    "hl": 30,
+    "hl": 120,
     "embedding_dim": 256,
     "epochs": 2,
     "tune": False,
     "tune_params": ["epochs", "embedding_dim"],
-    "tune_range": [[1,3,1],[30,180,50]]
+    "tune_range": [[1,3,1],[30,180,50]],
+    "model": "IMF",
+    "loss": "adaptive_hinge"
 }
 
 

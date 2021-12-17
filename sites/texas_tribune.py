@@ -23,10 +23,12 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 PARAMS = {
-    "hl": 30,
-    "embedding_dim": 500,
-    "epochs": 3,
+    "hl": 120,
+    "embedding_dim": 300,
+    "epochs": 2,
     "tune": False,
+    "model": "IMF",
+    "loss": "adaptive_hinge",
     "tune_params": ["epochs", "embedding_dim"],
     "tune_range": [[5,11,2],[160,360,100]]
 }
