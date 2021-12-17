@@ -12,6 +12,7 @@ from job.steps import (
     save_predictions,
     delete_old_models,
     warehouse,
+    trainer
 )
 from job.helpers import get_site
 from db.mappings.model import Type
@@ -114,14 +115,14 @@ def run():
             site, days=config.get("DAYS_OF_DATA")
         )
 
-        model, dates_df = train_model.train_model(
-            X=interactions_data, params=site.training_params, time=EXPERIMENT_DT
+        embeddings, dates_df = train_model.train_model(
+            X=interactions_data, params=site.training_params, experiment_time=EXPERIMENT_DT
         )
 
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
         save_predictions.save_predictions(
-            model=model,
+            embeddings=embeddings,
             model_id=model_id,
             spotlight_ids=dates_df["item_id"].values,
             external_item_ids=dates_df["external_id"].values,

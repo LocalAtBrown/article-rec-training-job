@@ -23,10 +23,16 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 PARAMS = {
-    "hl": 20,
-    "embedding_dim": 400,
-    "epochs": 1,
+    "hl": 90,
+    "embedding_dim": 100,
+    "epochs": 3,
+    "tune": False,
+    "model": "IMF",
+    "loss": "adaptive_hinge",
+    "tune_params": ["epochs", "embedding_dim"],
+    "tune_ranges": [[5,11,2],[160,360,100]]
 }
+
 NON_ARTICLE_PREFIXES = [
     "/districts",
     "/employees",

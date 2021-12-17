@@ -19,10 +19,16 @@ FIELDS = [
     "contexts_dev_amp_snowplow_amp_id_1",
 ]
 PARAMS = {
-    "hl": 15.0,
-    "embedding_dim": 72,
-    "epochs": 8,
+    "hl": 30,
+    "embedding_dim": 144,
+    "epochs": 3,
+    "model": "IMF",
+    "loss": "adaptive_hinge",
+    "tune": False, 
+    "tune_params": ["epochs", "embedding_dim"],
+    "tune_ranges": [[1,5,1],[40,300,20]]
 }
+
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
