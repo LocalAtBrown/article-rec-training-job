@@ -13,7 +13,7 @@ from job.steps.knn import KNN
 
 MAX_RECS = config.get("MAX_RECS")
 
-def map_nearest(self, spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray) -> (np.ndarray, np.ndarray):
+def map_nearest(spotlight_id:int, nearest_indices:np.ndarray, distances:np.ndarray, article_ids:np.ndarray) -> (np.ndarray, np.ndarray):
     """ Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances """
     return (article_ids[nearest_indices[spotlight_id][1:]], distances[spotlight_id][1:])
 
@@ -35,7 +35,7 @@ def save_predictions(embeddings:np.ndarray, model_id:int,
     start_ts = time.time()
     knn_index = KNN(embeddings)
     knn_index.decay_embeddings(date_decays)
-    distances, nearest_indices = knn_index.get_similarities(MAX_RECS + 1)
+    distances, nearest_indices = knn_index.get_similar_indices(MAX_RECS + 1)
     knn_latency = time.time() - start_ts
     logging.info(f"Total latency to find K-Nearest Neighbors: {knn_latency}")
     to_save = []
