@@ -82,11 +82,6 @@ class Trainer:
                                                 loss=self.params["loss"],
                                                 random_state=self.params["random_state"],
                                                 embedding_dim=self.params["embedding_dim"])
-        elif self.params["model"] == "Sequential":
-            self.model = ImplicitSequenceModel(n_iter=self.params["epochs"],
-                                                loss=self.params["loss"],
-                                                random_state=self.params["random_state"],
-                                                embedding_dim=self.params["embedding_dim"])
     
     def _normalize_embeddings(self, embedding_matrix:np.ndarray) -> np.ndarray:
         """l2 normalize all embeddings along row dimension of matrix"""

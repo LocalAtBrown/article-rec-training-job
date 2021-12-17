@@ -25,7 +25,7 @@ FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
 PARAMS = {
     "hl": 90,
     "embedding_dim": 100,
-    "epochs": 2,
+    "epochs": 3,
     "tune": False,
     "model": "IMF",
     "loss": "adaptive_hinge",
