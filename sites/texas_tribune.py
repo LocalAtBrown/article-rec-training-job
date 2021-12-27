@@ -30,7 +30,7 @@ PARAMS = {
     "model": "IMF",
     "loss": "adaptive_hinge",
     "tune_params": ["epochs", "embedding_dim"],
-    "tune_ranges": [[5,11,2],[160,360,100]]
+    "tune_ranges": [[5, 11, 2], [160, 360, 100]],
 }
 
 NON_ARTICLE_PREFIXES = [

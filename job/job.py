@@ -1,91 +1,36 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import time
-from typing import List
 
 from job.steps import (
     fetch_data,
-    scrape_metadata,
-    preprocess,
     save_defaults,
+    scrape_metadata,
     train_model,
     save_predictions,
     warehouse,
-    trainer
 )
 from job.helpers import get_site
 from db.mappings.model import Type
-from db.helpers import create_model, set_current_model, get_articles_by_path
+from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
-from sites.sites import Sites
 from sites.site import Site
-import pandas as pd
 
 
-def get_missing_paths(data_df: pd.DataFrame, article_df: pd.DataFrame) -> List[str]:
-    existing_articles = article_df["landing_page_path"].unique().tolist()
-    missing_articles = data_df[~data_df["landing_page_path"].isin(existing_articles)]
-    missing_article_paths = missing_articles["landing_page_path"].unique().tolist()
-    return missing_article_paths
-
-
-def hydrate_by_path(site, data_df):
-    logging.info("Fetching article metadata by path...")
-    paths = data_df["landing_page_path"].unique().tolist()
-    articles = get_articles_by_path(site.name, paths)
-    external_ids = [a.external_id for a in articles]
-    article_df = scrape_metadata.scrape_metadata(site, external_ids)
-    article_df = article_df.set_index("landing_page_path")
-    data_df = data_df.join(article_df, on="landing_page_path", how="inner")
-    article_df = article_df.reset_index()
-    article_df = article_df.set_index("external_id")
-    article_df.index = article_df.index.astype("object")
-    return article_df, data_df
-
-
-def hydrate_by_external_id(site, data_df, article_df_by_path):
-    logging.info("Fetching article metadata by external id...")
-    missing_article_paths = get_missing_paths(data_df, article_df_by_path)
-    external_id_df = preprocess.extract_external_ids(site, missing_article_paths)
-    found_external_ids = article_df_by_path.index.tolist()
-    external_id_df = external_id_df[
-        ~external_id_df["external_id"].isin(found_external_ids)
-    ]
-    data_df = data_df.merge(external_id_df, on="landing_page_path", how="inner")
-    external_ids = external_id_df["external_id"].unique().tolist()
-    article_df = scrape_metadata.scrape_metadata(site, external_ids)
-    article_df = article_df.set_index("external_id")
-    article_df.index = article_df.index.astype("object")
-    data_df = data_df.join(
-        article_df, on="external_id", lsuffix="_original", how="inner"
-    )
-    return article_df, data_df
-
-
-def fetch_and_upload_data(
-    site: Site, date: datetime.date, days=config.get("DAYS_OF_DATA")
-):
+def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):
     """
-    Fetch data from S3
-    Dwell time calculation
-    Hydrate with article metadata
-    Upload to data warehouse
-    Return df of data, and articles
+    1. Upload transformed events data to Redshift
+    2. Update article metadata
+    3. Update dwell times table
     """
-    data_df = fetch_data.fetch_data(site, date, days)
+    dts = [dt - timedelta(hours=i) for i in range(hours)]
 
-    article_df_by_path, data_df_by_path = hydrate_by_path(site, data_df)
+    fetch_data.fetch_transform_upload_chunks(site, dts)
+    scrape_metadata.scrape_upload_metadata(site, dts)
 
-    article_df_by_external_id, data_df_by_external_id = hydrate_by_external_id(
-        site, data_df, article_df_by_path
-    )
-
-    article_df = article_df_by_path.append(article_df_by_external_id)
-    data_df = data_df_by_path.append(data_df_by_external_id)
-
-    warehouse.update_dwell_times(data_df, date, site)
-    return data_df, article_df
+    for date in set([dt.date() for dt in dts]):
+        warehouse.update_dwell_times(site, date)
 
 
 def run():
@@ -99,15 +44,15 @@ def run():
 
     try:
 
-        EXPERIMENT_DT = datetime.now().date()
+        EXPERIMENT_DT = datetime.now()
 
         ## Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
-        fetch_and_upload_data(site, EXPERIMENT_DT, days=1)
+        fetch_and_upload_data(site, EXPERIMENT_DT)
 
         ## Step 2: Train models by pulling data from the warehouse and uploading
         ## new recommendation objects
         top_articles = warehouse.get_default_recs(site=site)
-        save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT)
+        save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
 
         interactions_data = warehouse.get_dwell_times(
             site, days=config.get("DAYS_OF_DATA")

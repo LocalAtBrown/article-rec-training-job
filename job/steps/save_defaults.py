@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import datetime
 
-from job.steps import preprocess
+from job.helpers import time_decay
 from lib.config import config
 from sites.site import Site
 
@@ -19,7 +19,7 @@ MAX_RECS = config.get("MAX_RECS")
 def save_defaults(
     top_articles: pd.DataFrame, site: Site, experiment_date: datetime.datetime.date
 ) -> None:
-    decayed_df = preprocess.time_decay(
+    decayed_df = time_decay(
         top_articles,
         experiment_date=experiment_date,
         half_life=10,

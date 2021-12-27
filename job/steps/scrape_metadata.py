@@ -1,11 +1,9 @@
-import time
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import List, Tuple, Optional
+from datetime import datetime
+import time
+from typing import List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
 
-import pandas as pd
-import numpy as np
 from requests.models import Response
 from bs4 import BeautifulSoup
 
@@ -14,81 +12,84 @@ from db.helpers import (
     get_articles_by_external_ids,
     refresh_db,
 )
+from job.steps import warehouse
 from sites.site import Site
 from sites.helpers import ArticleScrapingError
-from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 from db.helpers import delete_articles
 from db.mappings.base import db_proxy
 
-BACKFILL_ISO_DATE = "2021-09-08"
-
 
 @refresh_db
-def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
+def scrape_upload_metadata(site: Site, dts: List[datetime]) -> None:
     """
-    Find articles on news website from list of paths, then associate with corresponding identifiers.
-    :param site: Site object enabling retrieval of external ID
-    :param external_ids: Article id's from external news site
-    :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
-        and the article ID in the database.
-        * Requisite fields: "article_id" (str), "external_id" (str)
+    Update article metadata for any URLs that were visited during the given dts
+    for both Postgres and the Redshift article_cache table
     """
     start_ts = time.time()
     total_scraped = 0
     scraping_errors = 0
-    external_ids = set(external_ids)
-    articles = get_articles_by_external_ids(site, external_ids)
-    refresh_articles = [a for a in articles if should_refresh(a)]
-    found_external_ids = {a.external_id for a in articles}
 
+    logging.info("Fetching paths to update...")
+    df = warehouse.get_paths_to_update(site, dts)
+
+    logging.info(f"Updating {len(df)} paths...")
+
+    # New paths are the ones where the external ID is null
+    new_paths = list(df[df["external_id"].isna()]["landing_page_path"])
+    new_ext_ids = [e for e in extract_external_ids(site, new_paths) if e]
+    # Filter out matching articles in Postgres but not in the cache
+    existing_article_ids = set(
+        [a.external_id for a in get_articles_by_external_ids(site, new_ext_ids)]
+    )
+    create_ids = [e for e in new_ext_ids if e not in existing_article_ids]
+
+    logging.info(f"Scraping {len(new_paths)} new paths...")
+    n_scraped, n_error = scrape_and_create_articles(
+        site,
+        [Article(external_id=extid) for extid in create_ids],
+    )
+    # Paths to refresh are the ones where the external ID is not null
+    refresh_ext_ids = set(df["external_id"].dropna()).difference(new_ext_ids)
+    logging.info(f"Refreshing {len(refresh_ext_ids)} articles...")
+    refresh_articles = get_articles_by_external_ids(site, refresh_ext_ids)
     n_scraped, n_error = scrape_and_update_articles(site, refresh_articles)
+
     total_scraped += n_scraped
     scraping_errors += n_error
-
-    new_articles = [
-        Article(external_id=ext_id)
-        for ext_id in external_ids
-        if ext_id not in found_external_ids
-    ]
-
-    n_scraped, n_error = scrape_and_create_articles(site, new_articles)
-    total_scraped += n_scraped
-    scraping_errors += n_error
-
-    articles = get_articles_by_external_ids(site, external_ids)
 
     write_metric("article_scraping_total", total_scraped)
     write_metric("article_scraping_errors", scraping_errors)
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
-    df_data = {
-        "article_id": [a.id for a in articles],
-        "external_id": [a.external_id for a in articles],
-        "published_at": [a.published_at for a in articles],
-        "landing_page_path": [a.path for a in articles],
-        "site": [a.site for a in articles],
-    }
-    article_df = pd.DataFrame(df_data)
-    return article_df
 
 
-def should_refresh(article: Article) -> bool:
-    # refresh metadata without a published time recorded yet
-    if not article.published_at:
-        return True
+def extract_external_id(site: Site, path: str) -> str:
+    return site.extract_external_id(path)
 
-    # refresh metadata for articles published within the last day
-    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    if article.published_at > yesterday:
-        return True
 
-    # refresh metadata for articles last updated before the backfill
-    backfill_date = datetime.fromisoformat(BACKFILL_ISO_DATE).astimezone(timezone.utc)
-    if backfill_date > article.updated_at:
-        return True
+def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[str]:
+    """
+    :param data_df: DataFrame of activities collected from Snowplow.
+        * Requisite fields: "landing_page_path" (str)
+    :return: data_df with "external_id" column added
+    """
+    futures_list = []
+    results = []
 
-    return False
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for path in landing_page_paths:
+            future = executor.submit(extract_external_id, site, path=path)
+            futures_list.append((path, future))
+
+        for (path, future) in futures_list:
+            try:
+                result = future.result(timeout=60)
+                results.append(result)
+            except:
+                pass
+
+    return results
 
 
 def scrape_article(site: Site, article: Article) -> Article:

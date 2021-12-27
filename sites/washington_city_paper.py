@@ -7,6 +7,7 @@ from requests.models import Response
 
 from bs4 import BeautifulSoup
 
+from lib.events import Event
 from sites.helpers import safe_get, ArticleScrapingError
 from sites.site import Site
 import pandas as pd
@@ -24,9 +25,9 @@ PARAMS = {
     "epochs": 3,
     "model": "IMF",
     "loss": "adaptive_hinge",
-    "tune": False, 
+    "tune": False,
     "tune_params": ["epochs", "embedding_dim"],
-    "tune_ranges": [[1,5,1],[40,300,20]]
+    "tune_ranges": [[1, 5, 1], [40, 300, 20]],
 }
 
 # supported url path formats:
@@ -61,18 +62,16 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(
         lambda x: x[0]["ampClientId"]
     )
-    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp)
+    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp).dt.round("1s")
     transformed_df["session_date"] = pd.to_datetime(
         transformed_df.activity_time.dt.date
     )
     transformed_df["landing_page_path"] = df.page_urlpath
-    transformed_df["event_category"] = "snowplow_amp_page_ping"
-    transformed_df["event_category"] = transformed_df["event_category"].astype(
-        "category"
+    transformed_df["event_name"] = df.event_name
+    transformed_df.replace(
+        {"event_name": "amp_page_ping"}, Event.PAGE_PING.value, inplace=True
     )
-    transformed_df["event_action"] = "impression"
-    transformed_df["event_action"] = transformed_df["event_action"].astype("category")
-
+    transformed_df["event_name"] = transformed_df["event_name"].astype("category")
     return transformed_df
 
 
