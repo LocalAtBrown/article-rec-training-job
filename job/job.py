@@ -10,7 +10,6 @@ from job.steps import (
     save_defaults,
     train_model,
     save_predictions,
-    delete_old_models,
     warehouse,
     trainer
 )
@@ -99,8 +98,7 @@ def run():
     status = "success"
 
     try:
-        model_id = create_model(type=Type.ARTICLE.value, site=site.name)
-        logging.info(f"Created model with id {model_id}")
+
         EXPERIMENT_DT = datetime.now().date()
 
         ## Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
@@ -115,23 +113,18 @@ def run():
             site, days=config.get("DAYS_OF_DATA")
         )
 
-        embeddings, dates_df = train_model.train_model(
-            X=interactions_data, params=site.training_params, experiment_time=EXPERIMENT_DT
+        recommendations = train_model.get_recommendations(
+            interactions_data,
+            site.training_params,
+            EXPERIMENT_DT,
         )
-
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
         save_predictions.save_predictions(
-            embeddings=embeddings,
-            model_id=model_id,
-            spotlight_ids=dates_df["item_id"].values,
-            external_item_ids=dates_df["external_id"].values,
-            article_ids=dates_df["article_id"].values,
-            date_decays=dates_df["date_decays"].values,
+            site,
+            recommendations
         )
-        set_current_model(model_id, Type.ARTICLE.value, site.name)
 
-        delete_old_models.delete_old_models()
     except Exception:
         logging.exception("Job failed")
         status = "failure"

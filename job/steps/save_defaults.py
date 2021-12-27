@@ -1,4 +1,5 @@
 import logging
+import re
 import pandas as pd
 import numpy as np
 import datetime
@@ -7,7 +8,7 @@ from job.steps import preprocess
 from lib.config import config
 from sites.site import Site
 
-from db.helpers import create_model, set_current_model
+from db.helpers import create_model, refresh_db, set_current_model
 from db.mappings.base import db_proxy
 from db.mappings.model import Type
 from db.mappings.recommendation import Rec
@@ -15,6 +16,7 @@ from db.mappings.recommendation import Rec
 MAX_RECS = config.get("MAX_RECS")
 
 
+@refresh_db
 def save_defaults(
     top_articles: pd.DataFrame, site: Site, experiment_date: datetime.datetime.date
 ) -> None:

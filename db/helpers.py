@@ -12,6 +12,20 @@ from db.mappings.base import db_proxy
 from sites.site import Site
 
 
+def refresh_db(func):
+    """
+    Simple decorator to re-establish the database connection
+    because it occasionally times out
+    """
+
+    def wrapper(*args, **kwargs):
+        db_proxy.close()
+        db_proxy.connect()
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def create_model(**params: dict) -> int:
     return create_resource(Model, **params)
 
