@@ -58,6 +58,11 @@ def get_articles_by_external_ids(site: Site, external_ids: Iterable[str]) -> Lis
     else:
         return []
 
+def get_existing_external_ids(site: Site, external_ids: Iterable[str]) -> Iterable[str]:
+    """
+    Query the db with a list of external IDs and retrieve a list of the valid external IDs in the input
+    """
+    return [a.external_id for a in get_articles_by_external_ids(site, external_ids)]
 
 def update_article(article_id, **params) -> None:
     _update_resources(Article, Article.id == article_id, **params)

@@ -18,6 +18,7 @@ class Table(Enum):
     EVENTS = "events"
     DWELL_TIMES = "dwelltimes"
     ARTICLES = "articlerecdb.article"
+    PATHS = "articlerecdb.paths"
 
 
 def get_table(table: Table):
@@ -108,6 +109,7 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
 
     chunk_names_str = dts_to_chunk_name_sql(dts)
     events = get_table(Table.EVENTS)
+    paths = get_table(Table.PATHS)
     articles = get_table(Table.ARTICLES)
 
     query = f"""
@@ -121,22 +123,28 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
                 paths.landing_page_path, 
                 a.published_at, 
                 a.updated_at,
-                a.external_id
+                p.external_id,
+                p.exclude_reason
             from paths
-            left join {articles} a 
-                on paths.landing_page_path = a.path
-                and a.site = '{site.name}'
+            left join {paths} p
+                on paths.landing_page_path = p.path
+                and p.site = '{site.name}'
+            left join {articles} a
+                on p.external_id = a.external_id
+                and p.site = a.site
         )
         select landing_page_path, external_id from articles
         where 
             -- scrape articles that aren't in the cache:
-            external_id is NULL or
             -- re-scrape articles that meet these conditions:
             --    no publish date
             --    published within the last day
-            (
-                published_at is NULL or
-                published_at > current_date - 1
+            exclude_reason is NULL and (
+                external_id is NULL or
+                (
+                    published_at is NULL or
+                    (published_at > current_date - 1 and 
+                )
             )
     """
     connection = get_connection()

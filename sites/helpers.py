@@ -42,11 +42,22 @@ def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
     return transformed_df
 
 
+class ScrapeFailure(Enum):
+    UNKNOWN = 'unknown'
+    FETCH_ERROR = 'fetch_error'
+    NO_EXTERNAL_ID = 'no_external_id'
+    BAD_RESPONSE = 'bad_api_response'
+    EXCLUDE_TAG = 'exclude_tag'
+    NO_PUBLISH_DATE = 'no_publish_date'
+
+
 class ArticleScrapingError(Exception):
-    pass
+    def __init__(self, errorType: ScrapeFailure, path: str, external_id, msg=""):
+        self.error_type = errorType
+        self.path = path
+        self.msg = msg
+        self.external_id = external_id
 
-
-class ArticleFetchError(Exception):
     pass
 
 

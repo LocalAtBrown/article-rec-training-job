@@ -1,20 +1,34 @@
 from datetime import datetime
 from unittest import TestCase
 from unittest.mock import patch
-from typing import Optional
+from typing import Optional, Sized
 
 import pandas as pd
 from db.mappings.article import Article
+from db.mappings.exclude_url import ExcludeUrl
 
 from job.steps.scrape_metadata import scrape_upload_metadata
+from sites.helpers import ArticleScrapingError, ScrapeFailure
 from sites.site import Site
 from sites.sites import Sites
 from tests.base import BaseTest
 from tests.factories.article import ArticleFactory
 
 
-VALID_RES = (None, None, None)
-INVALID_RES = (None, None, "Test invalid message")
+def scrape_error(site, article):
+    raise ArticleScrapingError(ScrapeFailure.UNKNOWN, article.path, article.external_id)
+
+
+def safe_scrape_error(site, article):
+    raise ArticleScrapingError(ScrapeFailure.EXCLUDE_TAG, article.path, article.external_id)
+
+
+VALID_SCRAPE = Article(
+    external_id="some ID",
+    published_at=datetime.now(),
+    site=Sites.WCP.name,
+)
+
 
 NEW_VALID = pd.DataFrame(
     {
@@ -68,21 +82,21 @@ class TestScrapeMetadata(BaseTest):
         super().setUp()
 
     @patch("job.steps.warehouse.get_paths_to_update", return_value=NEW_VALID)
-    @patch("job.steps.scrape_metadata.validate_article", return_value=VALID_RES)
     @patch(
-        "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
+        "job.steps.scrape_metadata.scrape_article",
+        return_value=VALID_SCRAPE,
     )
-    def test_scrape_metadata__new_valid_recs(self, _, __, ___) -> None:
+    def test_scrape_metadata__new_valid_recs(self, _, __) -> None:
         scrape_upload_metadata(self.site, dts=[])
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 3
 
     @patch("job.steps.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
-    @patch("job.steps.scrape_metadata.validate_article", return_value=VALID_RES)
     @patch(
-        "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
+        "job.steps.scrape_metadata.scrape_article",
+        return_value=VALID_SCRAPE,
     )
-    def test_scrape_metadata__existing_valid_recs(self, _, __, ___) -> None:
+    def test_scrape_metadata__existing_valid_recs(self, _, __) -> None:
         for external_id in self.external_ids:
             article = ArticleFactory.create(
                 site=self.site.name, external_id=external_id
@@ -92,21 +106,27 @@ class TestScrapeMetadata(BaseTest):
         assert len(res) == 3
 
     @patch("job.steps.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
-    @patch("job.steps.scrape_metadata.validate_article", return_value=INVALID_RES)
     @patch(
-        "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
+        "job.steps.scrape_metadata.scrape_article",
+        return_value=None,
+        side_effect=scrape_error,
     )
-    def test_scrape_metadata__new_invalid_recs(self, _, __, ___) -> None:
+    def test_scrape_metadata__new_invalid_recs(self, _, __) -> None:
         scrape_upload_metadata(self.site, dts=[])
+        # No new articles created
         res = Article.select().where(Article.site == self.site.name)
+        assert len(res) == 0
+        # No exclude list entries created
+        res = ExcludeUrl.select().where(ExcludeUrl.site == self.site.name)
         assert len(res) == 0
 
     @patch("job.steps.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
-    @patch("job.steps.scrape_metadata.validate_article", return_value=INVALID_RES)
     @patch(
-        "job.steps.scrape_metadata.scrape_article_metadata", side_effect=dummy_scrape
+        "job.steps.scrape_metadata.scrape_article",
+        return_value=None,
+        side_effect=scrape_error,
     )
-    def test_scrape_metadata__existing_invalid_recs(self, _, __, ___) -> None:
+    def test_scrape_metadata__existing_invalid_recs(self, _, __) -> None:
         for external_id in self.external_ids:
             article = ArticleFactory.create(
                 site=self.site.name, external_id=external_id
@@ -115,3 +135,18 @@ class TestScrapeMetadata(BaseTest):
         scrape_upload_metadata(self.site, dts=[])
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 0
+
+    @patch("job.steps.warehouse.get_paths_to_update", return_value=NEW_VALID)
+    @patch(
+        "job.steps.scrape_metadata.scrape_article",
+        return_value=None,
+        side_effect=safe_scrape_error,
+    )
+    def test_scrape_metadata__new_invalid_safe_recs(self, _, __) -> None:
+        scrape_upload_metadata(self.site, dts=[])
+        # No new articles created
+        res = Article.select().where(Article.site == self.site.name)
+        assert len(res) == 0
+        # Exclude list entries created
+        res = ExcludeUrl.select().where(ExcludeUrl.site == self.site.name)
+        assert len(res) == 3
