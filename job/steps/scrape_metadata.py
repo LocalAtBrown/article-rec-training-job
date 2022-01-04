@@ -13,7 +13,6 @@ from db.mappings.article import Article
 from db.helpers import (
     get_articles_by_external_ids,
     refresh_db,
-    refresh_db,
 )
 from sites.site import Site
 from sites.helpers import ArticleScrapingError
