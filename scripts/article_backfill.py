@@ -35,10 +35,10 @@ def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
     log_level = config.get("LOG_LEVEL")
     logging.getLogger().setLevel(logging.getLevelName(log_level))
 
+    date = start_date
     for _ in range(0, days):
-        end_date = start_date + DELTA
         try:
-            res = site.bulk_fetch(start_date, end_date)
+            res = site.bulk_fetch(date, date + DELTA)
         except NotImplementedError:
             logging.error(f"`bulk_fetch` not implemented for site: {site.name}")
             return
@@ -49,7 +49,7 @@ def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
 
         db_proxy.close()
         db_proxy.connect()
-        start_date = end_date
+        date -= DELTA
 
 
 if __name__ == "__main__":
