@@ -13,7 +13,6 @@ from db.mappings.article import Article
 from db.helpers import (
     get_articles_by_external_ids,
     refresh_db,
-    get_existing_external_ids,
     refresh_db,
 )
 from sites.site import Site
