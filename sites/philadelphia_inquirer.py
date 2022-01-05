@@ -42,7 +42,7 @@ def bulk_fetch(
     raise NotImplementedError
 
 
-NON_ARTICLE_PREFIXES = ["/author" "/wires"]
+NON_ARTICLE_PREFIXES = ["/author", "/wires"]
 
 
 def extract_external_id(path: str) -> Optional[str]:
