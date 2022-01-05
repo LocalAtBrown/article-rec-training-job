@@ -10,7 +10,6 @@ import re
 from lib.config import config
 from sites.helpers import ArticleFetchError, transform_data_google_tag_manager, safe_get
 from sites.site import Site
-from sites.texas_tribune import NON_ARTICLE_PREFIXES
 
 """
 ARC API documentation
