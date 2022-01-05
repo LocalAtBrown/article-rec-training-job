@@ -10,6 +10,7 @@ import re
 from lib.config import config
 from sites.helpers import ArticleFetchError, transform_data_google_tag_manager, safe_get
 from sites.site import Site
+from sites.texas_tribune import NON_ARTICLE_PREFIXES
 
 """
 ARC API documentation
@@ -30,9 +31,9 @@ PARAMS = {
     "epochs": 2,
     "tune": False,
     "tune_params": ["epochs", "embedding_dim"],
-    "tune_ranges": [[1,3,1],[30,180,50]],
+    "tune_ranges": [[1, 3, 1], [30, 180, 50]],
     "model": "IMF",
-    "loss": "adaptive_hinge"
+    "loss": "adaptive_hinge",
 }
 
 
@@ -40,6 +41,9 @@ def bulk_fetch(
     start_date: datetime.date, end_date: datetime.date
 ) -> List[Dict[str, Any]]:
     raise NotImplementedError
+
+
+NON_ARTICLE_PREFIXES = ["/author" "/wires"]
 
 
 def extract_external_id(path: str) -> Optional[str]:
@@ -55,8 +59,9 @@ def extract_external_id(path: str) -> Optional[str]:
         "included_fields": "_id",
     }
 
-    if "/author/" in path:
-        return None
+    for prefix in NON_ARTICLE_PREFIXES:
+        if path.startswith(prefix):
+            return None
 
     try:
         res = safe_get(API_URL, API_HEADER, params)
