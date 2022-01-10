@@ -57,8 +57,6 @@ def scrape_upload_metadata(site: Site, dts: List[datetime]) -> None:
     total_scraped += n_scraped
     scraping_errors += n_error
 
-    logging.info(f"{len(old_articles)} pre-existing articles found with new paths")
-
     # Paths to refresh are the ones where the external ID is not null
     refresh_ext_ids = set(df["external_id"].dropna())
     refresh_articles = get_articles_by_external_ids(site, refresh_ext_ids) + old_articles
