@@ -50,9 +50,19 @@ def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
 
 
 def get_articles_by_external_ids(site: Site, external_ids: Iterable[str]) -> List[Article]:
-    return Article.select().where(
-        (Article.site == site.name) & Article.external_id.in_(list(external_ids))
-    )
+    if external_ids:
+        return Article.select().where(
+            (Article.site == site.name) & Article.external_id.in_(list(external_ids))
+        )
+    else:
+        return []
+
+
+def get_existing_external_ids(site: Site, external_ids: Iterable[str]) -> Iterable[str]:
+    """
+    Query the db with a list of external IDs and retrieve a list of the valid external IDs in the input
+    """
+    return [a.external_id for a in get_articles_by_external_ids(site, external_ids)]
 
 
 def update_article(article_id, **params) -> None:

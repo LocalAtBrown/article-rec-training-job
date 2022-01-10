@@ -160,6 +160,7 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
 
 def validate_article(
     external_id: str,
+    path: str,
 ) -> (Response, Optional[BeautifulSoup], Optional[str]):
     external_id = int(external_id)
 

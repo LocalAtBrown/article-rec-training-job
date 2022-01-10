@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from db.mappings.article import Article
 from db.helpers import (
     get_articles_by_external_ids,
+    get_existing_external_ids,
     refresh_db,
 )
 from job.steps import warehouse
@@ -37,22 +38,23 @@ def scrape_upload_metadata(site: Site, dts: List[datetime]) -> None:
 
     # New paths are the ones where the external ID is null
     new_paths = list(df[df["external_id"].isna()]["landing_page_path"])
-    new_ext_ids = [e for e in extract_external_ids(site, new_paths) if e]
-    # Filter out matching articles in Postgres but not in the cache
-    existing_article_ids = set(
-        [a.external_id for a in get_articles_by_external_ids(site, new_ext_ids)]
-    )
-    create_ids = [e for e in new_ext_ids if e not in existing_article_ids]
+    new_articles, old_articles = new_articles_from_paths(site, new_paths)
 
-    logging.info(f"Scraping {len(new_paths)} new paths...")
+    logging.info(f"Scraping {len(new_articles)} new paths...")
     n_scraped, n_error = scrape_and_create_articles(
         site,
-        [Article(external_id=extid) for extid in create_ids],
+        new_articles,
     )
+    total_scraped += n_scraped
+    scraping_errors += n_error
+
+    logging.info(f"{len(old_articles)} pre-existing articles found with new paths")
+
     # Paths to refresh are the ones where the external ID is not null
-    refresh_ext_ids = set(df["external_id"].dropna()).difference(new_ext_ids)
-    logging.info(f"Refreshing {len(refresh_ext_ids)} articles...")
-    refresh_articles = get_articles_by_external_ids(site, refresh_ext_ids)
+    refresh_ext_ids = set(df["external_id"].dropna())
+    refresh_articles = get_articles_by_external_ids(site, refresh_ext_ids) + old_articles
+
+    logging.info(f"Refreshing {len(refresh_articles)} articles...")
     n_scraped, n_error = scrape_and_update_articles(site, refresh_articles)
 
     total_scraped += n_scraped
@@ -68,11 +70,11 @@ def extract_external_id(site: Site, path: str) -> str:
     return site.extract_external_id(path)
 
 
-def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[str]:
+def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[Optional[str]]:
     """
     :param data_df: DataFrame of activities collected from Snowplow.
         * Requisite fields: "landing_page_path" (str)
-    :return: data_df with "external_id" column added
+    :return: data_df with "external_id" column added, None if no external ID found.
     """
     futures_list = []
     results = []
@@ -87,7 +89,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[str]
                 result = future.result(timeout=60)
                 results.append(result)
             except:
-                pass
+                results.append(None)
 
     return results
 
@@ -97,10 +99,9 @@ def scrape_article(site: Site, article: Article) -> Article:
     Validate the article and retrieve updated metadata via web scrape.
     Return updated Article object. If an error is found, raises ArticleScrapingError
     """
-    external_id = article.external_id
-    page, soup, error_msg = validate_article(site, external_id)
+    page, soup, error_msg = validate_article(site, article.external_id, article.path)
     if error_msg:
-        logging.warning(f"Error while validating article {external_id}: '{error_msg}'")
+        logging.warning(f"Error while validating article {article.external_id}: '{error_msg}'")
         raise ArticleScrapingError(error_msg)
     metadata = scrape_article_metadata(site, page, soup)
     for key, value in metadata.items():
@@ -140,13 +141,39 @@ def scrape_articles(
     return results, failed_articles
 
 
-def scrape_and_create_articles(site: Site, articles: List[Article]) -> Tuple[int, int]:
+def new_articles_from_paths(
+    site: Site, paths: List[str]
+) -> Tuple[List[Article], List[Article]]:
     """
-    Given a Site and list of Article objects, validate the article,
-    scrape associated metadata, and save articles to the database
-    if they have a published_at field
-    Return a tuple (# successful scrapes, # errors)
+    Given a set of paths, return a tuple of lists of articles.
+    The first element of the tuple are new articles, that need to be created.
+    The second element are old articles, that need to be updated.
     """
+    # First, extract external IDs from the paths
+    external_ids = extract_external_ids(site, paths)
+
+    articles = [Article(external_id=ext_id, path=path) for path, ext_id in zip(paths, external_ids) if ext_id]
+    logging.info(f"Discarding {len(paths) - len(articles)} paths with no external ID")
+
+    # Sometimes multiple paths resolve to the same external ID,
+    # so the db could be missing a path whose external ID already exists
+    existing_external_ids = set(get_existing_external_ids(site, [a.external_id for a in articles]))
+
+    new_articles = [a for a in articles if a.external_id not in existing_external_ids]
+    old_articles = [a for a in articles if a.external_id in existing_external_ids]
+    return new_articles, old_articles
+
+
+def scrape_and_create_articles(
+    site: Site, articles: List[Article]
+) -> Tuple[int, int]:
+    """
+    Given a Site and list of paths (or external ID scrape errors),
+    fetch the article, scrape associated metadata, and save articles to the database
+    Return a list of created article objects corresponding to the input IDs.
+    ArticleScrapeErrors are given for articles that failed to be created
+    """
+    logging.info(f"Creating {len(articles)} new articles")
     results, failed = scrape_articles(site, articles)
 
     for article in failed:
@@ -209,9 +236,9 @@ def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int
 
 
 def validate_article(
-    site: Site, path: str
+    site: Site, external_id: str, path: str
 ) -> Tuple[Response, BeautifulSoup, Optional[str]]:
-    return site.validate_article(path)
+    return site.validate_article(external_id, path)
 
 
 def scrape_article_metadata(
