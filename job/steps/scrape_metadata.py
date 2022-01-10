@@ -10,7 +10,6 @@ from bs4 import BeautifulSoup
 from db.mappings.article import Article
 from db.helpers import (
     get_articles_by_external_ids,
-    get_existing_external_ids,
     refresh_db,
 )
 from job.steps import warehouse
@@ -24,8 +23,12 @@ from db.mappings.base import db_proxy
 @refresh_db
 def scrape_upload_metadata(site: Site, dts: List[datetime]) -> None:
     """
-    Update article metadata for any URLs that were visited during the given dts
-    for both Postgres and the Redshift article_cache table
+    Update article metadata for any URLs that were visited during the given dts.
+
+    URLs from the events table are joined with the Postgres articles database
+    URLs with no associated article ID are "new urls" that we need to create.
+    URLs with an associated article ID are "refresh urls" that we need to update.
+    When multiple URLs resolve to the same article ID, we update Postgres with the new URL.
     """
     start_ts = time.time()
     total_scraped = 0
@@ -39,6 +42,12 @@ def scrape_upload_metadata(site: Site, dts: List[datetime]) -> None:
     # New paths are the ones where the external ID is null
     new_paths = list(df[df["external_id"].isna()]["landing_page_path"])
     new_articles, old_articles = new_articles_from_paths(site, new_paths)
+
+    # Old articles are articles where a "new" path resolves to an external ID
+    # that is already in the database. This should happen rarely.
+    for a in old_articles:
+        logging.warning(f"New path {a.path} found for existing article external_id {a.external_id}")
+    write_metric("article_scraping_multiple_paths", len(old_articles))
 
     logging.info(f"Scraping {len(new_articles)} new paths...")
     n_scraped, n_error = scrape_and_create_articles(
@@ -145,9 +154,9 @@ def new_articles_from_paths(
     site: Site, paths: List[str]
 ) -> Tuple[List[Article], List[Article]]:
     """
-    Given a set of paths, return a tuple of lists of articles.
-    The first element of the tuple are new articles, that need to be created.
-    The second element are old articles, that need to be updated.
+    Given a set of presumably new paths, return article objects that need to be created
+    The first element of the tuple are fresh articles, that need to be created.
+    The second element are old, pre-existing articles, that need to be updated with the new path.
     """
     # First, extract external IDs from the paths
     external_ids = extract_external_ids(site, paths)
@@ -157,10 +166,18 @@ def new_articles_from_paths(
 
     # Sometimes multiple paths resolve to the same external ID,
     # so the db could be missing a path whose external ID already exists
-    existing_external_ids = set(get_existing_external_ids(site, [a.external_id for a in articles]))
+    existing_articles = {a.external_id: a for a in get_articles_by_external_ids(
+        site, [a.external_id for a in articles])}
 
-    new_articles = [a for a in articles if a.external_id not in existing_external_ids]
-    old_articles = [a for a in articles if a.external_id in existing_external_ids]
+    new_articles = [a for a in articles if a.external_id not in existing_articles]
+
+    # Set the ID field for the old articles so update logic works
+    old_articles = []
+    for a in articles:
+        if a.external_id in existing_articles:
+            a.id = existing_articles[a.external_id].id
+            old_articles.append(a)
+
     return new_articles, old_articles
 
 
@@ -225,7 +242,7 @@ def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int
 
     # Use the peewee bulk update method. Update every field that isn't
     # in the RESERVED_FIELDS list
-    RESERVED_FIELDS = {"id", "created_at", "updated_at"}
+    RESERVED_FIELDS = {"id", "created_at"}
     fields = list(Article._meta.fields.keys() - RESERVED_FIELDS)
 
     logging.info(f"Bulk updating {len(to_update)} records")
