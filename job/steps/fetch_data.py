@@ -15,13 +15,13 @@ from job.steps import warehouse
 from sites.site import get_bucket_name, Site
 
 PATH = "/downloads"
-THRESHOLD = 100000
+MEM_THRESHOLD = 100000
 
 
 def download_chunk(site: Site, dt: datetime.datetime):
     """
     Download the files for the date and hour of the given dt
-    Returns an iterator of the downloaded filenames
+    Returns a generator of downloaded filenames
     """
     if not os.path.isdir(PATH):
         os.makedirs(PATH)
@@ -35,7 +35,8 @@ def download_chunk(site: Site, dt: datetime.datetime):
     )
 
     for _, _, files in os.walk(PATH):
-        return files
+        for file in files:
+            yield file
 
 
 def aggregate_page_pings(df: pd.DataFrame):
@@ -78,10 +79,10 @@ def fetch_transform_upload_chunks(
 
     dfs = []
     for dt in dts:
-        s = time.time()
+        start_ts = time.time()
         filenames = download_chunk(site, dt)
-        d = time.time()
-        logging.info(f"Download: {d - s}s")
+        download_ts = time.time()
+        logging.info(f"Download: {download_ts - start_ts}s")
         for filename in filenames:
             file_path = os.path.join(PATH, filename)
             tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
@@ -91,12 +92,11 @@ def fetch_transform_upload_chunks(
             df = aggregate_page_pings(df)
             if df.size:
                 dfs.append(df)
-        l = time.time() - d
-        logging.info(f"Transform: {l}s")
+        logging.info(f"Transform: {time.time() - download_ts}s")
         shutil.rmtree(PATH)
 
         total_rows = sum([len(df) for df in dfs])
-        if total_rows > THRESHOLD:
+        if total_rows > MEM_THRESHOLD:
             # We've hit the memory limit, push it to S3
             # Then continue from where we left off
             warehouse.write_events(site, dt, pd.concat(dfs))

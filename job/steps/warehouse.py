@@ -132,10 +132,11 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
             -- scrape articles that aren't in the cache:
             external_id is NULL or
             -- re-scrape articles that meet these conditions:
+            --    no publish date
+            --    published within the last day
             (
                 published_at is NULL or
-                (published_at > current_date - 1 and 
-                updated_at < dateadd(hour, -1, current_time))
+                published_at > current_date - 1
             )
     """
     connection = get_connection()
