@@ -82,6 +82,7 @@ def get_recommendations(
     external_item_ids = df["external_id"].values
     article_ids = df["article_id"].values
     recs = []
+
     for i in spotlight_ids:
         source_external_id = external_item_ids[i]
         recommendations = map_nearest(i, nearest_indices, similarities, article_ids)

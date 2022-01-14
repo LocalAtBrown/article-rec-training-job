@@ -203,6 +203,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     - Removes users who spent less than one total minute on the site
     """
     table = get_table(Table.DWELL_TIMES)
+    article_table = get_table(Table.ARTICLES)
     query = f"""
     with article_agg as (
         select count(*) as num_users_per_article, article_id 
@@ -219,10 +220,11 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
         group by client_id
     )
     select 
-        {table}.article_id, {table}.external_id, {table}.client_id, session_date, duration, published_at 
+        {table}.article_id, {table}.external_id, {table}.client_id, session_date, duration, cast({article_table}.published_at as date) as published_at
     from {table}
     join article_agg on article_agg.article_id = {table}.article_id
     join user_agg on user_agg.client_id = {table}.client_id
+    join {article_table} on {article_table}.id = {table}.article_id
     where {table}.site = '{site.name}'
     -- filter for session dates greater than `days` days ago
     and timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1

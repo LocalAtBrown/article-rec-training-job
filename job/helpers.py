@@ -10,7 +10,7 @@ def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
 
 
-def chunk_name(dt: datetime):
+def chunk_name(dt: datetime) -> str:
     month = pad_date(dt.month)
     day = pad_date(dt.day)
     hour = pad_date(dt.hour)

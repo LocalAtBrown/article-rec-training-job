@@ -167,7 +167,9 @@ def new_articles_from_paths(
     existing_articles = {a.external_id: a for a in get_articles_by_external_ids(
         site, [a.external_id for a in articles])}
 
-    new_articles = [a for a in articles if a.external_id not in existing_articles]
+    # In extremely rare cases there are duplicate external_ids here
+    # Get rid of duplicates by using a dictionary keyed by external_id
+    new_articles = {a.external_id: a for a in articles if a.external_id not in existing_articles}.values()
 
     # Set the ID field for the old articles so update logic works
     old_articles = []
