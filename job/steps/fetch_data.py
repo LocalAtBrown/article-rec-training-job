@@ -1,12 +1,15 @@
 import datetime
+from collections import deque
 import logging
+import json
 import os
+import gzip
 import subprocess
 import shutil
 import time
 
 import pandas as pd
-from typing import List
+from typing import List, Set
 
 from lib.metrics import write_metric, Unit
 from job.helpers import chunk_name
@@ -23,20 +26,56 @@ def download_chunk(site: Site, dt: datetime.datetime):
     Download the files for the date and hour of the given dt
     Returns a generator of downloaded filenames
     """
-    if not os.path.isdir(PATH):
-        os.makedirs(PATH)
+    path = os.path.join(PATH, chunk_name(dt))
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
     s3_path = f"s3://{get_bucket_name(site)}/enriched/good/{chunk_name(dt)}"
-    s3_sync_cmd = f"aws s3 sync {s3_path} {PATH}".split(" ")
+    s3_sync_cmd = f"aws s3 sync {s3_path} {path}".split(" ")
     logging.info(" ".join(s3_sync_cmd))
-    subprocess.call(
+    return subprocess.Popen(
         s3_sync_cmd,
         stdout=subprocess.DEVNULL,
     )
 
-    for _, _, files in os.walk(PATH):
-        for file in files:
-            yield file
+
+def fast_read(path: str, fields: Set[str]) -> pd.DataFrame:
+    """
+    Read the gzipped file path into a df with the given fields
+    This is 2x as fast as pd.read_json(gzip=True) for some reason
+    """
+    with gzip.open(path, 'rt') as f:
+        records = deque()
+        for line in f:
+            l = json.loads(line)
+            try:
+                records.appendleft({k: l[k] for k in fields})
+            except:
+                # believe it or not, this happens sometimes
+                logging.warning(f"Could not parse row! Filename {path}, path {l.get('page_path_urk')}")
+    return pd.DataFrame.from_records(records)
+
+
+def transform_chunk(site: Site, dt: datetime.datetime) -> List[pd.DataFrame]:
+    path = os.path.join(PATH, chunk_name(dt))
+    filenames = None
+    for _, _, files in os.walk(path):
+        filenames = files
+        break
+
+    dfs = []
+
+    for filename in filenames:
+        file_path = os.path.join(path, filename)
+
+        df = fast_read(file_path, site.fields)
+        df = site.transform_raw_data(df)
+        df = aggregate_page_pings(df)
+
+        if df.size:
+            dfs.append(df)
+
+    return dfs
 
 
 def aggregate_page_pings(df: pd.DataFrame):
@@ -47,7 +86,7 @@ def aggregate_page_pings(df: pd.DataFrame):
     pings = df[df["event_name"] == Event.PAGE_PING.value]
     grouped_df = (
         pings.groupby(["client_id", "landing_page_path", "session_date"])
-        .agg({"event_name": "count", "activity_time": "min"})
+        .agg({"event_name": "count", "activity_time": "first"})
         .reset_index()
         .rename(columns={"event_name": "ping_count"})
     )
@@ -61,14 +100,14 @@ def aggregate_page_pings(df: pd.DataFrame):
 def fetch_transform_upload_chunks(
     site: Site,
     dts: List[datetime.datetime],
-) -> pd.DataFrame:
+) -> None:
     """
     1. Fetches events data from S3
     2. Transform/filter the data to standard schema
     3. Upload to Redshift snowplow table
 
     start_dt: the dt to start fetching data for
-    hours: the number of hours to fetch for
+    dts: list of the dts to fetch for
     """
 
     # In order to balance performance and memory usage,
@@ -78,22 +117,26 @@ def fetch_transform_upload_chunks(
     written_events = 0
 
     dfs = []
-    for dt in dts:
-        start_ts = time.time()
-        filenames = download_chunk(site, dt)
-        download_ts = time.time()
-        logging.info(f"Download: {download_ts - start_ts}s")
-        for filename in filenames:
-            file_path = os.path.join(PATH, filename)
-            tmp_df = pd.read_json(file_path, lines=True, compression="gzip")
-            downloaded_rows += len(tmp_df)
 
-            df = site.transform_raw_data(tmp_df)
-            df = aggregate_page_pings(df)
-            if df.size:
-                dfs.append(df)
-        logging.info(f"Transform: {time.time() - download_ts}s")
-        shutil.rmtree(PATH)
+    # Take advantage of async download_chunk
+    # Launch N_CONCURRENT_DOWNLOAD processes first.
+    N_CONCURRENT_DOWNLOAD = 4
+    processes = {}
+    for dt in dts[0:N_CONCURRENT_DOWNLOAD]:
+        processes[dt] = download_chunk(site, dt)
+
+    # in the loop, start the next download process
+    # then wait for the current dt's download to finish
+    # before starting the transform
+    for dt in dts:
+        processes[dt].wait()
+        if len(processes) < len(dts):
+            next_dt = dts[len(processes)]
+            processes[next_dt] = download_chunk(site, next_dt)
+
+        dfs.extend(transform_chunk(site, dt))
+        # Delete the data as soon as it's used
+        shutil.rmtree(os.path.join(PATH, chunk_name(dt)))
 
         total_rows = sum([len(df) for df in dfs])
         if total_rows > MEM_THRESHOLD:
@@ -107,6 +150,9 @@ def fetch_transform_upload_chunks(
         total_rows = sum([len(df) for df in dfs])
         warehouse.write_events(site, dts[-1], pd.concat(dfs))
         written_events += total_rows
+
+    downloaded_rows += sum([len(df) for df in dfs])
+    shutil.rmtree(PATH)
 
     write_metric("downloaded_rows", downloaded_rows)
     write_metric("written_events", written_events)
