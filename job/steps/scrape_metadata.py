@@ -1,11 +1,9 @@
-import time
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import List, Tuple, Optional
+from datetime import datetime
+import time
+from typing import List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
 
-import pandas as pd
-import numpy as np
 from requests.models import Response
 from bs4 import BeautifulSoup
 
@@ -14,81 +12,93 @@ from db.helpers import (
     get_articles_by_external_ids,
     refresh_db,
 )
+from job.steps import warehouse
 from sites.site import Site
 from sites.helpers import ArticleScrapingError
-from lib.bucket import save_outputs
 from lib.metrics import write_metric, Unit
 from db.helpers import delete_articles
 from db.mappings.base import db_proxy
 
-BACKFILL_ISO_DATE = "2021-09-08"
-
 
 @refresh_db
-def scrape_metadata(site: Site, external_ids: List[str]) -> pd.DataFrame:
+def scrape_upload_metadata(site: Site, dts: List[datetime]) -> None:
     """
-    Find articles on news website from list of paths, then associate with corresponding identifiers.
-    :param site: Site object enabling retrieval of external ID
-    :param external_ids: Article id's from external news site
-    :return: DataFrame of identifiers for collected articles: the path on the website, the external ID,
-        and the article ID in the database.
-        * Requisite fields: "article_id" (str), "external_id" (str)
+    Update article metadata for any URLs that were visited during the given dts.
+
+    URLs from the events table are joined with the Postgres articles database
+    URLs with no associated article ID are "new urls" that we need to create.
+    URLs with an associated article ID are "refresh urls" that we need to update.
+    When multiple URLs resolve to the same article ID, we update Postgres with the new URL.
     """
     start_ts = time.time()
     total_scraped = 0
     scraping_errors = 0
-    external_ids = set(external_ids)
-    articles = get_articles_by_external_ids(site, external_ids)
-    refresh_articles = [a for a in articles if should_refresh(a)]
-    found_external_ids = {a.external_id for a in articles}
 
+    logging.info("Fetching paths to update...")
+    df = warehouse.get_paths_to_update(site, dts)
+
+    logging.info(f"Updating {len(df)} paths...")
+
+    # New paths are the ones where the external ID is null
+    new_paths = list(df[df["external_id"].isna()]["landing_page_path"])
+    new_articles, old_articles = new_articles_from_paths(site, new_paths)
+
+    # Old articles are articles where a "new" path resolves to an external ID
+    # that is already in the database. This should happen rarely.
+    for a in old_articles:
+        logging.warning(f"New path {a.path} found for existing article external_id {a.external_id}")
+    write_metric("article_scraping_multiple_paths", len(old_articles))
+
+    logging.info(f"Scraping {len(new_articles)} new paths...")
+    n_scraped, n_error = scrape_and_create_articles(
+        site,
+        new_articles,
+    )
+    total_scraped += n_scraped
+    scraping_errors += n_error
+
+    # Paths to refresh are the ones where the external ID is not null
+    refresh_ext_ids = set(df["external_id"].dropna())
+    refresh_articles = get_articles_by_external_ids(site, refresh_ext_ids) + old_articles
+
+    logging.info(f"Refreshing {len(refresh_articles)} articles...")
     n_scraped, n_error = scrape_and_update_articles(site, refresh_articles)
+
     total_scraped += n_scraped
     scraping_errors += n_error
-
-    new_articles = [
-        Article(external_id=ext_id)
-        for ext_id in external_ids
-        if ext_id not in found_external_ids
-    ]
-
-    n_scraped, n_error = scrape_and_create_articles(site, new_articles)
-    total_scraped += n_scraped
-    scraping_errors += n_error
-
-    articles = get_articles_by_external_ids(site, external_ids)
 
     write_metric("article_scraping_total", total_scraped)
     write_metric("article_scraping_errors", scraping_errors)
     latency = time.time() - start_ts
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
-    df_data = {
-        "article_id": [a.id for a in articles],
-        "external_id": [a.external_id for a in articles],
-        "published_at": [a.published_at for a in articles],
-        "landing_page_path": [a.path for a in articles],
-        "site": [a.site for a in articles],
-    }
-    article_df = pd.DataFrame(df_data)
-    return article_df
 
 
-def should_refresh(article: Article) -> bool:
-    # refresh metadata without a published time recorded yet
-    if not article.published_at:
-        return True
+def extract_external_id(site: Site, path: str) -> str:
+    return site.extract_external_id(path)
 
-    # refresh metadata for articles published within the last day
-    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    if article.published_at > yesterday:
-        return True
 
-    # refresh metadata for articles last updated before the backfill
-    backfill_date = datetime.fromisoformat(BACKFILL_ISO_DATE).astimezone(timezone.utc)
-    if backfill_date > article.updated_at:
-        return True
+def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[Optional[str]]:
+    """
+    :param data_df: DataFrame of activities collected from Snowplow.
+        * Requisite fields: "landing_page_path" (str)
+    :return: data_df with "external_id" column added, None if no external ID found.
+    """
+    futures_list = []
+    results = []
 
-    return False
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for path in landing_page_paths:
+            future = executor.submit(extract_external_id, site, path=path)
+            futures_list.append((path, future))
+
+        for (path, future) in futures_list:
+            try:
+                result = future.result(timeout=60)
+                results.append(result)
+            except:
+                results.append(None)
+
+    return results
 
 
 def scrape_article(site: Site, article: Article) -> Article:
@@ -96,10 +106,9 @@ def scrape_article(site: Site, article: Article) -> Article:
     Validate the article and retrieve updated metadata via web scrape.
     Return updated Article object. If an error is found, raises ArticleScrapingError
     """
-    external_id = article.external_id
-    page, soup, error_msg = validate_article(site, external_id)
+    page, soup, error_msg = validate_article(site, article.external_id, article.path)
     if error_msg:
-        logging.warning(f"Error while validating article {external_id}: '{error_msg}'")
+        logging.warning(f"Error while validating article {article.external_id}: '{error_msg}'")
         raise ArticleScrapingError(error_msg)
     metadata = scrape_article_metadata(site, page, soup)
     for key, value in metadata.items():
@@ -139,13 +148,49 @@ def scrape_articles(
     return results, failed_articles
 
 
-def scrape_and_create_articles(site: Site, articles: List[Article]) -> Tuple[int, int]:
+def new_articles_from_paths(
+    site: Site, paths: List[str]
+) -> Tuple[List[Article], List[Article]]:
     """
-    Given a Site and list of Article objects, validate the article,
-    scrape associated metadata, and save articles to the database
-    if they have a published_at field
-    Return a tuple (# successful scrapes, # errors)
+    Given a set of presumably new paths, return article objects that need to be created
+    The first element of the tuple are fresh articles, that need to be created.
+    The second element are old, pre-existing articles, that need to be updated with the new path.
     """
+    # First, extract external IDs from the paths
+    external_ids = extract_external_ids(site, paths)
+
+    articles = [Article(external_id=ext_id, path=path) for path, ext_id in zip(paths, external_ids) if ext_id]
+    logging.info(f"Discarding {len(paths) - len(articles)} paths with no external ID")
+
+    # Sometimes multiple paths resolve to the same external ID,
+    # so the db could be missing a path whose external ID already exists
+    existing_articles = {a.external_id: a for a in get_articles_by_external_ids(
+        site, [a.external_id for a in articles])}
+
+    # In extremely rare cases there are duplicate external_ids here
+    # Get rid of duplicates by using a dictionary keyed by external_id
+    new_articles = {a.external_id: a for a in articles if a.external_id not in existing_articles}.values()
+
+    # Set the ID field for the old articles so update logic works
+    old_articles = []
+    for a in articles:
+        if a.external_id in existing_articles:
+            a.id = existing_articles[a.external_id].id
+            old_articles.append(a)
+
+    return new_articles, old_articles
+
+
+def scrape_and_create_articles(
+    site: Site, articles: List[Article]
+) -> Tuple[int, int]:
+    """
+    Given a Site and list of paths (or external ID scrape errors),
+    fetch the article, scrape associated metadata, and save articles to the database
+    Return a list of created article objects corresponding to the input IDs.
+    ArticleScrapeErrors are given for articles that failed to be created
+    """
+    logging.info(f"Creating {len(articles)} new articles")
     results, failed = scrape_articles(site, articles)
 
     for article in failed:
@@ -197,7 +242,7 @@ def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int
 
     # Use the peewee bulk update method. Update every field that isn't
     # in the RESERVED_FIELDS list
-    RESERVED_FIELDS = {"id", "created_at", "updated_at"}
+    RESERVED_FIELDS = {"id", "created_at"}
     fields = list(Article._meta.fields.keys() - RESERVED_FIELDS)
 
     logging.info(f"Bulk updating {len(to_update)} records")
@@ -208,9 +253,9 @@ def scrape_and_update_articles(site: Site, articles: List[Article]) -> Tuple[int
 
 
 def validate_article(
-    site: Site, path: str
+    site: Site, external_id: str, path: str
 ) -> Tuple[Response, BeautifulSoup, Optional[str]]:
-    return site.validate_article(path)
+    return site.validate_article(external_id, path)
 
 
 def scrape_article_metadata(

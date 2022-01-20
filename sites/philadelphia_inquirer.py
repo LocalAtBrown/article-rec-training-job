@@ -171,7 +171,7 @@ def validate_not_excluded(res: Response) -> Optional[str]:
     return None
 
 
-def validate_article(external_id: str) -> (Response, str, Optional[str]):
+def validate_article(external_id: str, path: str) -> (Response, str, Optional[str]):
     """ARC API validation handler
 
     :external_id: Unique identifier for a URL

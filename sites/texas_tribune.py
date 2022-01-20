@@ -30,7 +30,7 @@ PARAMS = {
     "model": "IMF",
     "loss": "adaptive_hinge",
     "tune_params": ["epochs", "embedding_dim"],
-    "tune_ranges": [[5,11,2],[160,360,100]]
+    "tune_ranges": [[5, 11, 2], [160, 360, 100]],
 }
 
 NON_ARTICLE_PREFIXES = [
@@ -160,6 +160,7 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
 
 def validate_article(
     external_id: str,
+    path: str,
 ) -> (Response, Optional[BeautifulSoup], Optional[str]):
     external_id = int(external_id)
 
