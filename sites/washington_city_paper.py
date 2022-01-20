@@ -14,11 +14,12 @@ import pandas as pd
 
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
-FIELDS = [
+FIELDS = {
     "collector_tstamp",
     "page_urlpath",
     "contexts_dev_amp_snowplow_amp_id_1",
-]
+    "event_name",
+}
 PARAMS = {
     "hl": 30,
     "embedding_dim": 144,

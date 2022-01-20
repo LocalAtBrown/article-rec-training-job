@@ -6,12 +6,21 @@ import pandas as pd
 from retrying import retry
 
 
+GOOGLE_TAG_MANAGER_RAW_FIELDS = {
+    'collector_tstamp',
+    'domain_userid',
+    'event_name',
+    'page_urlpath'
+}
+
+
 def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
     """
         requires a dataframe with the following fields:
-                - domain_userid
-                    - collector_tstamp
-                        - page_urlpath
+            - domain_userid
+            - collector_tstamp
+            - page_urlpath
+            - event_name
     returns a dataframe with the following fields:
         - client_id
             - session_date
