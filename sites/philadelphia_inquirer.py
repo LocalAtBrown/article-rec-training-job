@@ -10,7 +10,7 @@ import re
 from lib.config import config
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
-    ArticleScrapingError,
+    ArticleFetchError,
     transform_data_google_tag_manager,
     safe_get,
 )
