@@ -112,7 +112,7 @@ def fetch_transform_upload_chunks(
 
     # In order to balance performance and memory usage,
     # data fetching is done in batches of <BATCH_SIZE> rows.
-    start_ts = time.time()
+    first_start_ts = time.time()
     downloaded_rows = 0
     written_events = 0
 
@@ -156,5 +156,5 @@ def fetch_transform_upload_chunks(
 
     write_metric("downloaded_rows", downloaded_rows)
     write_metric("written_events", written_events)
-    latency = time.time() - start_ts
+    latency = time.time() - first_start_ts
     write_metric("download_time", latency, unit=Unit.SECONDS)
