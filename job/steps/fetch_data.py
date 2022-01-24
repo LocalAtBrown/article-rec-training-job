@@ -24,7 +24,9 @@ MEM_THRESHOLD = 100000
 def download_chunk(site: Site, dt: datetime.datetime):
     """
     Download the files for the date and hour of the given dt
-    Returns a generator of downloaded filenames
+    Returns a process object representing the download-in-progress
+    The returned process object's .wait() method must be called before 
+    the files are guaranteed to be downloaded to disk
     """
     path = os.path.join(PATH, chunk_name(dt))
     if not os.path.isdir(path):
@@ -49,19 +51,21 @@ def fast_read(path: str, fields: Set[str]) -> pd.DataFrame:
         for line in f:
             l = json.loads(line)
             try:
-                records.appendleft({k: l[k] for k in fields})
+                records.append({k: l[k] for k in fields})
             except:
                 # believe it or not, this happens sometimes
-                logging.warning(f"Could not parse row! Filename {path}, path {l.get('page_path_urk')}")
+                logging.warning(f"Could not parse row! Filename {path}, path {l.get('page_path_url')}")
     return pd.DataFrame.from_records(records)
 
 
 def transform_chunk(site: Site, dt: datetime.datetime) -> List[pd.DataFrame]:
+    def gen_files(path):
+        for _, _, files in os.walk(path):
+            for file in files:
+                yield file
+
     path = os.path.join(PATH, chunk_name(dt))
-    filenames = None
-    for _, _, files in os.walk(path):
-        filenames = files
-        break
+    filenames = gen_files(path)
 
     dfs = []
 
@@ -117,35 +121,40 @@ def fetch_transform_upload_chunks(
     written_events = 0
 
     dfs = []
+    processes = {}
+    dts_to_download = iter(dts)
 
     # Take advantage of async download_chunk
     # Launch N_CONCURRENT_DOWNLOAD processes first.
     N_CONCURRENT_DOWNLOAD = 4
-    processes = {}
-    for dt in dts[0:N_CONCURRENT_DOWNLOAD]:
-        processes[dt] = download_chunk(site, dt)
+    for _ in range(N_CONCURRENT_DOWNLOAD):
+        dt = next(dts_to_download, None)
+        if dt:
+            processes[dt] = download_chunk(site, dt)
 
-    # in the loop, start the next download process
-    # then wait for the current dt's download to finish
-    # before starting the transform
     for dt in dts:
+        # wait for the download to finish before we can transform the data
         processes[dt].wait()
-        if len(processes) < len(dts):
-            next_dt = dts[len(processes)]
+
+        # start the next download job in the queue
+        next_dt = next(dts_to_download, None)
+        if next_dt:
             processes[next_dt] = download_chunk(site, next_dt)
 
+        # transform the downloaded data and save it
         dfs.extend(transform_chunk(site, dt))
-        # Delete the data as soon as it's used
+
+        # delete the downloaded data from disk
         shutil.rmtree(os.path.join(PATH, chunk_name(dt)))
 
+        # write data to the warehouse if threshold is met
         total_rows = sum([len(df) for df in dfs])
         if total_rows > MEM_THRESHOLD:
-            # We've hit the memory limit, push it to S3
-            # Then continue from where we left off
             warehouse.write_events(site, dt, pd.concat(dfs))
             written_events += total_rows
             dfs = []
 
+    # flush any remaining data to the warehouse
     if len(dfs):
         total_rows = sum([len(df) for df in dfs])
         warehouse.write_events(site, dts[-1], pd.concat(dfs))
