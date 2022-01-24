@@ -113,9 +113,6 @@ def fetch_transform_upload_chunks(
     start_dt: the dt to start fetching data for
     dts: list of the dts to fetch for
     """
-
-    # In order to balance performance and memory usage,
-    # data fetching is done in batches of <BATCH_SIZE> rows.
     first_start_ts = time.time()
     downloaded_rows = 0
     written_events = 0
