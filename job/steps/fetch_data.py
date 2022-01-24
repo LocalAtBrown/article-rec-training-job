@@ -121,7 +121,7 @@ def fetch_transform_upload_chunks(
     processes = {}
     dts_to_download = iter(dts)
 
-    # Take advantage of async download_chunk
+    # Use an async-pipeline approach to parallelize download
     # Launch N_CONCURRENT_DOWNLOAD processes first.
     N_CONCURRENT_DOWNLOAD = 4
     for _ in range(N_CONCURRENT_DOWNLOAD):
@@ -130,18 +130,18 @@ def fetch_transform_upload_chunks(
             processes[dt] = download_chunk(site, dt)
 
     for dt in dts:
-        # wait for the download to finish before we can transform the data
+        # wait for download to finish before transforming the data
         processes[dt].wait()
 
-        # start the next download job in the queue
+        # start next download job in the queue
         next_dt = next(dts_to_download, None)
         if next_dt:
             processes[next_dt] = download_chunk(site, next_dt)
 
-        # transform the downloaded data and save it
+        # transform downloaded data and save it
         dfs.extend(transform_chunk(site, dt))
 
-        # delete the downloaded data from disk
+        # delete downloaded data from disk
         shutil.rmtree(os.path.join(PATH, chunk_name(dt)))
 
         # write data to the warehouse if threshold is met
