@@ -8,7 +8,12 @@ import requests
 import re
 
 from lib.config import config
-from sites.helpers import ArticleFetchError, transform_data_google_tag_manager, safe_get
+from sites.helpers import (
+    GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    ArticleFetchError,
+    transform_data_google_tag_manager,
+    safe_get,
+)
 from sites.site import Site
 
 """
@@ -18,7 +23,7 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
-FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
+FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 
 API_URL = "https://api.pmn.arcpublishing.com/content/v4"
 API_KEY = config.get("INQUIRER_TOKEN")

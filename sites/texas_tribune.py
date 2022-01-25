@@ -8,6 +8,7 @@ import time
 from bs4 import BeautifulSoup
 
 from sites.helpers import (
+    GOOGLE_TAG_MANAGER_RAW_FIELDS,
     safe_get,
     ArticleScrapingError,
     transform_data_google_tag_manager,
@@ -21,7 +22,7 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
-FIELDS = ["collector_tstamp", "page_urlpath", "domain_userid"]
+FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 PARAMS = {
     "hl": 90,
     "embedding_dim": 100,
