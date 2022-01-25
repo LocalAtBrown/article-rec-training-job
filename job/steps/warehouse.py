@@ -143,7 +143,7 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
                 external_id is NULL or
                 (
                     published_at is NULL or
-                    (published_at > current_date - 1 and 
+                    published_at > current_date - 1
                 )
             )
     """
