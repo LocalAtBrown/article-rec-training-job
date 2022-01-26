@@ -49,6 +49,7 @@ class ScrapeFailure(Enum):
     BAD_RESPONSE = 'bad_api_response'
     EXCLUDE_TAG = 'exclude_tag'
     NO_PUBLISH_DATE = 'no_publish_date'
+    DUPLICATE_PATH = 'duplicate_path'
 
 
 class ArticleScrapingError(Exception):

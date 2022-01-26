@@ -5,7 +5,7 @@ from typing import Optional, Sized
 
 import pandas as pd
 from db.mappings.article import Article
-from db.mappings.exclude_url import ExcludeUrl
+from db.mappings.path import Path
 
 from job.steps.scrape_metadata import scrape_upload_metadata
 from sites.helpers import ArticleScrapingError, ScrapeFailure
@@ -117,7 +117,7 @@ class TestScrapeMetadata(BaseTest):
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 0
         # No exclude list entries created
-        res = ExcludeUrl.select().where(ExcludeUrl.site == self.site.name)
+        res = Path.select().where(Path.site == self.site.name)
         assert len(res) == 0
 
     @patch("job.steps.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
@@ -148,5 +148,5 @@ class TestScrapeMetadata(BaseTest):
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 0
         # Exclude list entries created
-        res = ExcludeUrl.select().where(ExcludeUrl.site == self.site.name)
+        res = Path.select().where(Path.site == self.site.name)
         assert len(res) == 3

@@ -7,10 +7,10 @@ from db.mappings import database
 from db.mappings.model import Model
 from db.mappings.article import Article
 from db.mappings.recommendation import Rec
-from db.mappings.exclude_url import ExcludeUrl
+from db.mappings.path import Path
 
 
-MAPPINGS = (Model, Article, Rec, ExcludeUrl)
+MAPPINGS = (Model, Article, Rec, Path)
 
 
 def recreate_tables(db):

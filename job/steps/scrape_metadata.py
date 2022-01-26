@@ -4,7 +4,6 @@ import time
 from typing import List, Tuple, Union
 from concurrent.futures import ThreadPoolExecutor
 
-
 from db.mappings.article import Article
 from db.mappings.path import Path
 from db.helpers import (
@@ -19,7 +18,7 @@ from lib.metrics import write_metric, Unit
 from db.helpers import delete_articles
 from db.mappings.base import db_proxy
 
-SAFE_FAILURE_TYPES = {
+EXCLUDE_FAILURE_TYPES = {
     ScrapeFailure.NO_EXTERNAL_ID,
     ScrapeFailure.EXCLUDE_TAG,
 }
@@ -33,14 +32,12 @@ def scrape_upload_metadata(site: Site, dts: List[datetime]) -> Tuple[List[Articl
     URLs from the events table are joined with the Postgres articles database
     URLs with no associated article ID are "new urls" that we need to create.
     URLs with an associated article ID are "refresh urls" that we need to update.
-    When multiple URLs resolve to the same article ID, we update Postgres with the new URL.
+    Update the Postgres path->externalID table with any new paths 
     """
     start_time = time.time()
 
     logging.info("Fetching paths to update...")
     df = warehouse.get_paths_to_update(site, dts)
-
-    logging.info(f"Updating {len(df)} paths...")
 
     # New paths are the ones where the external ID is null
     new_paths = list(df[df["external_id"].isna()]["landing_page_path"])
@@ -53,24 +50,40 @@ def scrape_upload_metadata(site: Site, dts: List[datetime]) -> Tuple[List[Articl
     refresh_ext_ids = list(df["external_id"].dropna().unique())
     update_results, update_errors = scrape_and_update_articles(site, refresh_ext_ids)
 
-    errors = create_errors + update_errors
-    safe_errors = [e for e in errors if e.error_type in SAFE_FAILURE_TYPES]
-    unsafe_errors = [e for e in errors if e.error_type not in SAFE_FAILURE_TYPES]
+    all_errors = create_errors + update_errors
 
+    update_path_cache(site, create_results, all_errors)
+
+    write_metric("article_scraping_total", len(create_results) + len(update_results))
+    write_metric("article_scraping_creates", len(create_results))
+    write_metric("article_scraping_updates", len(update_results))
+
+    latency = time.time() - start_time
+    write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
+    return create_results + update_results, all_errors,
+
+
+def update_path_cache(site: Site, create_results: List[Article], errors: List[ArticleScrapingError]):
+    """
+    Given the created articles and all the scraping errors, write new entries to the path->external ID table
+    """
     to_create = []
-    for e in safe_errors:
-        to_create.append(Path(path=e.path, exclude_reason=e.error_type.value, site=site.name))
+    for e in errors:
+        if e.error_type in EXCLUDE_FAILURE_TYPES:
+            to_create.append(Path(path=e.path, exclude_reason=e.error_type.value, site=site.name))
+        elif e.error_type == ScrapeFailure.DUPLICATE_PATH:
+            to_create.append(Path(path=e.path, external_id=e.external_id, site=site.name))
 
-    logging.info(f"Bulk creating {len(safe_errors)} exclude URLs")
+    num_unhandled_errors = len(errors) - len(to_create)
+
+    for c in create_results:
+        to_create.append(Path(path=c.path, external_id=c.external_id, site=site.name))
+
     with db_proxy.atomic():
         Path.bulk_create(to_create, batch_size=50)
 
-    write_metric("article_scraping_total", len(create_results) + len(update_results))
-
-    write_metric("article_scraping_errors", len(unsafe_errors))
-    latency = time.time() - start_time
-    write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
-    return create_results + update_results, errors,
+    write_metric("article_scraping_errors", num_unhandled_errors)
+    write_metric("article_scraping_paths_written", len(to_create))
 
 
 def extract_external_id(site: Site, path: str) -> str:
@@ -160,37 +173,34 @@ def scrape_articles(
 def new_articles_from_paths(
     site: Site, paths: List[str]
 ) -> Tuple[List[Article], List[ArticleScrapingError]]:
-    # First, throw out any that are excluded on the path list
+    """
+    Given a list of path strings, return two lists. the first is a list of valid Article objects
+    that need to be scraped and written to the DB. the second is a list of ArticleScrapingErrors
+    """
+    # First, throw out any articles marked as exclude
     exclude_urls = Path.select().where(
         (Path.site == site.name) & (Path.path.in_(paths) & (Path.exclude_reason is not None))
     )
     exclude_paths = set([p.path for p in exclude_urls])
     logging.info(f"Skipping {len(exclude_paths)} paths marked as ignore")
+
     paths = [p for p in paths if p not in exclude_paths]
 
     # First, extract external IDs from the paths
     external_ids = extract_external_ids(site, paths)
+    existing_external_ids = set(get_existing_external_ids(site, [e for e in external_ids if isinstance(e, str)]))
 
     new_articles = []
     errors = []
     for path, ext_id in zip(paths, external_ids):
         if isinstance(ext_id, ArticleScrapingError):
             errors.append(ext_id)
+        elif ext_id in existing_external_ids:
+            # We found a new path that maps to an existing external ID
+            errors.append(ArticleScrapingError(ScrapeFailure.DUPLICATE_PATH, path, ext_id))
         else:
             new_articles.append(Article(external_id=ext_id, path=path))
 
-    # Drop any articles that actually already exist
-    # Sometimes multiple paths resolve to the same external ID,
-    # so the db could be missing a path whose external ID already exists
-    existing_external_ids = set(get_existing_external_ids(site, [a.external_id for a in new_articles]))
-
-    logging.info(f"Not scraping {len(existing_external_ids)} paths from pre-existing records")
-    new_path_entries = [Path(external_id=a.external_id, site=site.name, path=a.path)
-                        for a in new_articles if a.external_id in existing_external_ids]
-    logging.info(f"Adding {len(new_path_entries)} new paths to pre-existing records")
-    with db_proxy.atomic():
-        Path.bulk_create(new_path_entries, batch_size=50)
-    new_articles = [a for a in new_articles if a.external_id not in existing_external_ids]
     return new_articles, errors
 
 
@@ -199,12 +209,12 @@ def scrape_and_create_articles(
 ) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Given a Site and list of paths (or external ID scrape errors),
-    fetch the article, scrape associated metadata, and save articles to the database
+    fetch the article, scrape associated metadata, and save articles and paths to the database
 
     Return a list of created article objects corresponding to the input IDs.
     ArticleScrapeErrors are given for articles that failed to be created
     """
-    logging.info(f"Creating {len(paths)} new articles")
+    logging.info(f"Inspecting {len(paths)} new paths")
     articles, errors = new_articles_from_paths(site, paths)
     results, scrape_errors = scrape_articles(site, articles)
     errors = errors + scrape_errors
