@@ -1,11 +1,11 @@
-from peewee import TextField, IntegerField
+from peewee import TextField
 
 from db.mappings.base import BaseMapping, DateTimeTZField
 
 
 class Path(BaseMapping):
     class Meta:
-        table_name = "paths"
+        table_name = "path"
 
     path = TextField(null=False, default="")
     site = TextField(null=False, default="")

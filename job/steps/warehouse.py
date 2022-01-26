@@ -18,7 +18,7 @@ class Table(Enum):
     EVENTS = "events"
     DWELL_TIMES = "dwelltimes"
     ARTICLES = "articlerecdb.article"
-    PATHS = "articlerecdb.paths"
+    PATHS = "articlerecdb.path"
 
 
 def get_table(table: Table):

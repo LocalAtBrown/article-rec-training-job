@@ -70,9 +70,9 @@ def update_path_cache(site: Site, create_results: List[Article], errors: List[Ar
     to_create = []
     for e in errors:
         if e.error_type in EXCLUDE_FAILURE_TYPES:
-            to_create.append(Path(path=e.path, exclude_reason=e.error_type.value, site=site.name))
+            to_create.append(Path(path=e.path, external_id=None, exclude_reason=e.error_type.value, site=site.name))
         elif e.error_type == ScrapeFailure.DUPLICATE_PATH:
-            to_create.append(Path(path=e.path, external_id=e.external_id, site=site.name))
+            to_create.append(Path(path=e.path, external_id=e.external_id, exclude_reason=None, site=site.name))
 
     num_unhandled_errors = len(errors) - len(to_create)
 
@@ -177,15 +177,6 @@ def new_articles_from_paths(
     Given a list of path strings, return two lists. the first is a list of valid Article objects
     that need to be scraped and written to the DB. the second is a list of ArticleScrapingErrors
     """
-    # First, throw out any articles marked as exclude
-    exclude_urls = Path.select().where(
-        (Path.site == site.name) & (Path.path.in_(paths) & (Path.exclude_reason is not None))
-    )
-    exclude_paths = set([p.path for p in exclude_urls])
-    logging.info(f"Skipping {len(exclude_paths)} paths marked as ignore")
-
-    paths = [p for p in paths if p not in exclude_paths]
-
     # First, extract external IDs from the paths
     external_ids = extract_external_ids(site, paths)
     existing_external_ids = set(get_existing_external_ids(site, [e for e in external_ids if isinstance(e, str)]))
