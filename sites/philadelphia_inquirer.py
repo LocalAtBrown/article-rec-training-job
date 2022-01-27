@@ -50,6 +50,7 @@ def bulk_fetch(
     params = {
         "q": f"publish_date:[{start_ts} TO {end_ts}]",
         "website": API_SITE,
+        "_sourceInclude": "headlines,publish_date,_id,canonical_url",
     }
     res = safe_get(f"{API_URL}/search/published", API_HEADER, params)
     json_res = res.json()
