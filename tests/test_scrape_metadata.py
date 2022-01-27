@@ -20,7 +20,9 @@ def scrape_error(site, article):
 
 
 def safe_scrape_error(site, article):
-    raise ArticleScrapingError(ScrapeFailure.EXCLUDE_TAG, article.path, article.external_id)
+    raise ArticleScrapingError(
+        ScrapeFailure.FAILED_SITE_VALIDATION, article.path, article.external_id
+    )
 
 
 VALID_SCRAPE = Article(
