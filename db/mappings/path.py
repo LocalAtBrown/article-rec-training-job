@@ -9,5 +9,5 @@ class Path(BaseMapping):
 
     path = TextField(null=False, default="")
     site = TextField(null=False, default="")
-    external_id = TextField(null=True, default=None)
-    exclude_reason = TextField(null=True, default=None)
+    external_id = TextField(null=True, default="")
+    exclude_reason = TextField(null=True, default="")

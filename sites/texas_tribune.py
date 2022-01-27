@@ -82,7 +82,9 @@ def extract_external_id(path: str) -> str:
     for prefix in NON_ARTICLE_PREFIXES:
         if path.startswith(prefix):
             msg = f"Skipping non-article path: {path}"
-            raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg=msg)
+            raise ArticleScrapingError(
+                ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg=msg
+            )
 
     article_url = f"https://{DOMAIN}{path}"
     try:
@@ -90,7 +92,10 @@ def extract_external_id(path: str) -> str:
         time.sleep(1)
     except Exception as e:
         raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id=None, msg=f"External ID fetch failed for {article_url}"
+            ScrapeFailure.FETCH_ERROR,
+            path,
+            external_id=None,
+            msg=f"External ID fetch failed for {article_url}",
         ) from e
     soup = BeautifulSoup(page.text, features="html.parser")
 
@@ -103,7 +108,10 @@ def extract_external_id(path: str) -> str:
         return str(int(contentID))
     else:
         raise ArticleScrapingError(
-            ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="External ID not found"
+            ScrapeFailure.NO_EXTERNAL_ID,
+            path,
+            external_id=None,
+            msg="External ID not found",
         )
 
 
@@ -129,7 +137,9 @@ def get_external_id(page: dict) -> str:
     return external_id
 
 
-def parse_metadata(api_info: Dict[str, Any], external_id: str, path: str) -> Dict[str, Any]:
+def parse_metadata(
+    api_info: Dict[str, Any], external_id: str, path: str
+) -> Dict[str, Any]:
     metadata = {}
     parsers = [
         ("title", get_title),
@@ -142,7 +152,9 @@ def parse_metadata(api_info: Dict[str, Any], external_id: str, path: str) -> Dic
             val = func(api_info)
         except Exception as e:
             msg = "error parsing metadata for article"
-            raise ArticleScrapingError(ScrapeFailure.BAD_RESPONSE, external_id, path, msg) from e
+            raise ArticleScrapingError(
+                ScrapeFailure.MALFORMED_RESPONSE, external_id, path, msg
+            ) from e
         metadata[prop] = val
 
     return metadata
@@ -172,7 +184,9 @@ def fetch_article(
         time.sleep(1)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
-        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, msg) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, external_id, msg
+        ) from e
 
     return res
 

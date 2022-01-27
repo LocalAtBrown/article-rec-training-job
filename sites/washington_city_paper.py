@@ -117,7 +117,9 @@ def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict
             val = func(page, soup)
         except Exception as e:
             msg = f"Error scraping {prop} for article path: {path}"
-            raise ArticleScrapingError(ScrapeFailure.BAD_RESPONSE, path, external_id, msg=msg) from e
+            raise ArticleScrapingError(
+                ScrapeFailure.MALFORMED_RESPONSE, path, external_id, msg=msg
+            ) from e
         metadata[prop] = val
 
     return metadata
@@ -147,12 +149,16 @@ def fetch_article(external_id: str, path: str) -> Response:
     try:
         page = safe_get(url)
     except Exception as e:
-        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, str(external_id)) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, str(external_id)
+        ) from e
     soup = BeautifulSoup(page.text, features="html.parser")
 
     error_msg = validate_not_excluded(page, soup)
     if error_msg:
-        raise ArticleScrapingError(ScrapeFailure.EXCLUDE_TAG, path, str(external_id), error_msg)
+        raise ArticleScrapingError(
+            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg
+        )
 
     return page
 

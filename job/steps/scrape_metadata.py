@@ -20,19 +20,21 @@ from db.mappings.base import db_proxy
 
 EXCLUDE_FAILURE_TYPES = {
     ScrapeFailure.NO_EXTERNAL_ID,
-    ScrapeFailure.EXCLUDE_TAG,
+    ScrapeFailure.FAILED_SITE_VALIDATION,
 }
 
 
 @refresh_db
-def scrape_upload_metadata(site: Site, dts: List[datetime]) -> Tuple[List[Article], List[ArticleScrapingError]]:
+def scrape_upload_metadata(
+    site: Site, dts: List[datetime]
+) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Update article metadata for any URLs that were visited during the given dts.
 
     URLs from the events table are joined with the Postgres articles database
     URLs with no associated article ID are "new urls" that we need to create.
     URLs with an associated article ID are "refresh urls" that we need to update.
-    Update the Postgres path->externalID table with any new paths 
+    Update the Postgres path->externalID table with any new paths
     """
     start_time = time.time()
 
@@ -60,19 +62,38 @@ def scrape_upload_metadata(site: Site, dts: List[datetime]) -> Tuple[List[Articl
 
     latency = time.time() - start_time
     write_metric("article_scraping_time", latency, unit=Unit.SECONDS)
-    return create_results + update_results, all_errors,
+    return (
+        create_results + update_results,
+        all_errors,
+    )
 
 
-def update_path_cache(site: Site, create_results: List[Article], errors: List[ArticleScrapingError]):
+def update_path_cache(
+    site: Site, create_results: List[Article], errors: List[ArticleScrapingError]
+):
     """
     Given the created articles and all the scraping errors, write new entries to the path->external ID table
     """
     to_create = []
     for e in errors:
         if e.error_type in EXCLUDE_FAILURE_TYPES:
-            to_create.append(Path(path=e.path, external_id=None, exclude_reason=e.error_type.value, site=site.name))
+            to_create.append(
+                Path(
+                    path=e.path,
+                    external_id=None,
+                    exclude_reason=e.error_type.value,
+                    site=site.name,
+                )
+            )
         elif e.error_type == ScrapeFailure.DUPLICATE_PATH:
-            to_create.append(Path(path=e.path, external_id=e.external_id, exclude_reason=None, site=site.name))
+            to_create.append(
+                Path(
+                    path=e.path,
+                    external_id=e.external_id,
+                    exclude_reason=None,
+                    site=site.name,
+                )
+            )
 
     num_unhandled_errors = len(errors) - len(to_create)
 
@@ -179,7 +200,9 @@ def new_articles_from_paths(
     """
     # First, extract external IDs from the paths
     external_ids = extract_external_ids(site, paths)
-    existing_external_ids = set(get_existing_external_ids(site, [e for e in external_ids if isinstance(e, str)]))
+    existing_external_ids = set(
+        get_existing_external_ids(site, [e for e in external_ids if isinstance(e, str)])
+    )
 
     new_articles = []
     errors = []
@@ -188,7 +211,9 @@ def new_articles_from_paths(
             errors.append(ext_id)
         elif ext_id in existing_external_ids:
             # We found a new path that maps to an existing external ID
-            errors.append(ArticleScrapingError(ScrapeFailure.DUPLICATE_PATH, path, ext_id))
+            errors.append(
+                ArticleScrapingError(ScrapeFailure.DUPLICATE_PATH, path, ext_id)
+            )
         else:
             new_articles.append(Article(external_id=ext_id, path=path))
 
@@ -215,9 +240,11 @@ def scrape_and_create_articles(
         if a.published_at is not None:
             to_create.append(a)
         else:
-            errors.append(ArticleScrapingError(
-                ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id
-            ))
+            errors.append(
+                ArticleScrapingError(
+                    ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id
+                )
+            )
 
     logging.info(f"Bulk inserting {len(to_create)} records")
     with db_proxy.atomic():
@@ -251,7 +278,11 @@ def scrape_and_update_articles(
         if a.published_at is not None:
             to_update.append(a)
         else:
-            errors.append(ArticleScrapingError(ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id))
+            errors.append(
+                ArticleScrapingError(
+                    ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id
+                )
+            )
 
     # Use the peewee bulk update method. Update every field that isn't
     # in the RESERVED_FIELDS list

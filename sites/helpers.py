@@ -7,10 +7,10 @@ from retrying import retry
 
 
 GOOGLE_TAG_MANAGER_RAW_FIELDS = {
-    'collector_tstamp',
-    'domain_userid',
-    'event_name',
-    'page_urlpath'
+    "collector_tstamp",
+    "domain_userid",
+    "event_name",
+    "page_urlpath",
 }
 
 
@@ -43,13 +43,13 @@ def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
 
 
 class ScrapeFailure(Enum):
-    UNKNOWN = 'unknown'
-    FETCH_ERROR = 'fetch_error'
-    NO_EXTERNAL_ID = 'no_external_id'
-    BAD_RESPONSE = 'bad_api_response'
-    EXCLUDE_TAG = 'exclude_tag'
-    NO_PUBLISH_DATE = 'no_publish_date'
-    DUPLICATE_PATH = 'duplicate_path'
+    UNKNOWN = "unknown"
+    FETCH_ERROR = "fetch_error"
+    NO_EXTERNAL_ID = "no_external_id"
+    MALFORMED_RESPONSE = "malformed_api_response"
+    FAILED_SITE_VALIDATION = "failed_site_validation"
+    NO_PUBLISH_DATE = "no_publish_date"
+    DUPLICATE_PATH = "duplicate_path"
 
 
 class ArticleScrapingError(Exception):

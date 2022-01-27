@@ -62,14 +62,19 @@ def extract_external_id(path: str) -> Optional[str]:
     for prefix in NON_ARTICLE_PREFIXES:
         if path.startswith(prefix):
             raise ArticleScrapingError(
-                ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="Skipping non-article path"
+                ScrapeFailure.NO_EXTERNAL_ID,
+                path,
+                external_id=None,
+                msg="Skipping non-article path",
             )
 
     try:
         res = safe_get(API_URL, API_HEADER, params)
         res = res.json()
     except Exception as e:
-        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id=None) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, external_id=None
+        ) from e
 
     if "_id" not in res:
         raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None)
@@ -136,7 +141,9 @@ def parse_article_metadata(page: Response, external_id: str, path: str) -> dict:
             val = func(res)
         except Exception as e:
             msg = f"Error parsing {prop}"
-            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, msg) from e
+            raise ArticleScrapingError(
+                ScrapeFailure.FETCH_ERROR, path, external_id, msg
+            ) from e
         metadata[prop] = val
 
     return metadata
@@ -190,11 +197,15 @@ def fetch_article(external_id: str, path: str) -> Response:
         res = safe_get(API_URL, API_HEADER, params)
     except Exception as e:
         msg = f"Error fetching article url: {API_URL}"
-        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, msg) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, external_id, msg
+        ) from e
 
     error_msg = validate_response(res)
     if error_msg:
-        raise ArticleScrapingError(ScrapeFailure.BAD_RESPONSE, path, external_id, error_msg)
+        raise ArticleScrapingError(
+            ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg
+        )
 
     return res
 
