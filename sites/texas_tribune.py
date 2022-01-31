@@ -24,7 +24,7 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
-PARAMS = {
+TRAINING_PARAMS = {
     "hl": 90,
     "embedding_dim": 100,
     "epochs": 3,
@@ -33,6 +33,11 @@ PARAMS = {
     "loss": "adaptive_hinge",
     "tune_params": ["epochs", "embedding_dim"],
     "tune_ranges": [[5, 11, 2], [160, 360, 100]],
+}
+
+SCRAPE_CONFIG = {
+    "concurrent_requests": 1,
+    "requests_per_second": 4,
 }
 
 NON_ARTICLE_PREFIXES = [
@@ -194,7 +199,8 @@ def fetch_article(
 TT_SITE = Site(
     NAME,
     FIELDS,
-    PARAMS,
+    TRAINING_PARAMS,
+    SCRAPE_CONFIG,
     transform_data_google_tag_manager,
     extract_external_id,
     scrape_article_metadata,

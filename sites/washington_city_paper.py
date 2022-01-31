@@ -19,7 +19,7 @@ FIELDS = {
     "contexts_dev_amp_snowplow_amp_id_1",
     "event_name",
 }
-PARAMS = {
+TRAINING_PARAMS = {
     "hl": 30,
     "embedding_dim": 144,
     "epochs": 3,
@@ -28,6 +28,11 @@ PARAMS = {
     "tune": False,
     "tune_params": ["epochs", "embedding_dim"],
     "tune_ranges": [[1, 5, 1], [40, 300, 20]],
+}
+
+SCRAPE_CONFIG = {
+    "concurrent_requests": 20,
+    "requests_per_second": None,
 }
 
 # supported url path formats:
@@ -166,7 +171,8 @@ def fetch_article(external_id: str, path: str) -> Response:
 WCP_SITE = Site(
     NAME,
     FIELDS,
-    PARAMS,
+    TRAINING_PARAMS,
+    SCRAPE_CONFIG,
     transform_raw_data,
     extract_external_id,
     scrape_article_metadata,
