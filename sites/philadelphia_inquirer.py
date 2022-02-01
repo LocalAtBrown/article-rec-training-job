@@ -2,7 +2,7 @@ import time
 from typing import Optional, List, Dict, Any, Union
 from requests.models import Response
 from datetime import datetime
-import time
+import logging
 
 from lib.config import config
 from sites.helpers import (
