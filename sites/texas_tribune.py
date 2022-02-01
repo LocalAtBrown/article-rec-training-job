@@ -37,7 +37,7 @@ TRAINING_PARAMS = {
 
 SCRAPE_CONFIG = {
     "concurrent_requests": 1,
-    "requests_per_second": 4,
+    "requests_per_second": 2,
 }
 
 NON_ARTICLE_PREFIXES = [
