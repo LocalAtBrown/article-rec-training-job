@@ -49,8 +49,10 @@ def bulk_fetch(
     end_ts = ms_timestamp(end_dt)
     params = {
         "q": f"publish_date:[{start_ts} TO {end_ts}]",
-        "website": API_SITE,
+        "include_distributor_category": "staff",
         "_sourceInclude": "headlines,publish_date,_id,canonical_url",
+        "website": API_SITE,
+        "size": 100,  # inquirer publishes ~50 articles per day
     }
     res = safe_get(f"{API_URL}/search/published", API_HEADER, params)
     json_res = res.json()
