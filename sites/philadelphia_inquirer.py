@@ -140,10 +140,7 @@ def get_headline(res_val: dict) -> str:
     """
     res_val = res_val["headlines"]
 
-    if res_val.get("meta_title"):
-        return res_val["meta_title"]
-
-    return res_val["basic"]
+    return res_val.get("meta_title", res_val["basic"])
 
 
 def get_external_id(res_val: dict) -> str:
