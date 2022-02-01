@@ -1,6 +1,8 @@
-from typing import Optional, List, Dict, Any
+import time
+from typing import Optional, List, Dict, Any, Union
 from requests.models import Response
 from datetime import datetime
+import logging
 
 from lib.config import config
 from sites.helpers import (
@@ -9,6 +11,7 @@ from sites.helpers import (
     ArticleScrapingError,
     transform_data_google_tag_manager,
     safe_get,
+    ms_timestamp,
 )
 from sites.site import Site
 
@@ -40,7 +43,26 @@ PARAMS = {
 def bulk_fetch(
     start_date: datetime.date, end_date: datetime.date
 ) -> List[Dict[str, Any]]:
-    raise NotImplementedError
+    logging.info(f"Fetching articles from {start_date} to {end_date}")
+    start_dt = datetime.combine(start_date, datetime.min.time())
+    end_dt = datetime.combine(end_date, datetime.min.time())
+    start_ts = ms_timestamp(start_dt)
+    end_ts = ms_timestamp(end_dt)
+    params = {
+        "q": f"publish_date:[{start_ts} TO {end_ts}]",
+        "include_distributor_category": "staff",
+        "_sourceInclude": "headlines,publish_date,_id,canonical_url",
+        "website": API_SITE,
+        "size": 100,  # inquirer publishes ~50 articles per day
+    }
+    res = safe_get(f"{API_URL}/search/published", API_HEADER, params)
+    json_res = res.json()
+    metadata = [
+        parse_article_metadata(a, a["_id"]) for a in json_res["content_elements"]
+    ]
+    # TODO replace with 1 / config-specified rps after it's merged
+    time.sleep(0.25)
+    return metadata
 
 
 NON_ARTICLE_PREFIXES = ["/author", "/wires"]
@@ -83,16 +105,27 @@ def extract_external_id(path: str) -> Optional[str]:
     return contentID
 
 
+def try_parsing_date(text: str, formats: List[str]) -> datetime:
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            pass
+    raise ValueError("no valid date format found")
+
+
 def get_date(res_val: dict) -> str:
     """ARC response date parser. PI response includes timezone
 
     :res_val: JSON payload from ARC API
     :return: Isoformat date string
     """
-    res_val = datetime.strptime(
-        res_val["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ"
-    ).isoformat()
-    return res_val
+    formats = [
+        "%Y-%m-%dT%H:%M:%SZ",  # 2021-12-01T15:53:20Z
+        "%Y-%m-%dT%H:%M:%S.%fZ",  # 2021-11-17T00:44:12.319Z
+    ]
+    dt = try_parsing_date(res_val["publish_date"], formats)
+    return dt.isoformat()
 
 
 def get_path(res_val: dict) -> str:
@@ -112,13 +145,16 @@ def get_headline(res_val: dict) -> str:
     :return: meta_title (if available) or basic title
     """
     res_val = res_val["headlines"]
-    if "meta_title" in res_val:
-        return res_val["meta_title"]
 
-    return res_val["basic"]
+    return res_val.get("meta_title", res_val["basic"])
 
 
-def parse_article_metadata(page: Response, external_id: str, path: str) -> dict:
+def get_external_id(res_val: dict) -> str:
+    external_id = res_val["_id"]
+    return external_id
+
+
+def parse_article_metadata(page: Union[Response, dict], external_id: str) -> dict:
     """ARC API JSON parser
 
     :page: JSON Payload from ARC for an external_id
@@ -129,11 +165,15 @@ def parse_article_metadata(page: Response, external_id: str, path: str) -> dict:
     metadata = {}
     parse_keys = [
         ("title", get_headline),
-        ("published_at", get_date),  # example published_at: '2021-11-17T00:44:12.319Z'
         ("path", get_path),
+        ("published_at", get_date),
+        ("external_id", get_external_id),
     ]
 
-    res = page.json()
+    if type(page) is dict:
+        res = page
+    else:
+        res = page.json()
 
     for prop, func in parse_keys:
         val = None

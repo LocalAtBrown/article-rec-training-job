@@ -1,4 +1,5 @@
 from enum import Enum
+from datetime import datetime
 
 from typing import Dict, Optional
 import requests as req
@@ -12,6 +13,11 @@ GOOGLE_TAG_MANAGER_RAW_FIELDS = {
     "event_name",
     "page_urlpath",
 }
+
+
+def ms_timestamp(dt: datetime) -> float:
+    epoch = datetime.utcfromtimestamp(0)
+    return (dt - epoch).total_seconds() * 1000.0
 
 
 def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
