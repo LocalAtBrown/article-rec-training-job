@@ -1,16 +1,12 @@
 from typing import Optional, List, Dict, Any
-from retrying import retry
-import logging
-from urllib.parse import urlparse
 from requests.models import Response
 from datetime import datetime
-import requests
-import re
 
 from lib.config import config
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
-    ArticleFetchError,
+    ScrapeFailure,
+    ArticleScrapingError,
     transform_data_google_tag_manager,
     safe_get,
 )
@@ -65,19 +61,26 @@ def extract_external_id(path: str) -> Optional[str]:
 
     for prefix in NON_ARTICLE_PREFIXES:
         if path.startswith(prefix):
-            return None
+            raise ArticleScrapingError(
+                ScrapeFailure.NO_EXTERNAL_ID,
+                path,
+                external_id=None,
+                msg="Skipping non-article path",
+            )
 
     try:
         res = safe_get(API_URL, API_HEADER, params)
         res = res.json()
-        contentID = res["_id"]
-        return contentID
     except Exception as e:
-        msg = f"Error fetching article url: {path}"
-        logging.exception(msg)
-        raise ArticleFetchError(msg) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, external_id=None
+        ) from e
 
-    return None
+    if "_id" not in res:
+        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None)
+
+    contentID = res["_id"]
+    return contentID
 
 
 def get_date(res_val: dict) -> str:
@@ -115,14 +118,13 @@ def get_headline(res_val: dict) -> str:
     return res_val["basic"]
 
 
-def parse_article_metadata(page: Response, external_id: str) -> dict:
+def parse_article_metadata(page: Response, external_id: str, path: str) -> dict:
     """ARC API JSON parser
 
     :page: JSON Payload from ARC for an external_id
     :external_id: Unique identifier for URL
     :return: Relevant metadata from an API response
     """
-    logging.info(f"Parsing metadata from id: {external_id}")
 
     metadata = {}
     parse_keys = [
@@ -138,15 +140,16 @@ def parse_article_metadata(page: Response, external_id: str) -> dict:
         try:
             val = func(res)
         except Exception as e:
-            msg = f"Error parsing {prop} for article id: {external_id}"
-            logging.exception(msg)
-            raise ArticleFetchError(msg) from e
+            msg = f"Error parsing {prop}"
+            raise ArticleScrapingError(
+                ScrapeFailure.FETCH_ERROR, path, external_id, msg
+            ) from e
         metadata[prop] = val
 
     return metadata
 
 
-def validate_not_excluded(res: Response) -> Optional[str]:
+def validate_response(res: Response) -> Optional[str]:
     """ARC API response validator
 
     :res: ARC API JSON response payload
@@ -176,11 +179,12 @@ def validate_not_excluded(res: Response) -> Optional[str]:
     return None
 
 
-def validate_article(external_id: str, path: str) -> (Response, str, Optional[str]):
-    """ARC API validation handler
+def fetch_article(external_id: str, path: str) -> Response:
+    """Fetch and validate article from the ARC API
 
     :external_id: Unique identifier for a URL
-    :return: JSON payload, external_id and an optional error message
+    :return: API response
+    :throws: ArticleScrapingError
     """
     params = {
         "_id": external_id,
@@ -189,29 +193,21 @@ def validate_article(external_id: str, path: str) -> (Response, str, Optional[st
         "included_fields": "headlines,publish_date,_id,canonical_url",
     }
 
-    logging.info(f"Validating article url: {external_id}")
-
     try:
         res = safe_get(API_URL, API_HEADER, params)
     except Exception as e:
-        msg = f"Error fetching article url: {url}"
-        logging.exception(msg)
-        raise ArticleFetchError(msg) from e
+        msg = f"Error fetching article url: {API_URL}"
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, external_id, msg
+        ) from e
 
-    error_msg = None
-    validator_funcs = [
-        validate_not_excluded,
-    ]
+    error_msg = validate_response(res)
+    if error_msg:
+        raise ArticleScrapingError(
+            ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg
+        )
 
-    for func in validator_funcs:
-        try:
-            error_msg = func(res)
-        except Exception as e:
-            error_msg = e.message
-        if error_msg:
-            break
-
-    return res, external_id, error_msg
+    return res
 
 
 PI_SITE = Site(
@@ -221,6 +217,6 @@ PI_SITE = Site(
     transform_data_google_tag_manager,
     extract_external_id,
     parse_article_metadata,
-    validate_article,
+    fetch_article,
     bulk_fetch,
 )

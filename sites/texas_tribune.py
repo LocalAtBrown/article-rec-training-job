@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    ScrapeFailure,
     safe_get,
     ArticleScrapingError,
     transform_data_google_tag_manager,
@@ -78,21 +79,24 @@ def bulk_fetch(
 
 
 def extract_external_id(path: str) -> str:
-    logging.info(f"Extracting external_id for {path}")
     for prefix in NON_ARTICLE_PREFIXES:
         if path.startswith(prefix):
             msg = f"Skipping non-article path: {path}"
-            logging.error(msg)
-            raise ArticleScrapingError(msg)
+            raise ArticleScrapingError(
+                ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg=msg
+            )
 
     article_url = f"https://{DOMAIN}{path}"
     try:
         page = safe_get(article_url)
         time.sleep(1)
     except Exception as e:
-        msg = f"Error fetching article url: {article_url}"
-        logging.exception(msg)
-        raise ArticleScrapingError(msg) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR,
+            path,
+            external_id=None,
+            msg=f"External ID fetch failed for {article_url}",
+        ) from e
     soup = BeautifulSoup(page.text, features="html.parser")
 
     token = None
@@ -103,7 +107,12 @@ def extract_external_id(path: str) -> str:
         contentID = token.split("'")[1]
         return str(int(contentID))
     else:
-        return None
+        raise ArticleScrapingError(
+            ScrapeFailure.NO_EXTERNAL_ID,
+            path,
+            external_id=None,
+            msg="External ID not found",
+        )
 
 
 def get_title(res: dict) -> str:
@@ -128,7 +137,9 @@ def get_external_id(page: dict) -> str:
     return external_id
 
 
-def parse_metadata(api_info: Dict[str, Any]) -> Dict[str, Any]:
+def parse_metadata(
+    api_info: Dict[str, Any], external_id: str, path: str
+) -> Dict[str, Any]:
     metadata = {}
     parsers = [
         ("title", get_title),
@@ -141,42 +152,43 @@ def parse_metadata(api_info: Dict[str, Any]) -> Dict[str, Any]:
             val = func(api_info)
         except Exception as e:
             msg = "error parsing metadata for article"
-            raise ArticleScrapingError(msg) from e
+            raise ArticleScrapingError(
+                ScrapeFailure.MALFORMED_RESPONSE, external_id, path, msg
+            ) from e
         metadata[prop] = val
 
     return metadata
 
 
-def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
-    logging.info(f"Fetching metadata from url: {page.url}, type is {type(page)}")
+def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict:
     try:
         api_info = page.json()
     except Exception as e:
-        msg = f"error parsing json res for article url: {page.url}"
-        logging.exception(msg)
-        raise ArticleScrapingError(msg) from e
-    metadata = parse_metadata(api_info)
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, external_id, "JSON parse failed"
+        ) from e
+    metadata = parse_metadata(api_info, external_id, path)
     return metadata
 
 
-def validate_article(
+def fetch_article(
     external_id: str,
     path: str,
-) -> (Response, Optional[BeautifulSoup], Optional[str]):
+) -> Response:
     external_id = int(external_id)
 
     api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
-    logging.info(f"Validating article url: {api_url}")
 
     try:
         res = safe_get(api_url)
         time.sleep(1)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
-        logging.exception(msg)
-        raise ArticleScrapingError(msg) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, external_id, msg
+        ) from e
 
-    return res, None, None
+    return res
 
 
 TT_SITE = Site(
@@ -186,6 +198,6 @@ TT_SITE = Site(
     transform_data_google_tag_manager,
     extract_external_id,
     scrape_article_metadata,
-    validate_article,
+    fetch_article,
     bulk_fetch,
 )

@@ -18,6 +18,7 @@ class Table(Enum):
     EVENTS = "events"
     DWELL_TIMES = "dwelltimes"
     ARTICLES = "articlerecdb.article"
+    PATHS = "articlerecdb.path"
 
 
 def get_table(table: Table):
@@ -59,9 +60,7 @@ def write_events(
     chunk_names_str = dts_to_chunk_name_sql(list(df["activity_time"]))
 
     s3_name = chunk_name(start_dt)
-    s3_path = (
-        f"{config.get('REDSHIFT_CACHE_BUCKET')}/events/{site.name}/{s3_name}.tsv"
-    )
+    s3_path = f"{config.get('REDSHIFT_CACHE_BUCKET')}/events/{site.name}/{s3_name}.tsv"
     s3 = s3fs.S3FileSystem(anon=False)
     with s3.open(s3_path, "w") as f:
         df.to_csv(f, index=False, sep="\t")
@@ -108,35 +107,42 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
 
     chunk_names_str = dts_to_chunk_name_sql(dts)
     events = get_table(Table.EVENTS)
+    paths = get_table(Table.PATHS)
     articles = get_table(Table.ARTICLES)
 
     query = f"""
-        with paths as (
+        with event_paths as (
             select distinct landing_page_path from {events}
             where chunk_name in {chunk_names_str}
             and site = '{site.name}'
         ),
         articles as (
             select 
-                paths.landing_page_path, 
+                event_paths.landing_page_path, 
                 a.published_at, 
                 a.updated_at,
-                a.external_id
-            from paths
-            left join {articles} a 
-                on paths.landing_page_path = a.path
-                and a.site = '{site.name}'
+                p.external_id,
+                p.exclude_reason
+            from event_paths
+            left join {paths} p
+                on event_paths.landing_page_path = p.path
+                and p.site = '{site.name}'
+            left join {articles} a
+                on p.external_id = a.external_id
+                and p.site = a.site
         )
         select landing_page_path, external_id from articles
         where 
             -- scrape articles that aren't in the cache:
-            external_id is NULL or
             -- re-scrape articles that meet these conditions:
             --    no publish date
             --    published within the last day
-            (
-                published_at is NULL or
-                published_at > current_date - 1
+            exclude_reason is NULL and (
+                external_id is NULL or
+                (
+                    published_at is NULL or
+                    published_at > current_date - 1
+                )
             )
     """
     connection = get_connection()

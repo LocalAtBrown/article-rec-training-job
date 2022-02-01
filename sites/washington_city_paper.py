@@ -1,14 +1,13 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import re
-import logging
 from urllib.parse import urlparse
 from requests.models import Response
 
 from bs4 import BeautifulSoup
 
 from lib.events import Event
-from sites.helpers import safe_get, ArticleScrapingError
+from sites.helpers import safe_get, ArticleScrapingError, ScrapeFailure
 from sites.site import Site
 import pandas as pd
 
@@ -73,6 +72,7 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
         {"event_name": "amp_page_ping"}, Event.PAGE_PING.value, inplace=True
     )
     transformed_df["event_name"] = transformed_df["event_name"].astype("category")
+
     return transformed_df
 
 
@@ -81,7 +81,7 @@ def extract_external_id(path: str) -> str:
     if result:
         return result.groups()[2]
     else:
-        return None
+        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None)
 
 
 def scrape_title(page: Response, soup: BeautifulSoup) -> str:
@@ -102,9 +102,9 @@ def scrape_path(page: Response, soup: BeautifulSoup) -> str:
     return urlparse(page.url).path
 
 
-def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
-    logging.info(f"Scraping metadata from url: {page.url}")
+def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict:
 
+    soup = BeautifulSoup(page.text, features="html.parser")
     metadata = {}
     scraper_funcs = [
         ("title", scrape_title),
@@ -116,15 +116,15 @@ def scrape_article_metadata(page: Response, soup: BeautifulSoup) -> dict:
         try:
             val = func(page, soup)
         except Exception as e:
-            msg = f"Error scraping {prop} for article url: {page.url}"
-            logging.exception(msg)
-            raise ArticleScrapingError(msg) from e
+            msg = f"Error scraping {prop} for article path: {path}"
+            raise ArticleScrapingError(
+                ScrapeFailure.MALFORMED_RESPONSE, path, external_id, msg=msg
+            ) from e
         metadata[prop] = val
 
     return metadata
 
 
-# TODO move all validation logic to separate file
 def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
     error_msg = None
     primary = soup.find(id="primary")
@@ -143,32 +143,24 @@ def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
     return error_msg
 
 
-def validate_article(external_id: int, path: str) -> (Response, BeautifulSoup, Optional[str]):
+def fetch_article(external_id: str, path: str) -> Response:
     url = f"https://{DOMAIN}{path}"
-    logging.info(f"Validating article url: {url}")
 
     try:
         page = safe_get(url)
     except Exception as e:
-        msg = f"Error fetching article url: {url}"
-        logging.exception(msg)
-        raise ArticleScrapingError(msg) from e
+        raise ArticleScrapingError(
+            ScrapeFailure.FETCH_ERROR, path, str(external_id)
+        ) from e
     soup = BeautifulSoup(page.text, features="html.parser")
 
-    error_msg = None
-    validator_funcs = [
-        validate_not_excluded,
-    ]
+    error_msg = validate_not_excluded(page, soup)
+    if error_msg:
+        raise ArticleScrapingError(
+            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg
+        )
 
-    for func in validator_funcs:
-        try:
-            error_msg = func(page, soup)
-        except Exception as e:
-            error_msg = e.message
-        if error_msg:
-            break
-
-    return page, soup, error_msg
+    return page
 
 
 WCP_SITE = Site(
@@ -178,6 +170,6 @@ WCP_SITE = Site(
     transform_raw_data,
     extract_external_id,
     scrape_article_metadata,
-    validate_article,
+    fetch_article,
     bulk_fetch,
 )
