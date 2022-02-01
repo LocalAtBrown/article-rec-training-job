@@ -105,21 +105,27 @@ def extract_external_id(path: str) -> Optional[str]:
     return contentID
 
 
+def try_parsing_date(text: str, formats: List[str]) -> datetime:
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            pass
+    raise ValueError("no valid date format found")
+
+
 def get_date(res_val: dict) -> str:
     """ARC response date parser. PI response includes timezone
 
     :res_val: JSON payload from ARC API
     :return: Isoformat date string
     """
-    # publish date has two possible formats:
-    #   2021-12-01T15:53:20Z
-    #   2021-11-17T00:44:12.319Z
-    canonical_date = res_val["publish_date"][:-1]
-    canonical_date = canonical_date.split(".")[0]
-    canonical_date = f"{canonical_date}Z"
-
-    res_val = datetime.strptime(canonical_date, "%Y-%m-%dT%H:%M:%SZ").isoformat()
-    return res_val
+    formats = [
+        "%Y-%m-%dT%H:%M:%SZ",  # 2021-12-01T15:53:20Z
+        "%Y-%m-%dT%H:%M:%S.%fZ",  # 2021-11-17T00:44:12.319Z
+    ]
+    dt = try_parsing_date(res_val["publish_date"], formats)
+    return dt.isoformat()
 
 
 def get_path(res_val: dict) -> str:
