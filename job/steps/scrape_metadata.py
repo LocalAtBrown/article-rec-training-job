@@ -108,8 +108,6 @@ def update_path_cache(
 
 
 def extract_external_id(site: Site, path: str) -> str:
-    if site.scrape_config["requests_per_second"]:
-        time.sleep(1 / site.scrape_config["requests_per_second"])
     return site.extract_external_id(path)
 
 
@@ -163,8 +161,6 @@ def scrape_article(
             setattr(article, key, value)
 
     article.site = site.name
-    if site.scrape_config["requests_per_second"]:
-        time.sleep(1 / site.scrape_config["requests_per_second"])
     return article
 
 
