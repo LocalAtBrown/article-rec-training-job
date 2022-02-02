@@ -65,8 +65,6 @@ def bulk_fetch(
     metadata = [
         parse_article_metadata(a, a["_id"]) for a in json_res["content_elements"]
     ]
-    # TODO replace with 1 / config-specified rps after it's merged
-    time.sleep(0.25)
     return metadata
 
 
