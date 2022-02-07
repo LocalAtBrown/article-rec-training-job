@@ -77,8 +77,9 @@ def bulk_fetch(
     end_date = end_date.strftime(DATE_FORMAT)
     # texas tribune publishes 5-10 articles per day
     params = {"start_date": start_date, "end_date": end_date, "limit": 100}
-    res = safe_get(API_URL, params=params)
+    res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
     json_res = res.json()
+
     metadata = [parse_metadata(article) for article in json_res["results"]]
     return metadata
 
