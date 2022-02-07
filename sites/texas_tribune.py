@@ -93,7 +93,7 @@ def extract_external_id(path: str) -> str:
 
     article_url = f"https://{DOMAIN}{path}"
     try:
-        page = safe_get(article_url)
+        page = safe_get(article_url, scrape_config=SCRAPE_CONFIG)
     except Exception as e:
         raise ArticleScrapingError(
             ScrapeFailure.FETCH_ERROR,
@@ -184,7 +184,7 @@ def fetch_article(
     api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
 
     try:
-        res = safe_get(api_url)
+        res = safe_get(api_url, scrape_config=SCRAPE_CONFIG)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
         raise ArticleScrapingError(
