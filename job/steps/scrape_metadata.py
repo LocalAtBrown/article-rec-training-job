@@ -220,6 +220,7 @@ def new_articles_from_paths(
             )
         else:
             new_articles.append(Article(external_id=ext_id, path=path))
+            existing_external_ids.add(ext_id)
 
     return new_articles, errors
 
