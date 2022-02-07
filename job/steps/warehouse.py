@@ -80,7 +80,9 @@ def write_events(
         )
         cursor.execute(
             f"""
-                COPY {staging} FROM 's3://{s3_path}'
+                COPY 
+                    {staging}(client_id, activity_time, session_date, landing_page_path, event_name, ping_count, site, chunk_name) 
+                FROM 's3://{s3_path}'
                 CREDENTIALS 'aws_iam_role={config.get("REDSHIFT_SERVICE_ROLE")}'
                 DELIMITER AS '\t'
                 DATEFORMAT 'YYYY-MM-DD'

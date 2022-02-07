@@ -60,7 +60,7 @@ def bulk_fetch(
         "website": API_SITE,
         "size": 100,  # inquirer publishes ~50 articles per day
     }
-    res = safe_get(f"{API_URL}/search/published", API_HEADER, params)
+    res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
     json_res = res.json()
     metadata = [
         parse_article_metadata(a, a["_id"]) for a in json_res["content_elements"]
@@ -94,7 +94,7 @@ def extract_external_id(path: str) -> Optional[str]:
             )
 
     try:
-        res = safe_get(API_URL, API_HEADER, params)
+        res = safe_get(API_URL, API_HEADER, params, SCRAPE_CONFIG)
         res = res.json()
     except Exception as e:
         raise ArticleScrapingError(
@@ -237,7 +237,7 @@ def fetch_article(external_id: str, path: str) -> Response:
     }
 
     try:
-        res = safe_get(API_URL, API_HEADER, params)
+        res = safe_get(API_URL, API_HEADER, params, SCRAPE_CONFIG)
     except Exception as e:
         msg = f"Error fetching article url: {API_URL}"
         raise ArticleScrapingError(

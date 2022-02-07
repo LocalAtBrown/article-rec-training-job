@@ -77,8 +77,9 @@ def bulk_fetch(
     end_date = end_date.strftime(DATE_FORMAT)
     # texas tribune publishes 5-10 articles per day
     params = {"start_date": start_date, "end_date": end_date, "limit": 100}
-    res = safe_get(API_URL, params=params)
+    res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
     json_res = res.json()
+
     metadata = [parse_metadata(article) for article in json_res["results"]]
     return metadata
 
@@ -93,7 +94,7 @@ def extract_external_id(path: str) -> str:
 
     article_url = f"https://{DOMAIN}{path}"
     try:
-        page = safe_get(article_url)
+        page = safe_get(article_url, scrape_config=SCRAPE_CONFIG)
     except Exception as e:
         raise ArticleScrapingError(
             ScrapeFailure.FETCH_ERROR,
@@ -184,7 +185,7 @@ def fetch_article(
     api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
 
     try:
-        res = safe_get(api_url)
+        res = safe_get(api_url, scrape_config=SCRAPE_CONFIG)
     except Exception as e:
         msg = f"Error fetching article url: {api_url}"
         raise ArticleScrapingError(
