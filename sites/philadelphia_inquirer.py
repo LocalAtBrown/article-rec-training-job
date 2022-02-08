@@ -62,8 +62,12 @@ def bulk_fetch(
     }
     res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
     json_res = res.json()
+    import pdb
+
+    pdb.set_trace()
     metadata = [
-        parse_article_metadata(a, a["_id"]) for a in json_res["content_elements"]
+        parse_article_metadata(a, a["_id"], a["canonical_url"])
+        for a in json_res["content_elements"]
     ]
     return metadata
 
