@@ -41,6 +41,9 @@ def scrape_upload_metadata(
     logging.info("Fetching paths to update...")
     df = warehouse.get_paths_to_update(site, dts)
 
+    import pdb
+
+    pdb.set_trace()
     # New paths are the ones where the external ID is null
     new_paths = list(df[df["external_id"].isna()]["landing_page_path"])
     create_results, create_errors = scrape_and_create_articles(
@@ -98,7 +101,14 @@ def update_path_cache(
     num_unhandled_errors = len(errors) - len(to_create)
 
     for c in create_results:
-        to_create.append(Path(path=c.path, external_id=c.external_id, site=site.name))
+        to_create.append(
+            Path(
+                path=c.path,
+                external_id=c.external_id,
+                exclude_reason=None,
+                site=site.name,
+            )
+        )
 
     with db_proxy.atomic():
         Path.bulk_create(to_create, batch_size=50)

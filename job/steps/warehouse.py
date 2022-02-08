@@ -147,6 +147,7 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
                 )
             )
     """
+
     connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute(query)

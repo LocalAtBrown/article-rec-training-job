@@ -40,7 +40,7 @@ TRAINING_PARAMS = {
 }
 
 SCRAPE_CONFIG = {
-    "concurrent_requests": 1,
+    "concurrent_requests": 2,
     "requests_per_second": 4,
 }
 
@@ -157,7 +157,9 @@ def get_external_id(res_val: dict) -> str:
     return external_id
 
 
-def parse_article_metadata(page: Union[Response, dict], external_id: str) -> dict:
+def parse_article_metadata(
+    page: Union[Response, dict], external_id: str, path: str
+) -> dict:
     """ARC API JSON parser
 
     :page: JSON Payload from ARC for an external_id
