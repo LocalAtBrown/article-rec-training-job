@@ -41,9 +41,6 @@ def scrape_upload_metadata(
     logging.info("Fetching paths to update...")
     df = warehouse.get_paths_to_update(site, dts)
 
-    import pdb
-
-    pdb.set_trace()
     # New paths are the ones where the external ID is null
     new_paths = list(df[df["external_id"].isna()]["landing_page_path"])
     create_results, create_errors = scrape_and_create_articles(
