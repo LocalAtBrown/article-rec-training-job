@@ -40,7 +40,7 @@ TRAINING_PARAMS = {
 }
 
 SCRAPE_CONFIG = {
-    "concurrent_requests": 1,
+    "concurrent_requests": 2,
     "requests_per_second": 4,
 }
 
@@ -62,8 +62,12 @@ def bulk_fetch(
     }
     res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
     json_res = res.json()
+    import pdb
+
+    pdb.set_trace()
     metadata = [
-        parse_article_metadata(a, a["_id"]) for a in json_res["content_elements"]
+        parse_article_metadata(a, a["_id"], a["canonical_url"])
+        for a in json_res["content_elements"]
     ]
     return metadata
 
@@ -157,7 +161,9 @@ def get_external_id(res_val: dict) -> str:
     return external_id
 
 
-def parse_article_metadata(page: Union[Response, dict], external_id: str) -> dict:
+def parse_article_metadata(
+    page: Union[Response, dict], external_id: str, path: str
+) -> dict:
     """ARC API JSON parser
 
     :page: JSON Payload from ARC for an external_id
