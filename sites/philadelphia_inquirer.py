@@ -69,7 +69,7 @@ def bulk_fetch(
     return metadata
 
 
-NON_ARTICLE_PREFIXES = ["/author"]
+INVALID_PREFIXES = ["/author", "/wires", "/zzz-systest"]
 
 
 def extract_external_id(path: str) -> Optional[str]:
@@ -85,13 +85,13 @@ def extract_external_id(path: str) -> Optional[str]:
         "included_fields": "_id,source,taxonomy",
     }
 
-    for prefix in NON_ARTICLE_PREFIXES:
+    for prefix in INVALID_PREFIXES:
         if path.startswith(prefix):
             raise ArticleScrapingError(
-                ScrapeFailure.NO_EXTERNAL_ID,
+                ScrapeFailure.FAILED_SITE_VALIDATION,
                 path,
                 external_id=None,
-                msg="Skipping non-article path",
+                msg="Skipping path with invalid prefix",
             )
 
     try:
