@@ -62,9 +62,6 @@ def bulk_fetch(
     }
     res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
     json_res = res.json()
-    import pdb
-
-    pdb.set_trace()
     metadata = [
         parse_article_metadata(a, a["_id"], a["canonical_url"])
         for a in json_res["content_elements"]
@@ -72,7 +69,7 @@ def bulk_fetch(
     return metadata
 
 
-NON_ARTICLE_PREFIXES = ["/author", "/wires"]
+INVALID_PREFIXES = ["/author", "/wires", "/zzz-systest"]
 
 
 def extract_external_id(path: str) -> Optional[str]:
@@ -85,16 +82,16 @@ def extract_external_id(path: str) -> Optional[str]:
         "website_url": path,
         "published": "true",
         "website": API_SITE,
-        "included_fields": "_id",
+        "included_fields": "_id,source,taxonomy",
     }
 
-    for prefix in NON_ARTICLE_PREFIXES:
+    for prefix in INVALID_PREFIXES:
         if path.startswith(prefix):
             raise ArticleScrapingError(
-                ScrapeFailure.NO_EXTERNAL_ID,
+                ScrapeFailure.FAILED_SITE_VALIDATION,
                 path,
                 external_id=None,
-                msg="Skipping non-article path",
+                msg="Skipping path with invalid prefix",
             )
 
     try:
@@ -108,8 +105,24 @@ def extract_external_id(path: str) -> Optional[str]:
     if "_id" not in res:
         raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None)
 
-    contentID = res["_id"]
-    return contentID
+    external_id = res["_id"]
+
+    IN_HOUSE_PLATFORMS = {"composer", "ellipsis"}
+    if res.get("source", {}).get("system") not in IN_HOUSE_PLATFORMS:
+        error_msg = "Not in-house article"
+        raise ArticleScrapingError(
+            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg
+        )
+
+    TEST_SITE = "/zzz-systest"
+    sites = res.get("taxonomy", {}).get("sites", [])
+    if sites and sites[0].get("_id") == TEST_SITE:
+        error_msg = "Test article"
+        raise ArticleScrapingError(
+            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg
+        )
+
+    return external_id
 
 
 def try_parsing_date(text: str, formats: List[str]) -> datetime:
