@@ -264,7 +264,7 @@ def get_default_recs(site: Site, limit=50):
     Pull the articles that were the most popular in the last {days} days
     """
     days = site.popularity_window
-    logging.info(f"Fetching default recs for {days} day window")
+    logging.info(f"Fetching default recs for {days}-day window")
     table = get_table(Table.DWELL_TIMES)
     query = f"""
         with total_times as (
