@@ -11,6 +11,7 @@ from sites.helpers import safe_get, ArticleScrapingError, ScrapeFailure
 from sites.site import Site
 import pandas as pd
 
+POPULARITY_WINDOW = 7
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
 FIELDS = {
@@ -178,4 +179,5 @@ WCP_SITE = Site(
     scrape_article_metadata,
     fetch_article,
     bulk_fetch,
+    POPULARITY_WINDOW,
 )
