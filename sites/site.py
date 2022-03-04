@@ -12,6 +12,7 @@ Site = namedtuple(
         "scrape_article_metadata",
         "fetch_article",
         "bulk_fetch",
+        "popularity_window",
     ],
 )
 

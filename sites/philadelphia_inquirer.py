@@ -20,6 +20,7 @@ ARC API documentation
 https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451a345bb0d2&p=209fa6fada864bc0a1555622bb559181
 """
 
+POPULARITY_WINDOW = 1
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
@@ -282,4 +283,5 @@ PI_SITE = Site(
     parse_article_metadata,
     fetch_article,
     bulk_fetch,
+    POPULARITY_WINDOW,
 )
