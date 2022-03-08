@@ -129,6 +129,9 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
             left join {paths} p
                 on event_paths.landing_page_path = p.path
                 and p.site = '{site.name}'
+                -- ignore newly created entries, in case they change
+                -- in the next few hours (this does happen sometimes)
+                and cast(p.created_at as DATE) < current_date
             left join {articles} a
                 on p.external_id = a.external_id
                 and p.site = a.site

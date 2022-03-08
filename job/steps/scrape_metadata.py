@@ -108,6 +108,9 @@ def update_path_cache(
         )
 
     with db_proxy.atomic():
+        Path.delete().where(
+            Path.path.in_([c.path for c in to_create]) & (Path.site == site.name)
+        ).execute()
         Path.bulk_create(to_create, batch_size=50)
 
     write_metric("article_scraping_errors", num_unhandled_errors)
