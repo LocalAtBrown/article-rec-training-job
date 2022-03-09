@@ -6,6 +6,12 @@ from sites.sites import Sites
 from sites.site import Site
 
 
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx : min(ndx + n, l)]
+
+
 def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
 

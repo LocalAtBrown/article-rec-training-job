@@ -8,7 +8,7 @@ from spotlight.interactions import Interactions
 
 from db.mappings.base import tzaware_now
 from job.steps.train_model import map_nearest
-from job.steps.slow_knn import SlowKNN
+from job.steps.knn import KNN
 from job.steps.trainer import Trainer
 from job.steps.train_model import _spotlight_transform
 
@@ -72,7 +72,7 @@ def decays():
 
 def _test_similarities(embeddings: np.ndarray, n_recs: int, decays: np.ndarray):
     """Checks that n recs are returned and the most similar rec is identical"""
-    knn_index = SlowKNN(embeddings, np.unique(decays))
+    knn_index = KNN(embeddings, np.unique(decays))
     similarities, indices = knn_index.get_similar_indices(n_recs)
     assert similarities.shape == (4, n_recs)
     assert all([similarities[i, 0] == 1.0 for i in range(similarities.shape[0])])
