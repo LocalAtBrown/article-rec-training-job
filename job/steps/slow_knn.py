@@ -2,7 +2,8 @@ import logging
 import numpy as np
 from scipy.spatial import distance
 
-DEFAULT_BATCH_SIZE = 1000
+DEFAULT_BATCH_SIZE = 4000
+# this batch size means that each iteration consumes ~ 176MB
 
 
 def batch(iterable, n=1):
