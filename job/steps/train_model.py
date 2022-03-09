@@ -71,8 +71,7 @@ def get_recommendations(
     start_ts = time.time()
 
     # Use KNN similarity to calculate score of each recommendation
-    knn_index = KNN(embeddings)
-    knn_index.decay_embeddings(df["date_decays"].values)
+    knn_index = KNN(embeddings, df["date_decays"].values)
     similarities, nearest_indices = knn_index.get_similar_indices(MAX_RECS + 1)
 
     knn_latency = time.time() - start_ts

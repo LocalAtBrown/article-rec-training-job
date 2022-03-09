@@ -72,8 +72,7 @@ def decays():
 
 def _test_similarities(embeddings: np.ndarray, n_recs: int, decays: np.ndarray):
     """Checks that n recs are returned and the most similar rec is identical"""
-    knn_index = KNN(embeddings)
-    knn_index.decay_embeddings(np.unique(decays))
+    knn_index = KNN(embeddings, np.unique(decays))
     similarities, indices = knn_index.get_similar_indices(n_recs)
     assert similarities.shape == (4, n_recs)
     assert all([similarities[i, 0] == 1.0 for i in range(similarities.shape[0])])
