@@ -50,7 +50,7 @@ def delete_old_models() -> None:
     )
     model_ids = [x.id for x in query]
 
-    BATCH_SIZE = 10
+    BATCH_SIZE = 2
     logging.info(
         f"found {len(model_ids)} models to delete, deleting a max of {BATCH_SIZE}..."
     )
