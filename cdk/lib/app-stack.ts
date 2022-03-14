@@ -20,23 +20,10 @@ function getSchedule(stage: helpers.STAGE, index: number) {
   let n = partners.filter(f => f.enabled).length
   if (stage == helpers.STAGE.DEVELOPMENT) {
     // Development job runs once per day
-    // Offset each development job by 1 hour.
-    let cronOptions = {
-      hour: `${index % 24}`,
-      minute: '0',
-    }
-    return Schedule.cron(cronOptions)
+    return Schedule.rate(cdk.Duration.hours(24))
   }
-  // In prod, run the job once every 2 hours.
-  // Offset the jobs evenly across 1 hour.
-  // Cron makes it really hard to do more complicated scheduling than that
-  let offset = Math.floor(60 / n) * index
-
-  let cronOptions = {
-    minute: `${offset}`,
-    hour: '0,2,4,6,8,10,12,14,16,18,20,22',
-  }
-  return Schedule.cron(cronOptions)
+  // In prod, run the job once every 3 hours.
+  return Schedule.rate(cdk.Duration.hours(3))
 }
 
 export class AppStack extends cdk.Stack {
