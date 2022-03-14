@@ -17,6 +17,8 @@ export interface AppStackProps extends cdk.StackProps {
 }
 
 function getSchedule(stage: helpers.STAGE, index: number) {
+  // find more scheduling options here:
+  // https://docs.aws.amazon.com/cdk/api/v1/docs/@aws-cdk_aws-applicationautoscaling.Schedule.html
   let n = partners.filter(f => f.enabled).length
   if (stage == helpers.STAGE.DEVELOPMENT) {
     // Development job runs once per day
@@ -109,8 +111,6 @@ export class AppStack extends cdk.Stack {
     });
 
     new ScheduledFargateTask(this, `${id}ScheduledFargateTask`, {
-      // find more scheduling options here:
-      // https://docs.aws.amazon.com/cdk/api/v1/docs/@aws-cdk_aws-applicationautoscaling.Schedule.html
       schedule: getSchedule(props.stage, props.index),
       desiredTaskCount: 1,
       cluster,
