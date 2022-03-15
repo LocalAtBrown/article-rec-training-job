@@ -31,6 +31,7 @@ def save_predictions(
     for rec in recs:
         rec.model_id = model_id
 
+    # Insert a small delay to avoid overwhelming the DB
     for rec_batch in batch(recs, n=50):
         Rec.bulk_create(rec_batch)
         time.sleep(0.05)
