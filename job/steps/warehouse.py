@@ -211,6 +211,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     - Removes interactions longer than 10 minutes (600 seconds)
     - Removes users who spent less than one total minute on the site
     """
+    logging.info("Fetching dwell time data...")
     table = get_table(Table.DWELL_TIMES)
     article_table = get_table(Table.ARTICLES)
     query = f"""

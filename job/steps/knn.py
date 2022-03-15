@@ -4,7 +4,7 @@ from job.helpers import batch
 import numpy as np
 from scipy.spatial import distance
 
-DEFAULT_BATCH_SIZE = 4000
+DEFAULT_BATCH_SIZE = 2000
 # this batch size means that each iteration consumes ~ 176MB
 
 
@@ -72,5 +72,6 @@ class KNN:
             scores_i, indices_i = self._get_similar_for_indices(i, n_recs)
             scores[i] = scores_i
             indices[i] = indices_i
+            logging.info(f"running knn batch {i} of {n}")
 
         return scores, indices
