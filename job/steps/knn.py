@@ -4,7 +4,7 @@ from job.helpers import batch
 import numpy as np
 from scipy.spatial import distance
 
-DEFAULT_BATCH_SIZE = 3000
+DEFAULT_BATCH_SIZE = 2000
 # this batch size means that each iteration consumes ~ 176MB
 
 
@@ -33,14 +33,8 @@ class KNN:
         # Calculate cosine distances
         # Format values on a [0,2] scale, where 0 is closer,
         # to values on a [0,1] scale, where 1 is closer.
-        import pdb
-
-        pdb.set_trace()
-        distances = np.empty(
-            len(self.embeddings[idxs]), len(self.embeddings), dtype="float32"
-        )
-        distance.cdist(
-            self.embeddings[idxs], self.embeddings, metric="cosine", out=distances
+        distances = distance.cdist(
+            self.embeddings[idxs], self.embeddings, metric="cosine"
         )
         if 0 in idxs:
             logging.info(
