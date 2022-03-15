@@ -72,5 +72,6 @@ class KNN:
             scores_i, indices_i = self._get_similar_for_indices(i, n_recs)
             scores[i] = scores_i
             indices[i] = indices_i
+            logging.info(i)
 
         return scores, indices
