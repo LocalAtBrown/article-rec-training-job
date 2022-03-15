@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 import logging
 import time
 from typing import List
+from job.helpers import batch
 
 from db.helpers import (
     create_model,
@@ -30,7 +31,9 @@ def save_predictions(
     for rec in recs:
         rec.model_id = model_id
 
-    Rec.bulk_create(recs, batch_size=50)
+    for rec_batch in batch(recs, n=50):
+        Rec.bulk_create(rec_batch)
+        time.sleep(0.05)
 
     # Update model objects in DB
     set_current_model(model_id, Type.ARTICLE.value, site.name)
