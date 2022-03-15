@@ -31,12 +31,13 @@ def save_predictions(
     for rec in recs:
         rec.model_id = model_id
 
+    logging.info(f"Writing recommendations...")
     # Insert a small delay to avoid overwhelming the DB
     for rec_batch in batch(recs, n=50):
         Rec.bulk_create(rec_batch)
         time.sleep(0.05)
 
-    # Update model objects in DB
+    logging.info(f"Updating model objects in DB")
     set_current_model(model_id, Type.ARTICLE.value, site.name)
     delete_old_models()
 
