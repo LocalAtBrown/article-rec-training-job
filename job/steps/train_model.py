@@ -66,10 +66,12 @@ def map_nearest(
 def get_recommendations(
     X: pd.DataFrame, params: dict, dt: datetime.datetime
 ) -> List[Rec]:
+    logging.info("Starting model training...")
     embeddings, df = train_model(X, params, dt)
 
     start_ts = time.time()
 
+    logging.info("Calcuating KNN...")
     # Use KNN similarity to calculate score of each recommendation
     knn_index = KNN(embeddings, df["date_decays"].values)
     similarities, nearest_indices = knn_index.get_similar_indices(MAX_RECS + 1)
