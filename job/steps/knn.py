@@ -33,8 +33,14 @@ class KNN:
         # Calculate cosine distances
         # Format values on a [0,2] scale, where 0 is closer,
         # to values on a [0,1] scale, where 1 is closer.
-        distances = distance.cdist(
-            self.embeddings[idxs], self.embeddings, metric="cosine"
+        import pdb
+
+        pdb.set_trace()
+        distances = np.empty(
+            len(self.embeddings[idxs]), len(self.embeddings), dtype="float32"
+        )
+        distance.cdist(
+            self.embeddings[idxs], self.embeddings, metric="cosine", out=distances
         )
         if 0 in idxs:
             logging.info(
