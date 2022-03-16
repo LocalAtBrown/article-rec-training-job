@@ -47,7 +47,7 @@ def save_predictions(
 
 
 def delete_old_models() -> None:
-    TTL_DAYS = 14
+    TTL_DAYS = 28
     ttl_days_ago = datetime.now(timezone.utc) - timedelta(days=TTL_DAYS)
 
     query = Model.select().where(
@@ -55,7 +55,8 @@ def delete_old_models() -> None:
     )
     model_ids = [x.id for x in query]
 
-    BATCH_SIZE = 2
+    # each job produces two models, so we clean up one more than we add
+    BATCH_SIZE = 3
     logging.info(
         f"found {len(model_ids)} models to delete, deleting a max of {BATCH_SIZE}..."
     )
