@@ -47,7 +47,7 @@ def save_predictions(
 
 
 def delete_old_models() -> None:
-    TTL_DAYS = 28
+    TTL_DAYS = 1
     ttl_days_ago = datetime.now(timezone.utc) - timedelta(days=TTL_DAYS)
 
     query = Model.select().where(
