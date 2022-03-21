@@ -87,6 +87,7 @@ def delete_articles(external_ids: List[str]) -> None:
 
 
 def delete_models(model_ids: List[int]) -> None:
+    logging.info(f"Deleting {len(model_ids)} models: {model_ids}")
     _delete_resources(Model, Model.id.in_(model_ids))
 
 
@@ -104,14 +105,16 @@ def set_stale_model(model_type: Type, model_site: str) -> None:
     _update_resources(Model, current_model_query, status=Status.STALE.value)
 
 
-def get_stale_model_ids() -> List[int]:
+def get_stale_model_ids(model_type: Type, model_site: str) -> List[int]:
     stale_model_query = (
         (Model.type == model_type)
         & (Model.status == Status.STALE.value)
         & (Model.site == model_site)
     )
     query = Model.select(Model.id).where(stale_model_query)
-    return [_id for _id in query]
+    stale_model_ids = [res.id for res in query]
+    logging.info(f"Found {len(stale_model_ids)} stale '{model_type}' models")
+    return stale_model_ids
 
 
 # If an exception occurs, the current transaction/savepoint will be rolled back.
@@ -120,7 +123,7 @@ def get_stale_model_ids() -> List[int]:
 def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
     MAX_DELETES = 2
     # get stale models
-    stale_model_ids = get_stale_model_ids()
+    stale_model_ids = get_stale_model_ids(model_type, model_site)
     # set current model as stale
     set_stale_model(model_type, model_site)
     # set pending model as current
@@ -129,7 +132,7 @@ def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
     delete_models(stale_model_ids[:MAX_DELETES])
 
     logging.info(
-        f"Successfully updated model id {model_id} as current '{model_type}' model for '{model_site}'"
+        f"Successfully updated model id {model_id} as current '{model_type}' model'"
     )
 
 
