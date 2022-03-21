@@ -58,11 +58,13 @@ def get_articles_by_external_ids(site: Site, external_ids: Iterable[str]) -> Lis
     else:
         return []
 
+
 def get_existing_external_ids(site: Site, external_ids: Iterable[str]) -> Iterable[str]:
     """
     Query the db with a list of external IDs and retrieve a list of the valid external IDs in the input
     """
     return [a.external_id for a in get_articles_by_external_ids(site, external_ids)]
+
 
 def update_article(article_id, **params) -> None:
     _update_resources(Article, Article.id == article_id, **params)
@@ -93,17 +95,39 @@ def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> Non
     dq.execute()
 
 
-# If an exception occurs, the current transaction/savepoint will be rolled back.
-# Otherwise the statements will be committed at the end.
-@db_proxy.atomic()
-def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
+def set_stale_model(model_type: Type, model_site: str) -> None:
     current_model_query = (
         (Model.type == model_type)
         & (Model.status == Status.CURRENT.value)
         & (Model.site == model_site)
     )
     _update_resources(Model, current_model_query, status=Status.STALE.value)
+
+
+def get_stale_model_ids() -> List[int]:
+    stale_model_query = (
+        (Model.type == model_type)
+        & (Model.status == Status.STALE.value)
+        & (Model.site == model_site)
+    )
+    query = Model.select(Model.id).where(stale_model_query)
+    return [_id for _id in query]
+
+
+# If an exception occurs, the current transaction/savepoint will be rolled back.
+# Otherwise the statements will be committed at the end.
+@db_proxy.atomic()
+def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
+    MAX_DELETES = 2
+    # get stale models
+    stale_model_ids = get_stale_model_ids()
+    # set current model as stale
+    set_stale_model(model_type, model_site)
+    # set pending model as current
     update_model(model_id, status=Status.CURRENT.value)
+    # delete stale models
+    delete_models(stale_model_ids[:MAX_DELETES])
+
     logging.info(
         f"Successfully updated model id {model_id} as current '{model_type}' model for '{model_site}'"
     )
