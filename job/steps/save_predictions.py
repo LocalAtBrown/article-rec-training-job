@@ -39,33 +39,7 @@ def save_predictions(
 
     logging.info(f"Updating model objects in DB")
     set_current_model(model_id, Type.ARTICLE.value, site.name)
-    delete_old_models()
 
     latency = time.time() - start_ts
     write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
     write_metric("rec_creation_total", len(recs))
-
-
-def delete_old_models() -> None:
-    TTL_DAYS = 1
-    ttl_days_ago = datetime.now(timezone.utc) - timedelta(days=TTL_DAYS)
-
-    query = Model.select().where(
-        (Model.created_at < ttl_days_ago) & (Model.status != Status.CURRENT.value)
-    )
-    model_ids = [x.id for x in query]
-
-    # each job produces two models, so we clean up one more than we add
-    BATCH_SIZE = 3
-    logging.info(
-        f"found {len(model_ids)} models to delete, deleting a max of {BATCH_SIZE}..."
-    )
-
-    # prevent a large deletion that may slow other queries
-    if len(model_ids) > BATCH_SIZE:
-        model_ids = model_ids[:BATCH_SIZE]
-
-    # associated recommendations will also be deleted
-    delete_models(model_ids)
-
-    logging.info(f"deleted model_ids: {model_ids}")
