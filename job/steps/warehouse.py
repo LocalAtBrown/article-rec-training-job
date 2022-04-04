@@ -243,7 +243,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     and num_articles_per_user > 2 
     and duration between 30 and 600
     and duration_per_user > 60
-    and {article_table}.published_at > current_date - {site.max_article_age}
+    and {article_table}.published_at > current_date - {site.max_article_age * 365}
     """
     conn = get_connection()
     with conn.cursor() as cursor:
