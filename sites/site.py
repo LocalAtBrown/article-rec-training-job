@@ -13,6 +13,7 @@ Site = namedtuple(
         "fetch_article",
         "bulk_fetch",
         "popularity_window",
+        "max_article_age",
     ],
 )
 

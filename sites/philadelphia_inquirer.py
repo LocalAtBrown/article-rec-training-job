@@ -21,6 +21,7 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 """
 
 POPULARITY_WINDOW = 1
+MAX_ARTICLE_AGE = 2
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
@@ -284,4 +285,5 @@ PI_SITE = Site(
     fetch_article,
     bulk_fetch,
     POPULARITY_WINDOW,
+    MAX_ARTICLE_AGE,
 )
