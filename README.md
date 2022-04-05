@@ -78,7 +78,7 @@ kar article-backfill --site texas-tribune --start-date 2021-12-01 --days 10
 For dev deployment, run:
 
 ```
-kar cdk deploy DevArticleRecTrainingJob
+kar deploy
 ```
 
 Each pull request to main will trigger a new prod deployment when merged.
