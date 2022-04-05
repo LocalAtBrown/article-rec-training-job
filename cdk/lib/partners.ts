@@ -17,7 +17,7 @@ export const partners: Array<Organization> = [
     orgName: "philadelphia-inquirer",
     pascalName: "PhiladelphiaInquirer",
     cpu: DEFAULT_CPU,
-    memoryLimitMiB: DEFAULT_MEM,
+    memoryLimitMiB: 16384,
     enabled: true,
   },
   {
