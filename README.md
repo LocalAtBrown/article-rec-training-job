@@ -10,7 +10,6 @@ Job that runs every two hours to create a new batch of article recommendations, 
 ├── db         # object-relational mappings to interact with the database
 ├── job        # key steps of the job pipeline (data fetch, preprocessing, training, etc...)
 ├── lib        # helpers to interact with lnl's aws resources
-├── notebooks  # offline data science notebooks for local analysis
 ├── sites      # site-specific logic for each newsroom partner
 └── tests      # unit tests
 ```
@@ -98,10 +97,6 @@ Each log group contains separate log streams for each client
 
 - [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-article-rec-training-job-wcp)
 - [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-training-job-wcp)
-
-### Rec Evaluation Dashboards
-
-- [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-evaluations;start=PT168H)
 
 ## Hyperparamter tuning
 
