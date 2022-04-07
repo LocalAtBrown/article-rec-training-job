@@ -12,6 +12,7 @@ from sites.site import Site
 import pandas as pd
 
 POPULARITY_WINDOW = 7
+MAX_ARTICLE_AGE = 10
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
 FIELDS = {
@@ -180,4 +181,5 @@ WCP_SITE = Site(
     fetch_article,
     bulk_fetch,
     POPULARITY_WINDOW,
+    MAX_ARTICLE_AGE,
 )

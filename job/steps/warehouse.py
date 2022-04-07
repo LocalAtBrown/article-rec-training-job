@@ -210,6 +210,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     - Removes readers who only read one article
     - Removes interactions longer than 10 minutes (600 seconds)
     - Removes users who spent less than one total minute on the site
+    - Removes articles older than a site-specific window
     """
     logging.info("Fetching dwell time data...")
     table = get_table(Table.DWELL_TIMES)
@@ -242,6 +243,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     and num_articles_per_user > 2 
     and duration between 30 and 600
     and duration_per_user > 60
+    and {article_table}.published_at > current_date - {site.max_article_age * 365}
     """
     conn = get_connection()
     with conn.cursor() as cursor:

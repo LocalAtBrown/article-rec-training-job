@@ -18,15 +18,6 @@ export interface AppStackProps extends cdk.StackProps {
 
 function getCron(stage: helpers.STAGE, index: number) {
   let n = partners.filter(f => f.enabled).length
-  if (stage == helpers.STAGE.DEVELOPMENT) {
-    // Development job runs once per day
-    // Offset each development job by 1 hour.
-    return {
-      hour: `${index % 24}`,
-      minute: '0',
-    }
-  }
-  // In prod, run the job once every 2 hours.
   // Offset the jobs evenly across 1 hour.
   // Cron makes it really hard to do more complicated scheduling than that
   let offset = Math.floor(60 / n) * index
