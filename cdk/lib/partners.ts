@@ -14,18 +14,17 @@ export const partners: Array<Organization> = [
     enabled: true,
   },
   {
-    orgName: "philadelphia-inquirer",
-    pascalName: "PhiladelphiaInquirer",
-    cpu: DEFAULT_CPU,
-    memoryLimitMiB: 16384,
-    enabled: true,
-  },
-  {
     orgName: "texas-tribune",
     pascalName: "TexasTribune",
     cpu: DEFAULT_CPU,
     memoryLimitMiB: DEFAULT_MEM,
     enabled: true,
   },
-
+  {
+    orgName: "philadelphia-inquirer",
+    pascalName: "PhiladelphiaInquirer",
+    cpu: DEFAULT_CPU,
+    memoryLimitMiB: 16384,
+    enabled: true,
+  },
 ]
