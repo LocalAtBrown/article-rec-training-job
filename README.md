@@ -93,10 +93,21 @@ Each log group contains separate log streams for each client
 
 ### System Dashboards
 
-#### WashingtonCityPaper
+#### Philadelphia Inquirer
 
-- [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-article-rec-training-job-wcp)
-- [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-training-job-wcp)
+- [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-article-rec-training-job-pi;start=PT72H)
+- [Prod](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-training-job-pi;start=PT72H)
+
+#### Texas Tribune
+
+- [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-article-rec-training-job-tt;start=PT72H)
+- [Prod](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-training-job-tt;start=PT72H)
+
+#### Washington City Paper
+
+- [Dev](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-article-rec-training-job-wcp;start=PT72H)
+- [Prod](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=article-rec-training-job-wcp;start=PT72H)
+
 
 ## Hyperparamter tuning
 
