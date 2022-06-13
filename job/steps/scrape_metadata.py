@@ -143,7 +143,8 @@ def extract_external_ids(
                 results.append(result)
             except ArticleScrapingError as e:
                 logging.warning(
-                    f"Failed to scrape External ID for path {e.path}. "
+                    "Failed to scrape external ID. "
+                    + f"Path: {e.path}. "
                     + f"Type: {e.error_type}. "
                     + f"Message: {e.msg}"
                 )
@@ -196,7 +197,10 @@ def scrape_articles(
                 results.append(result)
             except ArticleScrapingError as e:
                 logging.warning(
-                    f"ArticleScrapingError! {e.error_type}, {e.path}, {e.msg}"
+                    f"Failed to scrape article!! "
+                    + f"Path: {e.path}. "
+                    + f"Type: {e.error_type}. "
+                    + f"Message: {e.msg}"
                 )
                 errors.append(e)
 
