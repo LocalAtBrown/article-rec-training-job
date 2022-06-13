@@ -101,11 +101,11 @@ def extract_external_id(path: str) -> Optional[str]:
         res = res.json()
     except Exception as e:
         raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id=None
+            ScrapeFailure.FETCH_ERROR, path, external_id=None, msg="ARC API request failed"
         ) from e
 
     if "_id" not in res:
-        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None)
+        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="External ID not detected in response")
 
     external_id = res["_id"]
 
