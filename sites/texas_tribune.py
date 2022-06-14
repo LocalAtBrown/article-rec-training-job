@@ -89,9 +89,8 @@ def bulk_fetch(
 def extract_external_id(path: str) -> str:
     for prefix in NON_ARTICLE_PREFIXES:
         if path.startswith(prefix):
-            msg = f"Skipping non-article path: {path}"
             raise ArticleScrapingError(
-                ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg=msg
+                ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="Skipping non-article path"
             )
 
     article_url = f"https://{DOMAIN}{path}"
@@ -102,7 +101,7 @@ def extract_external_id(path: str) -> str:
             ScrapeFailure.FETCH_ERROR,
             path,
             external_id=None,
-            msg=f"External ID fetch failed for {article_url}",
+            msg=f"API request failed for {article_url}",
         ) from e
     soup = BeautifulSoup(page.text, features="html.parser")
 
@@ -158,9 +157,8 @@ def parse_metadata(
         try:
             val = func(api_info)
         except Exception as e:
-            msg = "error parsing metadata for article"
             raise ArticleScrapingError(
-                ScrapeFailure.MALFORMED_RESPONSE, external_id, path, msg
+                ScrapeFailure.MALFORMED_RESPONSE, external_id, path, "Error parsing metadata for article"
             ) from e
         metadata[prop] = val
 
@@ -172,7 +170,7 @@ def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict
         api_info = page.json()
     except Exception as e:
         raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id, "JSON parse failed"
+            ScrapeFailure.FETCH_ERROR, path, external_id, "Response JSON parse failed"
         ) from e
     metadata = parse_metadata(api_info, external_id, path)
     return metadata
@@ -189,9 +187,8 @@ def fetch_article(
     try:
         res = safe_get(api_url, scrape_config=SCRAPE_CONFIG)
     except Exception as e:
-        msg = f"Error fetching article url: {api_url}"
         raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id, msg
+            ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article url: {api_url}"
         ) from e
 
     return res

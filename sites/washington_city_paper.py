@@ -88,7 +88,8 @@ def extract_external_id(path: str) -> str:
     if result:
         return result.groups()[2]
     else:
-        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None)
+        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None,
+                                   msg="External ID not found in path")
 
 
 def scrape_title(page: Response, soup: BeautifulSoup) -> str:
@@ -123,9 +124,8 @@ def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict
         try:
             val = func(page, soup)
         except Exception as e:
-            msg = f"Error scraping {prop} for article path: {path}"
             raise ArticleScrapingError(
-                ScrapeFailure.MALFORMED_RESPONSE, path, external_id, msg=msg
+                ScrapeFailure.MALFORMED_RESPONSE, path, external_id, f"Error scraping {prop} for article path"
             ) from e
         metadata[prop] = val
 
@@ -157,7 +157,7 @@ def fetch_article(external_id: str, path: str) -> Response:
         page = safe_get(url)
     except Exception as e:
         raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, str(external_id)
+            ScrapeFailure.FETCH_ERROR, path, str(external_id), f"Request failed for {url}"
         ) from e
     soup = BeautifulSoup(page.text, features="html.parser")
 

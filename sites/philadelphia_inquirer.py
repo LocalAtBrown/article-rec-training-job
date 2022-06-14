@@ -101,27 +101,26 @@ def extract_external_id(path: str) -> Optional[str]:
         res = res.json()
     except Exception as e:
         raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id=None
+            ScrapeFailure.FETCH_ERROR, path, external_id=None, msg="ARC API request failed"
         ) from e
 
     if "_id" not in res:
-        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None)
+        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None,
+                                   msg="External ID not detected in response")
 
     external_id = res["_id"]
 
     IN_HOUSE_PLATFORMS = {"composer", "ellipsis"}
     if res.get("source", {}).get("system") not in IN_HOUSE_PLATFORMS:
-        error_msg = "Not in-house article"
         raise ArticleScrapingError(
-            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg
+            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Not in-house article"
         )
 
     TEST_SITE = "/zzz-systest"
     sites = res.get("taxonomy", {}).get("sites", [])
     if sites and sites[0].get("_id") == TEST_SITE:
-        error_msg = "Test article"
         raise ArticleScrapingError(
-            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg
+            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Test article"
         )
 
     return external_id
@@ -204,9 +203,8 @@ def parse_article_metadata(
         try:
             val = func(res)
         except Exception as e:
-            msg = f"Error parsing {prop}"
             raise ArticleScrapingError(
-                ScrapeFailure.FETCH_ERROR, path, external_id, msg
+                ScrapeFailure.FETCH_ERROR, path, external_id, f"Error parsing {prop}"
             ) from e
         metadata[prop] = val
 
@@ -260,9 +258,8 @@ def fetch_article(external_id: str, path: str) -> Response:
     try:
         res = safe_get(API_URL, API_HEADER, params, SCRAPE_CONFIG)
     except Exception as e:
-        msg = f"Error fetching article url: {API_URL}"
         raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id, msg
+            ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
         ) from e
 
     error_msg = validate_response(res)
