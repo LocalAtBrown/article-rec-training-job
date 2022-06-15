@@ -87,6 +87,7 @@ def write_events(
                 DELIMITER AS '\t'
                 DATEFORMAT 'YYYY-MM-DD'
                 IGNOREHEADER 1
+                TRUNCATECOLUMNS
                 csv;
             """
         )
