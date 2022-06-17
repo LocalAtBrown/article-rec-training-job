@@ -20,9 +20,7 @@ def scrape_error(site, article):
 
 
 def safe_scrape_error(site, article):
-    raise ArticleScrapingError(
-        ScrapeFailure.FAILED_SITE_VALIDATION, article.path, article.external_id
-    )
+    raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, article.path, article.external_id)
 
 
 VALID_SCRAPE = Article(
@@ -100,9 +98,7 @@ class TestScrapeMetadata(BaseTest):
     )
     def test_scrape_metadata__existing_valid_recs(self, _, __) -> None:
         for external_id in self.external_ids:
-            article = ArticleFactory.create(
-                site=self.site.name, external_id=external_id
-            )
+            ArticleFactory.create(site=self.site.name, external_id=external_id)
         scrape_upload_metadata(self.site, dts=[])
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 3
@@ -130,9 +126,7 @@ class TestScrapeMetadata(BaseTest):
     )
     def test_scrape_metadata__existing_invalid_recs(self, _, __) -> None:
         for external_id in self.external_ids:
-            article = ArticleFactory.create(
-                site=self.site.name, external_id=external_id
-            )
+            ArticleFactory.create(site=self.site.name, external_id=external_id)
 
         scrape_upload_metadata(self.site, dts=[])
         res = Article.select().where(Article.site == self.site.name)

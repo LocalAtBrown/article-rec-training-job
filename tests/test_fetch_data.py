@@ -10,9 +10,7 @@ from lib.config import ROOT_DIR
 def snowplow_df():
     df = pd.read_csv(f"{ROOT_DIR}/tests/data/snowplow_activities.csv")
     # Read as Python dict (expected format)
-    df[
-        "contexts_dev_amp_snowplow_amp_id_1"
-    ] = df.contexts_dev_amp_snowplow_amp_id_1.apply(eval)
+    df["contexts_dev_amp_snowplow_amp_id_1"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(eval)
     return df
 
 

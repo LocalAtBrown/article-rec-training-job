@@ -68,9 +68,7 @@ NON_ARTICLE_PREFIXES = [
 ]
 
 
-def bulk_fetch(
-    start_date: datetime.date, end_date: datetime.date
-) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
     logging.info(f"Fetching articles from {start_date} to {end_date}")
 
     API_URL = f"https://{DOMAIN}/api/v2/articles"
@@ -143,9 +141,7 @@ def get_external_id(page: dict) -> str:
     return external_id
 
 
-def parse_metadata(
-    api_info: Dict[str, Any], external_id: str, path: str
-) -> Dict[str, Any]:
+def parse_metadata(api_info: Dict[str, Any], external_id: str, path: str) -> Dict[str, Any]:
     metadata = {}
     parsers = [
         ("title", get_title),
@@ -169,9 +165,7 @@ def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict
     try:
         api_info = page.json()
     except Exception as e:
-        raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id, "Response JSON parse failed"
-        ) from e
+        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, "Response JSON parse failed") from e
     metadata = parse_metadata(api_info, external_id, path)
     return metadata
 

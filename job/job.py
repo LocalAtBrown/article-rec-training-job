@@ -54,9 +54,7 @@ def run():
         top_articles = warehouse.get_default_recs(site=site)
         save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
 
-        interactions_data = warehouse.get_dwell_times(
-            site, days=config.get("DAYS_OF_DATA")
-        )
+        interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
         recommendations = train_model.get_recommendations(
             interactions_data,
@@ -65,10 +63,7 @@ def run():
         )
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
-        save_predictions.save_predictions(
-            site,
-            recommendations
-        )
+        save_predictions.save_predictions(site, recommendations)
 
     except Exception:
         logging.exception("Job failed")

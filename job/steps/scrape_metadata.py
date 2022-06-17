@@ -25,9 +25,7 @@ EXCLUDE_FAILURE_TYPES = {
 
 
 @refresh_db
-def scrape_upload_metadata(
-    site: Site, dts: List[datetime]
-) -> Tuple[List[Article], List[ArticleScrapingError]]:
+def scrape_upload_metadata(site: Site, dts: List[datetime]) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Update article metadata for any URLs that were visited during the given dts.
 
@@ -68,9 +66,7 @@ def scrape_upload_metadata(
     )
 
 
-def update_path_cache(
-    site: Site, create_results: List[Article], errors: List[ArticleScrapingError]
-):
+def update_path_cache(site: Site, create_results: List[Article], errors: List[ArticleScrapingError]):
     """
     Given the created articles and all the scraping errors, write new entries to the path->external ID table
     """
@@ -118,9 +114,7 @@ def extract_external_id(site: Site, path: str) -> str:
     return site.extract_external_id(path)
 
 
-def extract_external_ids(
-    site: Site, landing_page_paths: List[str]
-) -> List[Union[str, ArticleScrapingError]]:
+def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[Union[str, ArticleScrapingError]]:
     """
     Attempts to extract externalIDs from a list of URLs
     :param landing_page_paths: List of unique landing page paths
@@ -130,9 +124,7 @@ def extract_external_ids(
     futures_list = []
     results = []
 
-    with ThreadPoolExecutor(
-        max_workers=site.scrape_config["concurrent_requests"]
-    ) as executor:
+    with ThreadPoolExecutor(max_workers=site.scrape_config["concurrent_requests"]) as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
             futures_list.append((path, future))
@@ -152,9 +144,7 @@ def extract_external_ids(
     return results
 
 
-def scrape_article(
-    site: Site, article: Union[Article, ArticleScrapingError]
-) -> Union[Article, ArticleScrapingError]:
+def scrape_article(site: Site, article: Union[Article, ArticleScrapingError]) -> Union[Article, ArticleScrapingError]:
     """
     Fetch the article and retrieve updated metadata. If the input is an ArticleScrapingError,
     just return it
@@ -174,9 +164,7 @@ def scrape_article(
     return article
 
 
-def scrape_articles(
-    site: Site, articles: List[Article]
-) -> Tuple[List[Article], List[ArticleScrapingError]]:
+def scrape_articles(site: Site, articles: List[Article]) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Use a concurrent thread pool to scrape each of the input articles.
     Return a list of Article objects with updated, scraped metadata
@@ -185,9 +173,7 @@ def scrape_articles(
     futures_list = []
     results = []
     errors = []
-    with ThreadPoolExecutor(
-        max_workers=site.scrape_config["concurrent_requests"]
-    ) as executor:
+    with ThreadPoolExecutor(max_workers=site.scrape_config["concurrent_requests"]) as executor:
         for article in articles:
             future = executor.submit(scrape_article, site, article=article)
             futures_list.append(future)
@@ -197,10 +183,7 @@ def scrape_articles(
                 results.append(result)
             except ArticleScrapingError as e:
                 logging.warning(
-                    f"Failed to scrape article!! "
-                    + f"Path: {e.path}. "
-                    + f"Type: {e.error_type}. "
-                    + f"Message: {e.msg}"
+                    f"Failed to scrape article!! " + f"Path: {e.path}. " + f"Type: {e.error_type}. " + f"Message: {e.msg}"
                 )
                 errors.append(e)
 
@@ -208,18 +191,14 @@ def scrape_articles(
     return results, errors
 
 
-def new_articles_from_paths(
-    site: Site, paths: List[str]
-) -> Tuple[List[Article], List[ArticleScrapingError]]:
+def new_articles_from_paths(site: Site, paths: List[str]) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Given a list of path strings, return two lists. the first is a list of valid Article objects
     that need to be scraped and written to the DB. the second is a list of ArticleScrapingErrors
     """
     # First, extract external IDs from the paths
     external_ids = extract_external_ids(site, paths)
-    existing_external_ids = set(
-        get_existing_external_ids(site, [e for e in external_ids if isinstance(e, str)])
-    )
+    existing_external_ids = set(get_existing_external_ids(site, [e for e in external_ids if isinstance(e, str)]))
 
     new_articles = []
     errors = []
@@ -228,9 +207,7 @@ def new_articles_from_paths(
             errors.append(ext_id)
         elif ext_id in existing_external_ids:
             # We found a new path that maps to an existing external ID
-            errors.append(
-                ArticleScrapingError(ScrapeFailure.DUPLICATE_PATH, path, ext_id)
-            )
+            errors.append(ArticleScrapingError(ScrapeFailure.DUPLICATE_PATH, path, ext_id))
         else:
             new_articles.append(Article(external_id=ext_id, path=path))
             existing_external_ids.add(ext_id)
@@ -238,9 +215,7 @@ def new_articles_from_paths(
     return new_articles, errors
 
 
-def scrape_and_create_articles(
-    site: Site, paths: List[str]
-) -> Tuple[List[Article], List[ArticleScrapingError]]:
+def scrape_and_create_articles(site: Site, paths: List[str]) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Given a Site and list of paths (or external ID scrape errors),
     fetch the article, scrape associated metadata, and save articles and paths to the database
@@ -258,11 +233,7 @@ def scrape_and_create_articles(
         if a.published_at is not None:
             to_create.append(a)
         else:
-            errors.append(
-                ArticleScrapingError(
-                    ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id
-                )
-            )
+            errors.append(ArticleScrapingError(ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id))
 
     logging.info(f"Bulk inserting {len(to_create)} records")
     with db_proxy.atomic():
@@ -271,9 +242,7 @@ def scrape_and_create_articles(
     return results, errors
 
 
-def scrape_and_update_articles(
-    site: Site, external_ids: List[str]
-) -> Tuple[List[Article], List[ArticleScrapingError]]:
+def scrape_and_update_articles(site: Site, external_ids: List[str]) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Given a site and a list of article objects that need to be updated,
     scrape them and then submit the updated article objects to the database
@@ -296,11 +265,7 @@ def scrape_and_update_articles(
         if a.published_at is not None:
             to_update.append(a)
         else:
-            errors.append(
-                ArticleScrapingError(
-                    ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id
-                )
-            )
+            errors.append(ArticleScrapingError(ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id))
 
     # Use the peewee bulk update method. Update every field that isn't
     # in the RESERVED_FIELDS list

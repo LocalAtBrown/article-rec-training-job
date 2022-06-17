@@ -25,7 +25,7 @@ def download_chunk(site: Site, dt: datetime.datetime):
     """
     Download the files for the date and hour of the given dt
     Returns a process object representing the download-in-progress
-    The returned process object's .wait() method must be called before 
+    The returned process object's .wait() method must be called before
     the files are guaranteed to be downloaded to disk
     """
     path = os.path.join(PATH, chunk_name(dt))
@@ -46,15 +46,16 @@ def fast_read(path: str, fields: Set[str]) -> pd.DataFrame:
     Read the gzipped file path into a df with the given fields
     This is 2x as fast as pd.read_json(gzip=True) for some reason
     """
-    with gzip.open(path, 'rt') as f:
+    with gzip.open(path, "rt") as f:
         records = deque()
         for line in f:
-            l = json.loads(line)
+            record = json.loads(line)
             try:
-                records.append({k: l[k] for k in fields})
-            except:
+                records.append({k: record[k] for k in fields})
+            # TODO this appeases pep8 for no bare exception, but we should be far more specific with the type here
+            except Exception:
                 # believe it or not, this happens sometimes
-                logging.warning(f"Could not parse row! Filename {path}, path {l.get('page_path_url')}")
+                logging.warning(f"Could not parse row! Filename {path}, path {record.get('page_path_url')}")
     return pd.DataFrame.from_records(records)
 
 

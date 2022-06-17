@@ -99,17 +99,13 @@ def _test_orders(
         The map_nearest function maps the ids
     """
     _test_spotlight_id = 0
-    rec_ids, rec_similarities = map_nearest(
-        _test_spotlight_id, nearest_indices, similarities, article_ids
-    )
+    rec_ids, rec_similarities = map_nearest(_test_spotlight_id, nearest_indices, similarities, article_ids)
     assert rec_ids.shape == (n_recs - 1,)
     assert (rec_ids == np.array([13, 14])).all()
     return rec_ids, rec_similarities
 
 
-def test_article_recommendations(
-    external_ids, user_ids, durations, session_dates, publish_dates, article_ids, decays
-):
+def test_article_recommendations(external_ids, user_ids, durations, session_dates, publish_dates, article_ids, decays):
     n_recs = 3
     warehouse_df = pd.DataFrame(
         {
@@ -122,11 +118,9 @@ def test_article_recommendations(
         }
     )
     params = {"epochs": 35, "embedding_dim": 16, "model": "IMF"}
-    k = _spotlight_transform(warehouse_df)
+    _spotlight_transform(warehouse_df)
     model = Trainer(warehouse_df, datetime.now().date(), _spotlight_transform, params)
     model.fit()
     embeddings = model.model_embeddings
     distances, nearest_indices = _test_similarities(embeddings, n_recs, decays)
-    nearest_recs = _test_orders(
-        n_recs, nearest_indices, distances, np.unique(article_ids)
-    )
+    _test_orders(n_recs, nearest_indices, distances, np.unique(article_ids))

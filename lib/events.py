@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 # Snowplow Events
 class Event(Enum):
     PAGE_PING = "page_ping"

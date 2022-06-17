@@ -11,7 +11,7 @@ from lib.config import ROOT_DIR
 
 RESOURCE = boto3.resource("s3")
 CLIENT = boto3.client("s3")
-ARTIFACT_BUCKET = 'lnl-monitoring-artifacts'
+ARTIFACT_BUCKET = "lnl-monitoring-artifacts"
 os.makedirs(f"{ROOT_DIR}/tmp", exist_ok=True)
 
 
@@ -44,12 +44,14 @@ def save_outputs(filename):
             else:
                 raise NotImplementedError
             return result
+
         return save_outputs_wrapper
+
     return save_outputs_decorator
 
 
 def upload_to_s3(filepath, bucket):
-    filename = filepath.split('/')[-1]
-    logging.info(f'Uploading {filename} to s3...')
-    RESOURCE.Object(bucket, f"article-rec-training-job/{filename}").put(Body=open(filepath, 'rb'))
-    logging.info(f'Successfully uploaded {filename} to s3')
+    filename = filepath.split("/")[-1]
+    logging.info(f"Uploading {filename} to s3...")
+    RESOURCE.Object(bucket, f"article-rec-training-job/{filename}").put(Body=open(filepath, "rb"))
+    logging.info(f"Successfully uploaded {filename} to s3")

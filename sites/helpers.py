@@ -40,9 +40,7 @@ def transform_data_google_tag_manager(df: pd.DataFrame) -> pd.DataFrame:
     transformed_df = pd.DataFrame()
     transformed_df["client_id"] = df["domain_userid"]
     transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp).dt.round("1s")
-    transformed_df["session_date"] = pd.to_datetime(
-        transformed_df.activity_time.dt.date
-    )
+    transformed_df["session_date"] = pd.to_datetime(transformed_df.activity_time.dt.date)
     transformed_df["landing_page_path"] = df.page_urlpath
     transformed_df["event_name"] = df.event_name
     transformed_df["event_name"] = transformed_df["event_name"].astype("category")

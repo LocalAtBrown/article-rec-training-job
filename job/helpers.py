@@ -7,9 +7,9 @@ from sites.site import Site
 
 
 def batch(iterable, n=1):
-    l = len(iterable)
-    for ndx in range(0, l, n):
-        yield iterable[ndx : min(ndx + n, l)]
+    total_length = len(iterable)
+    for ndx in range(0, total_length, n):
+        yield iterable[ndx : min(ndx + n, total_length)]
 
 
 def pad_date(date_expr: int) -> str:
@@ -39,9 +39,7 @@ def time_decay(
     return data_df
 
 
-def decay_fn(
-    experiment_date: datetime.date, df_column: pd.Series, half_life: float
-) -> pd.Series:
+def decay_fn(experiment_date: datetime.date, df_column: pd.Series, half_life: float) -> pd.Series:
     """half life decay a pandas Series"""
     return 0.5 ** ((experiment_date - df_column).dt.days / half_life)
 

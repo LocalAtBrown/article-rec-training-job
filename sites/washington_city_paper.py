@@ -40,13 +40,11 @@ SCRAPE_CONFIG = {
 # supported url path formats:
 # '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
-PATH_PATTERN = f"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
+PATH_PATTERN = rf"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
 
-def bulk_fetch(
-    start_date: datetime.date, end_date: datetime.date
-) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
     raise NotImplementedError
 
 
@@ -66,18 +64,12 @@ def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.dropna(subset=["contexts_dev_amp_snowplow_amp_id_1"])
     transformed_df = pd.DataFrame()
-    transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(
-        lambda x: x[0]["ampClientId"]
-    )
+    transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(lambda x: x[0]["ampClientId"])
     transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp).dt.round("1s")
-    transformed_df["session_date"] = pd.to_datetime(
-        transformed_df.activity_time.dt.date
-    )
+    transformed_df["session_date"] = pd.to_datetime(transformed_df.activity_time.dt.date)
     transformed_df["landing_page_path"] = df.page_urlpath
     transformed_df["event_name"] = df.event_name
-    transformed_df.replace(
-        {"event_name": "amp_page_ping"}, Event.PAGE_PING.value, inplace=True
-    )
+    transformed_df.replace({"event_name": "amp_page_ping"}, Event.PAGE_PING.value, inplace=True)
     transformed_df["event_name"] = transformed_df["event_name"].astype("category")
 
     return transformed_df
@@ -88,8 +80,9 @@ def extract_external_id(path: str) -> str:
     if result:
         return result.groups()[2]
     else:
-        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None,
-                                   msg="External ID not found in path")
+        raise ArticleScrapingError(
+            ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="External ID not found in path"
+        )
 
 
 def scrape_title(page: Response, soup: BeautifulSoup) -> str:
@@ -140,9 +133,7 @@ def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
         # non-article page
         return error_msg
 
-    classes = {
-        value for element in primary.find_all(class_=True) for value in element["class"]
-    }
+    classes = {value for element in primary.find_all(class_=True) for value in element["class"]}
 
     if "tag-exclude" in classes:
         error_msg = "Article has exclude tag"
@@ -156,16 +147,12 @@ def fetch_article(external_id: str, path: str) -> Response:
     try:
         page = safe_get(url)
     except Exception as e:
-        raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, str(external_id), f"Request failed for {url}"
-        ) from e
+        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, str(external_id), f"Request failed for {url}") from e
     soup = BeautifulSoup(page.text, features="html.parser")
 
     error_msg = validate_not_excluded(page, soup)
     if error_msg:
-        raise ArticleScrapingError(
-            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg
-        )
+        raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg)
 
     return page
 

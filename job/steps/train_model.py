@@ -31,9 +31,7 @@ def _spotlight_transform(prepared_df: pd.DataFrame) -> pd.DataFrame:
     return prepared_df
 
 
-def train_model(
-    X: pd.DataFrame, params: dict, experiment_time: datetime.datetime
-) -> Tuple[Trainer, pd.DataFrame]:
+def train_model(X: pd.DataFrame, params: dict, experiment_time: datetime.datetime) -> Tuple[Trainer, pd.DataFrame]:
     """Train spotlight model
 
     X: pandas dataframe of interactions
@@ -63,9 +61,7 @@ def map_nearest(
     return (article_ids[nearest_indices[spotlight_id][1:]], distances[spotlight_id][1:])
 
 
-def get_recommendations(
-    X: pd.DataFrame, params: dict, dt: datetime.datetime
-) -> List[Rec]:
+def get_recommendations(X: pd.DataFrame, params: dict, dt: datetime.datetime) -> List[Rec]:
     logging.info("Starting model training...")
     embeddings, df = train_model(X, params, dt)
 
