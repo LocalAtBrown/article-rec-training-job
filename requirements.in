@@ -1,7 +1,6 @@
 -e file:.#egg=lib
 aiobotocore[awscli, boto3]
 beautifulsoup4
-black
 h5py
 matplotlib
 pandas

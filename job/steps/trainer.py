@@ -9,7 +9,6 @@ from sklearn.preprocessing import normalize
 import torch
 from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.factorization.explicit import ExplicitFactorizationModel
-from spotlight.sequence.implicit import ImplicitSequenceModel
 from spotlight.interactions import Interactions
 from spotlight.cross_validation import random_train_test_split
 from spotlight.evaluation import mrr_score

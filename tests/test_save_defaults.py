@@ -1,13 +1,10 @@
-from datetime import datetime, timedelta
-import unittest
+from datetime import datetime
 from sites.sites import Sites
 
 import pandas as pd
 
 from job.steps.save_defaults import save_defaults
-from sites.washington_city_paper import WCP_SITE
 from tests.base import BaseTest
-from db.mappings.model import Model, Type, Status
 from db.mappings.recommendation import Rec
 
 

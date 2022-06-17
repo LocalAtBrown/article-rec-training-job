@@ -1,4 +1,3 @@
-from datetime import datetime, timezone, timedelta
 import logging
 import time
 from typing import List
@@ -8,9 +7,8 @@ from db.helpers import (
     create_model,
     refresh_db,
     set_current_model,
-    delete_models,
 )
-from db.mappings.model import Model, Status, Type
+from db.mappings.model import Type
 from db.mappings.recommendation import Rec
 from lib.metrics import write_metric, Unit
 from sites.site import Site

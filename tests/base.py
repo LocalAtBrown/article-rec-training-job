@@ -1,4 +1,3 @@
-import functools
 from unittest import TestCase
 
 from peewee import SqliteDatabase

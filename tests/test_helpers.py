@@ -2,11 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from datetime import datetime, timedelta
-from spotlight.factorization.implicit import ImplicitFactorizationModel
-from spotlight.interactions import Interactions
+from datetime import datetime
 
-from db.mappings.base import tzaware_now
 from job.steps.train_model import map_nearest
 from job.steps.knn import KNN
 from job.steps.trainer import Trainer

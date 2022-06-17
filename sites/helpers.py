@@ -6,7 +6,6 @@ from typing import Dict, Optional
 import requests as req
 import pandas as pd
 from retrying import retry
-from sites.site import Site
 
 
 GOOGLE_TAG_MANAGER_RAW_FIELDS = {

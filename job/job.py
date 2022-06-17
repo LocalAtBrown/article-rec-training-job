@@ -11,8 +11,6 @@ from job.steps import (
     warehouse,
 )
 from job.helpers import get_site
-from db.mappings.model import Type
-from db.helpers import create_model, set_current_model
 from lib.metrics import write_metric, Unit
 from lib.config import config
 from sites.site import Site
@@ -46,11 +44,10 @@ def run():
 
         EXPERIMENT_DT = datetime.now()
 
-        ## Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
+        # Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
         fetch_and_upload_data(site, EXPERIMENT_DT)
 
-        ## Step 2: Train models by pulling data from the warehouse and uploading
-        ## new recommendation objects
+        # Step 2: Train models by pulling data from the warehouse and uploading new recommendation objects
         top_articles = warehouse.get_default_recs(site=site)
         save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
 

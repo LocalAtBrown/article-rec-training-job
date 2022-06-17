@@ -1,7 +1,5 @@
 from datetime import datetime
-from unittest import TestCase
 from unittest.mock import patch
-from typing import Optional, Sized
 
 import pandas as pd
 from db.mappings.article import Article

@@ -1,4 +1,3 @@
-import time
 from typing import Optional, List, Dict, Any, Union
 from requests.models import Response
 from datetime import datetime

@@ -8,7 +8,6 @@ import argparse
 
 from job.job import fetch_and_upload_data
 from job.helpers import get_site
-from db.helpers import db_proxy
 from lib.config import config
 from sites.site import Site
 

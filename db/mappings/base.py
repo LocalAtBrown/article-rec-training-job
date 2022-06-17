@@ -1,5 +1,5 @@
 from typing import Dict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from peewee import Model, DatabaseProxy
 from playhouse.postgres_ext import DateTimeTZField as _DateTimeTZField

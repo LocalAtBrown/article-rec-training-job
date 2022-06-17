@@ -1,10 +1,9 @@
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 from datetime import datetime
 import re
 import logging
 from urllib.parse import urlparse
 from requests.models import Response
-import time
 from bs4 import BeautifulSoup
 
 from sites.helpers import (
