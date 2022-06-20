@@ -1,3 +1,31 @@
+[tool.poetry]
+name = "article-rec-training-job"
+version = "0.1.0"
+description = "Code to define, run, and orchestrate the LNL article recommendation training job."
+authors = ["LocalNewsLab <markh@columbia.edu>"]
+
+[tool.poetry.dependencies]
+python = "3.8"
+aiobotocore = {version = "2.0.1", extras = ["awscli", "boto3"]}
+beautifulsoup4 = "4.10.0"
+h5py = "3.6.0"
+matplotlib = "3.5.0"
+pandas = "1.3.4"
+peewee = "3.14.8"
+psycopg2-binary = "2.9.2"
+progressbar2 = "3.55.0"
+redshift-connector = "2.0.901"
+requests = "2.26.0"
+retrying = "1.3.3"
+s3fs = "2021.11.1"
+scikit-learn = "1.0.1"
+scipy = "1.7.3"
+
+[tool.poetry.dev-dependencies]
+black = "22.3.0"
+pre-commit = "2.19.0"
+pytest = "6.2.5"
+
 [tool.black]
 line-length = 122
 include = '\.pyi?$'
@@ -18,4 +46,3 @@ exclude = '''
 
 [tool.isort]
 profile = "black"
-
