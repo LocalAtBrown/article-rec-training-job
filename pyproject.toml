@@ -5,7 +5,7 @@ description = "Code to define, run, and orchestrate the LNL article recommendati
 authors = ["LocalNewsLab <markh@columbia.edu>"]
 
 [tool.poetry.dependencies]
-python = "3.8"
+python = "3.8.*"
 aiobotocore = {version = "2.0.1", extras = ["awscli", "boto3"]}
 beautifulsoup4 = "4.10.0"
 h5py = "3.6.0"
