@@ -3,8 +3,8 @@ import logging
 import time
 from typing import List, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from db.mappings.recommendation import Rec
 from job.steps.knn import KNN

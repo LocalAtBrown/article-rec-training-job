@@ -2,12 +2,12 @@
 this script allows you to backfill the data warehouse
 """
 
+import argparse
 import datetime
 import logging
-import argparse
 
-from job.job import fetch_and_upload_data
 from job.helpers import get_site
+from job.job import fetch_and_upload_data
 from lib.config import config
 from sites.site import Site
 

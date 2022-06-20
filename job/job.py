@@ -1,18 +1,18 @@
-from datetime import datetime, timedelta
 import logging
 import time
+from datetime import datetime, timedelta
 
+from job.helpers import get_site
 from job.steps import (
     fetch_data,
     save_defaults,
+    save_predictions,
     scrape_metadata,
     train_model,
-    save_predictions,
     warehouse,
 )
-from job.helpers import get_site
-from lib.metrics import write_metric, Unit
 from lib.config import config
+from lib.metrics import Unit, write_metric
 from sites.site import Site
 
 

@@ -1,9 +1,8 @@
+import pandas as pd
 import pytest
 
-import pandas as pd
-
-from sites.washington_city_paper import transform_raw_data
 from lib.config import ROOT_DIR
+from sites.washington_city_paper import transform_raw_data
 
 
 @pytest.fixture(scope="module")

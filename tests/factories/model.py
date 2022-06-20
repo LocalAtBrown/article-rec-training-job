@@ -1,5 +1,5 @@
+from db.mappings.model import Model, Status, Type
 from tests.factories.base import BaseFactory
-from db.mappings.model import Model, Type, Status
 
 
 class ModelFactory(BaseFactory):

@@ -1,6 +1,6 @@
-from sites.washington_city_paper import WCP_SITE
-from sites.texas_tribune import TT_SITE
 from sites.philadelphia_inquirer import PI_SITE
+from sites.texas_tribune import TT_SITE
+from sites.washington_city_paper import WCP_SITE
 
 
 class Sites:

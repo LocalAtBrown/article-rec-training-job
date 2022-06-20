@@ -1,17 +1,17 @@
-import logging
 import datetime
+import logging
+from enum import Enum
 from typing import List
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import redshift_connector as rc
 import s3fs
 
-from sites.site import Site
-from lib.config import config
-from lib.events import Event, PING_INTERVAL
 from job.helpers import chunk_name
-from enum import Enum
+from lib.config import config
+from lib.events import PING_INTERVAL, Event
+from sites.site import Site
 
 
 class Table(Enum):

@@ -1,12 +1,11 @@
-from enum import Enum
-from datetime import datetime
 import time
-
+from datetime import datetime
+from enum import Enum
 from typing import Dict, Optional
-import requests as req
-import pandas as pd
-from retrying import retry
 
+import pandas as pd
+import requests as req
+from retrying import retry
 
 GOOGLE_TAG_MANAGER_RAW_FIELDS = {
     "collector_tstamp",

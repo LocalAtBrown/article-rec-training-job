@@ -2,9 +2,9 @@ from datetime import datetime
 from unittest.mock import patch
 
 import pandas as pd
+
 from db.mappings.article import Article
 from db.mappings.path import Path
-
 from job.steps.scrape_metadata import scrape_upload_metadata
 from sites.helpers import ArticleScrapingError, ScrapeFailure
 from sites.site import Site

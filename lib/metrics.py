@@ -1,10 +1,9 @@
-from typing import Dict
 import logging
+from typing import Dict
 
 import boto3
 
-from lib.config import config, STAGE, REGION
-
+from lib.config import REGION, STAGE, config
 
 client = boto3.client("cloudwatch", REGION)
 SERVICE = config.get("SERVICE")

@@ -1,9 +1,8 @@
-from typing import Dict
 from datetime import datetime, timezone
+from typing import Dict
 
-from peewee import Model, DatabaseProxy
+from peewee import DatabaseProxy, Model
 from playhouse.postgres_ext import DateTimeTZField as _DateTimeTZField
-
 from playhouse.shortcuts import model_to_dict
 
 db_proxy = DatabaseProxy()

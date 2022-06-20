@@ -1,21 +1,21 @@
 import datetime
-from collections import deque
-import logging
-import json
-import os
 import gzip
-import subprocess
+import json
+import logging
+import os
 import shutil
+import subprocess
 import time
-
-import pandas as pd
+from collections import deque
 from typing import List, Set
 
-from lib.metrics import write_metric, Unit
+import pandas as pd
+
 from job.helpers import chunk_name
-from lib.events import Event
 from job.steps import warehouse
-from sites.site import get_bucket_name, Site
+from lib.events import Event
+from lib.metrics import Unit, write_metric
+from sites.site import Site, get_bucket_name
 
 PATH = "/downloads"
 MEM_THRESHOLD = 100000

@@ -2,17 +2,16 @@
 this script allows you to backfill our article table for a given site
 """
 
+import argparse
 import datetime
 import logging
-import argparse
-from typing import Dict, Any
+from typing import Any, Dict
 
+from db.helpers import create_article, db_proxy, update_article
+from db.mappings.article import Article
 from job.helpers import get_site
-from db.helpers import db_proxy
 from lib.config import config
 from sites.site import Site
-from db.mappings.article import Article
-from db.helpers import update_article, create_article
 
 DELTA = datetime.timedelta(days=1)
 

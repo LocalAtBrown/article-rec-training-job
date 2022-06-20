@@ -1,7 +1,7 @@
 from copy import deepcopy
 
-from tests.base import BaseTest
 import sites.philadelphia_inquirer as site
+from tests.base import BaseTest
 
 
 class TestPhiladelphiaInquirer(BaseTest):

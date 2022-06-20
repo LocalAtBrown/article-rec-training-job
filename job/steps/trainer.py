@@ -1,20 +1,20 @@
 import logging
 import time
 from copy import deepcopy
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
-from typing import Optional, Callable
-from sklearn.preprocessing import normalize
 import torch
-from spotlight.factorization.implicit import ImplicitFactorizationModel
-from spotlight.factorization.explicit import ExplicitFactorizationModel
-from spotlight.interactions import Interactions
+from sklearn.preprocessing import normalize
 from spotlight.cross_validation import random_train_test_split
 from spotlight.evaluation import mrr_score
+from spotlight.factorization.explicit import ExplicitFactorizationModel
+from spotlight.factorization.implicit import ImplicitFactorizationModel
+from spotlight.interactions import Interactions
 
-from lib.metrics import write_metric, Unit
 from job.helpers import decay_fn
+from lib.metrics import Unit, write_metric
 
 
 class Trainer:

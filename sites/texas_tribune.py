@@ -1,16 +1,17 @@
-from typing import List, Dict, Any
-from datetime import datetime
-import re
 import logging
+import re
+from datetime import datetime
+from typing import Any, Dict, List
 from urllib.parse import urlparse
-from requests.models import Response
+
 from bs4 import BeautifulSoup
+from requests.models import Response
 
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    ArticleScrapingError,
     ScrapeFailure,
     safe_get,
-    ArticleScrapingError,
     transform_data_google_tag_manager,
 )
 from sites.site import Site

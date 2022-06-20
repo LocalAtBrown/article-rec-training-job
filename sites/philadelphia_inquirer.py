@@ -1,16 +1,17 @@
-from typing import Optional, List, Dict, Any, Union
-from requests.models import Response
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
+
+from requests.models import Response
 
 from lib.config import config
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
-    ScrapeFailure,
     ArticleScrapingError,
-    transform_data_google_tag_manager,
-    safe_get,
+    ScrapeFailure,
     ms_timestamp,
+    safe_get,
+    transform_data_google_tag_manager,
 )
 from sites.site import Site
 

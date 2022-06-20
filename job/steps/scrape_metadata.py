@@ -1,22 +1,22 @@
 import logging
-from datetime import datetime
 import time
-from typing import List, Tuple, Union
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from typing import List, Tuple, Union
 
-from db.mappings.article import Article
-from db.mappings.path import Path
 from db.helpers import (
+    delete_articles,
     get_articles_by_external_ids,
-    refresh_db,
     get_existing_external_ids,
+    refresh_db,
 )
-from job.steps import warehouse
-from sites.site import Site
-from sites.helpers import ArticleScrapingError, ScrapeFailure
-from lib.metrics import write_metric, Unit
-from db.helpers import delete_articles
+from db.mappings.article import Article
 from db.mappings.base import db_proxy
+from db.mappings.path import Path
+from job.steps import warehouse
+from lib.metrics import Unit, write_metric
+from sites.helpers import ArticleScrapingError, ScrapeFailure
+from sites.site import Site
 
 EXCLUDE_FAILURE_TYPES = {
     ScrapeFailure.NO_EXTERNAL_ID,

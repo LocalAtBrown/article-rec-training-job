@@ -1,8 +1,10 @@
 import logging
-from lib.metrics import write_metric
-from job.helpers import batch
+
 import numpy as np
 from scipy.spatial import distance
+
+from job.helpers import batch
+from lib.metrics import write_metric
 
 DEFAULT_BATCH_SIZE = 2000
 # this batch size means that each iteration consumes ~ 176MB

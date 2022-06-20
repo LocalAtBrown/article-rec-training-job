@@ -3,11 +3,10 @@ from unittest import TestCase
 from peewee import SqliteDatabase
 
 from db.mappings import database
-from db.mappings.model import Model
 from db.mappings.article import Article
-from db.mappings.recommendation import Rec
+from db.mappings.model import Model
 from db.mappings.path import Path
-
+from db.mappings.recommendation import Rec
 
 MAPPINGS = (Model, Article, Rec, Path)
 

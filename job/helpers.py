@@ -1,9 +1,9 @@
-import pandas as pd
-
 from datetime import datetime
 
-from sites.sites import Sites
+import pandas as pd
+
 from sites.site import Site
+from sites.sites import Sites
 
 
 def batch(iterable, n=1):

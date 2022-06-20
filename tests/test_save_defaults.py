@@ -1,11 +1,11 @@
 from datetime import datetime
-from sites.sites import Sites
 
 import pandas as pd
 
-from job.steps.save_defaults import save_defaults
-from tests.base import BaseTest
 from db.mappings.recommendation import Rec
+from job.steps.save_defaults import save_defaults
+from sites.sites import Sites
+from tests.base import BaseTest
 
 
 def generate_row(article_id, publish_date, score):

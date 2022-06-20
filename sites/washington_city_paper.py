@@ -1,15 +1,15 @@
-from typing import Optional, List, Dict, Any
-from datetime import datetime
 import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
+
+import pandas as pd
+from bs4 import BeautifulSoup
 from requests.models import Response
 
-from bs4 import BeautifulSoup
-
 from lib.events import Event
-from sites.helpers import safe_get, ArticleScrapingError, ScrapeFailure
+from sites.helpers import ArticleScrapingError, ScrapeFailure, safe_get
 from sites.site import Site
-import pandas as pd
 
 POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10

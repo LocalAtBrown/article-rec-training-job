@@ -1,14 +1,12 @@
 import logging
+from typing import Iterable, List
 
 from peewee import Expression
-from typing import List, Iterable
 
-from db.mappings.base import BaseMapping, tzaware_now
-from db.mappings.model import Model, Type, Status
 from db.mappings.article import Article
+from db.mappings.base import BaseMapping, db_proxy, tzaware_now
+from db.mappings.model import Model, Status, Type
 from db.mappings.recommendation import Rec
-from db.mappings.base import db_proxy
-
 from sites.site import Site
 
 
