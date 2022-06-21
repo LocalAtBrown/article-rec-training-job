@@ -1,24 +1,22 @@
-import logging
-import pandas as pd
-import numpy as np
 import datetime
+import logging
 
-from job.helpers import time_decay
-from lib.config import config
-from sites.site import Site
+import numpy as np
+import pandas as pd
 
 from db.helpers import create_model, refresh_db, set_current_model
 from db.mappings.base import db_proxy
 from db.mappings.model import Type
 from db.mappings.recommendation import Rec
+from job.helpers import time_decay
+from lib.config import config
+from sites.site import Site
 
 MAX_RECS = config.get("MAX_RECS")
 
 
 @refresh_db
-def save_defaults(
-    top_articles: pd.DataFrame, site: Site, experiment_date: datetime.datetime.date
-) -> None:
+def save_defaults(top_articles: pd.DataFrame, site: Site, experiment_date: datetime.datetime.date) -> None:
     decayed_df = time_decay(
         top_articles,
         experiment_date=experiment_date,

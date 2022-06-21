@@ -1,18 +1,15 @@
+import pandas as pd
 import pytest
 
-import pandas as pd
-
-from sites.washington_city_paper import transform_raw_data
 from lib.config import ROOT_DIR
+from sites.washington_city_paper import transform_raw_data
 
 
 @pytest.fixture(scope="module")
 def snowplow_df():
     df = pd.read_csv(f"{ROOT_DIR}/tests/data/snowplow_activities.csv")
     # Read as Python dict (expected format)
-    df[
-        "contexts_dev_amp_snowplow_amp_id_1"
-    ] = df.contexts_dev_amp_snowplow_amp_id_1.apply(eval)
+    df["contexts_dev_amp_snowplow_amp_id_1"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(eval)
     return df
 
 

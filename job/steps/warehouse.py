@@ -1,17 +1,17 @@
-import logging
 import datetime
+import logging
+from enum import Enum
 from typing import List
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import redshift_connector as rc
 import s3fs
 
-from sites.site import Site
-from lib.config import config
-from lib.events import Event, PING_INTERVAL
 from job.helpers import chunk_name
-from enum import Enum
+from lib.config import config
+from lib.events import PING_INTERVAL, Event
+from sites.site import Site
 
 
 class Table(Enum):
@@ -51,7 +51,6 @@ def write_events(
     start_dt: datetime.datetime,
     df: pd.DataFrame,
 ) -> None:
-
     logging.info(f"Uploading events data to Redshift...")
 
     df["site"] = site.name
@@ -73,15 +72,15 @@ def write_events(
         cursor.execute(f"create temp table {staging} (like {events_table})")
         cursor.execute(
             f"""
-                delete from {events_table} 
+                delete from {events_table}
                 where chunk_name in {chunk_names_str}
                 and site = '{site.name}'
             """
         )
         cursor.execute(
             f"""
-                COPY 
-                    {staging}(client_id, activity_time, session_date, landing_page_path, event_name, ping_count, site, chunk_name) 
+                COPY
+                    {staging}(client_id, activity_time, session_date, landing_page_path, event_name, ping_count, site, chunk_name)
                 FROM 's3://{s3_path}'
                 CREDENTIALS 'aws_iam_role={config.get("REDSHIFT_SERVICE_ROLE")}'
                 DELIMITER AS '\t'
@@ -93,7 +92,7 @@ def write_events(
         )
         cursor.execute(
             f"""
-                INSERT INTO {events_table} 
+                INSERT INTO {events_table}
                 select * from {staging}
                 """
         )
@@ -120,9 +119,9 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
             and site = '{site.name}'
         ),
         articles as (
-            select 
-                event_paths.landing_page_path, 
-                a.published_at, 
+            select
+                event_paths.landing_page_path,
+                a.published_at,
                 a.updated_at,
                 p.external_id,
                 p.exclude_reason
@@ -135,7 +134,7 @@ def get_paths_to_update(site: Site, dts: List[datetime.datetime]) -> pd.DataFram
                 and p.site = a.site
         )
         select landing_page_path, external_id from articles
-        where 
+        where
             -- scrape articles that aren't in the cache:
             -- re-scrape articles that meet these conditions:
             --    no publish date
@@ -170,7 +169,6 @@ def update_dwell_times(site: Site, date: datetime.date):
 
     conn = get_connection()
     with conn.cursor() as cursor:
-
         logging.info(f"Deleting stale data from {dwell_time_table}...")
         cursor.execute(
             f"""
@@ -181,16 +179,16 @@ def update_dwell_times(site: Site, date: datetime.date):
         cursor.execute(
             f"""
             insert into {dwell_time_table}
-            select 
-                sum(s.ping_count) * {PING_INTERVAL} as duration, 
-                s.session_date, 
-                s.client_id, 
-                a.id as article_id, 
+            select
+                sum(s.ping_count) * {PING_INTERVAL} as duration,
+                s.session_date,
+                s.client_id,
+                a.id as article_id,
                 s.site,
                 a.external_id,
                 a.published_at
-            from {events_table} s 
-            join {articles} a on 
+            from {events_table} s
+            join {articles} a on
                 a.path = s.landing_page_path
                 and a.site = s.site
             where event_name = '{Event.PAGE_PING.value}'
@@ -218,20 +216,20 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     article_table = get_table(Table.ARTICLES)
     query = f"""
     with article_agg as (
-        select count(*) as num_users_per_article, article_id 
-        from {table} 
+        select count(*) as num_users_per_article, article_id
+        from {table}
         where {table}.site = '{site.name}'
-            and timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1
+            and timestamp_cmp_date(dateadd(day, -{days - 1}, current_date), session_date) != 1
         group by article_id
     ),
     user_agg as (
         select count(*) as num_articles_per_user, sum(duration) as duration_per_user, client_id
-        from {table} 
+        from {table}
         where {table}.site = '{site.name}'
-            and timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1
+            and timestamp_cmp_date(dateadd(day, -{days - 1}, current_date), session_date) != 1
         group by client_id
     )
-    select 
+    select
         {table}.article_id, {table}.external_id, {table}.client_id, session_date, duration, cast({article_table}.published_at as date) as published_at
     from {table}
     join article_agg on article_agg.article_id = {table}.article_id
@@ -239,9 +237,9 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     join {article_table} on {article_table}.id = {table}.article_id
     where {table}.site = '{site.name}'
     -- filter for session dates greater than `days` days ago
-    and timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1
+    and timestamp_cmp_date(dateadd(day, -{days - 1}, current_date), session_date) != 1
     and num_users_per_article > 5
-    and num_articles_per_user > 2 
+    and num_articles_per_user > 2
     and duration between 30 and 600
     and duration_per_user > 60
     and {article_table}.published_at > current_date - {site.max_article_age * 365}
@@ -272,23 +270,23 @@ def get_default_recs(site: Site, limit=50):
     table = get_table(Table.DWELL_TIMES)
     query = f"""
         with total_times as (
-            select 
+            select
                 article_id
                 , max(published_at) as publish_date
                 , sum(duration) as total_duration
-                , count(distinct client_id) n_users 
-            from {table} 
+                , count(distinct client_id) n_users
+            from {table}
             where
                 -- filter for session dates greater than `days` days ago
-                timestamp_cmp_date(dateadd(day, -{days-1}, current_date), session_date) != 1
+                timestamp_cmp_date(dateadd(day, -{days - 1}, current_date), session_date) != 1
                 and {table}.site = '{site.name}'
             group by article_id
         )
-        select 
+        select
             article_id,
             publish_date,
             total_duration as score
-        from total_times 
+        from total_times
         order by 3 desc limit {limit}
     """
     conn = get_connection()

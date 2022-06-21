@@ -2,17 +2,16 @@
 this script allows you to backfill our article table for a given site
 """
 
+import argparse
 import datetime
 import logging
-import argparse
-from typing import Dict, Any
+from typing import Any, Dict
 
+from db.helpers import create_article, db_proxy, update_article
+from db.mappings.article import Article
 from job.helpers import get_site
-from db.helpers import db_proxy
 from lib.config import config
 from sites.site import Site
-from db.mappings.article import Article
-from db.helpers import update_article, create_article
 
 DELTA = datetime.timedelta(days=1)
 
@@ -20,15 +19,12 @@ DELTA = datetime.timedelta(days=1)
 def update_or_create(site: Site, metadata: Dict[str, Any]):
     metadata["site"] = site.name
     try:
-        article = Article.get(
-            (Article.site == site.name)
-            & (Article.external_id == metadata["external_id"])
-        )
+        article = Article.get((Article.site == site.name) & (Article.external_id == metadata["external_id"]))
         logging.info(f'Updating article with external_id: {metadata["external_id"]}')
         update_article(article.id, **metadata)
     except Article.DoesNotExist:
         logging.info(f'Creating article with external_id: {metadata["external_id"]}')
-        article_id = create_article(**metadata)
+        create_article(**metadata)
 
 
 def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
@@ -62,9 +58,7 @@ if __name__ == "__main__":
         default=datetime.date.today() - datetime.timedelta(days=7),
         help="start date for backfill",
     )
-    parser.add_argument(
-        "--days", dest="days", type=int, default=7, help="number of days for backfill"
-    )
+    parser.add_argument("--days", dest="days", type=int, default=7, help="number of days for backfill")
     parser.add_argument(
         "--site",
         dest="site",

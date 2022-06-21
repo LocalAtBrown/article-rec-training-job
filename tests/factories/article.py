@@ -1,8 +1,8 @@
 from datetime import datetime
 from random import randint
 
-from tests.factories.base import BaseFactory
 from db.mappings.article import Article
+from tests.factories.base import BaseFactory
 
 
 class ArticleFactory(BaseFactory):

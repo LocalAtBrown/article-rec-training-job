@@ -1,17 +1,17 @@
-import time
-from typing import Optional, List, Dict, Any, Union
-from requests.models import Response
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
+
+from requests.models import Response
 
 from lib.config import config
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
-    ScrapeFailure,
     ArticleScrapingError,
-    transform_data_google_tag_manager,
-    safe_get,
+    ScrapeFailure,
     ms_timestamp,
+    safe_get,
+    transform_data_google_tag_manager,
 )
 from sites.site import Site
 
@@ -47,9 +47,7 @@ SCRAPE_CONFIG = {
 }
 
 
-def bulk_fetch(
-    start_date: datetime.date, end_date: datetime.date
-) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
     logging.info(f"Fetching articles from {start_date} to {end_date}")
     start_dt = datetime.combine(start_date, datetime.min.time())
     end_dt = datetime.combine(end_date, datetime.min.time())
@@ -64,10 +62,7 @@ def bulk_fetch(
     }
     res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
     json_res = res.json()
-    metadata = [
-        parse_article_metadata(a, a["_id"], a["canonical_url"])
-        for a in json_res["content_elements"]
-    ]
+    metadata = [parse_article_metadata(a, a["_id"], a["canonical_url"]) for a in json_res["content_elements"]]
     return metadata
 
 
@@ -100,28 +95,23 @@ def extract_external_id(path: str) -> Optional[str]:
         res = safe_get(API_URL, API_HEADER, params, SCRAPE_CONFIG)
         res = res.json()
     except Exception as e:
-        raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id=None, msg="ARC API request failed"
-        ) from e
+        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id=None, msg="ARC API request failed") from e
 
     if "_id" not in res:
-        raise ArticleScrapingError(ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None,
-                                   msg="External ID not detected in response")
+        raise ArticleScrapingError(
+            ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="External ID not detected in response"
+        )
 
     external_id = res["_id"]
 
     IN_HOUSE_PLATFORMS = {"composer", "ellipsis"}
     if res.get("source", {}).get("system") not in IN_HOUSE_PLATFORMS:
-        raise ArticleScrapingError(
-            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Not in-house article"
-        )
+        raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Not in-house article")
 
     TEST_SITE = "/zzz-systest"
     sites = res.get("taxonomy", {}).get("sites", [])
     if sites and sites[0].get("_id") == TEST_SITE:
-        raise ArticleScrapingError(
-            ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Test article"
-        )
+        raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Test article")
 
     return external_id
 
@@ -175,9 +165,7 @@ def get_external_id(res_val: dict) -> str:
     return external_id
 
 
-def parse_article_metadata(
-    page: Union[Response, dict], external_id: str, path: str
-) -> dict:
+def parse_article_metadata(page: Union[Response, dict], external_id: str, path: str) -> dict:
     """ARC API JSON parser
 
     :page: JSON Payload from ARC for an external_id
@@ -203,9 +191,7 @@ def parse_article_metadata(
         try:
             val = func(res)
         except Exception as e:
-            raise ArticleScrapingError(
-                ScrapeFailure.FETCH_ERROR, path, external_id, f"Error parsing {prop}"
-            ) from e
+            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, f"Error parsing {prop}") from e
         metadata[prop] = val
 
     return metadata
@@ -222,9 +208,7 @@ def validate_response(res: Response) -> Optional[str]:
     except Exception as e:
         return e
 
-    if "headlines" not in res or (
-        "headlines" in res and "basic" not in res["headlines"]
-    ):
+    if "headlines" not in res or ("headlines" in res and "basic" not in res["headlines"]):
         return "Article missing headline"
 
     if "canonical_url" not in res:
@@ -264,9 +248,7 @@ def fetch_article(external_id: str, path: str) -> Response:
 
     error_msg = validate_response(res)
     if error_msg:
-        raise ArticleScrapingError(
-            ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg
-        )
+        raise ArticleScrapingError(ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg)
 
     return res
 

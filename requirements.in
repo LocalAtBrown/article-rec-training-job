@@ -1,16 +1,16 @@
 -e file:.#egg=lib
-redshift-connector
-s3fs
 aiobotocore[awscli, boto3]
+beautifulsoup4
+h5py
+matplotlib
+pandas
 peewee
 psycopg2-binary
-requests
-beautifulsoup4
-pandas
-retrying
-matplotlib
-pytest
-scipy
 progressbar2
+pytest
+redshift-connector
+requests
+retrying
+s3fs
 scikit-learn
-h5py
+scipy

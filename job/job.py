@@ -1,20 +1,18 @@
-from datetime import datetime, timedelta
 import logging
 import time
+from datetime import datetime, timedelta
 
+from job.helpers import get_site
 from job.steps import (
     fetch_data,
     save_defaults,
+    save_predictions,
     scrape_metadata,
     train_model,
-    save_predictions,
     warehouse,
 )
-from job.helpers import get_site
-from db.mappings.model import Type
-from db.helpers import create_model, set_current_model
-from lib.metrics import write_metric, Unit
 from lib.config import config
+from lib.metrics import Unit, write_metric
 from sites.site import Site
 
 
@@ -46,17 +44,14 @@ def run():
 
         EXPERIMENT_DT = datetime.now()
 
-        ## Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
+        # Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
         fetch_and_upload_data(site, EXPERIMENT_DT)
 
-        ## Step 2: Train models by pulling data from the warehouse and uploading
-        ## new recommendation objects
+        # Step 2: Train models by pulling data from the warehouse and uploading new recommendation objects
         top_articles = warehouse.get_default_recs(site=site)
         save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
 
-        interactions_data = warehouse.get_dwell_times(
-            site, days=config.get("DAYS_OF_DATA")
-        )
+        interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
         recommendations = train_model.get_recommendations(
             interactions_data,
@@ -65,10 +60,7 @@ def run():
         )
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
-        save_predictions.save_predictions(
-            site,
-            recommendations
-        )
+        save_predictions.save_predictions(site, recommendations)
 
     except Exception:
         logging.exception("Job failed")

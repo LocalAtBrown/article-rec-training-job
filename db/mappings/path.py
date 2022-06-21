@@ -1,6 +1,6 @@
 from peewee import TextField
 
-from db.mappings.base import BaseMapping, DateTimeTZField
+from db.mappings.base import BaseMapping
 
 
 class Path(BaseMapping):

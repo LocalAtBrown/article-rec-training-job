@@ -1,8 +1,7 @@
 import logging
 
-from lib.config import config
 from job import job
-
+from lib.config import config
 
 if __name__ == "__main__":
     log_level = config.get("LOG_LEVEL")

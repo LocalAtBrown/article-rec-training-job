@@ -1,18 +1,12 @@
-from datetime import datetime, timezone, timedelta
 import logging
 import time
 from typing import List
-from job.helpers import batch
 
-from db.helpers import (
-    create_model,
-    refresh_db,
-    set_current_model,
-    delete_models,
-)
-from db.mappings.model import Model, Status, Type
+from db.helpers import create_model, refresh_db, set_current_model
+from db.mappings.model import Type
 from db.mappings.recommendation import Rec
-from lib.metrics import write_metric, Unit
+from job.helpers import batch
+from lib.metrics import Unit, write_metric
 from sites.site import Site
 
 
