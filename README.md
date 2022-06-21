@@ -32,9 +32,10 @@ readability. Note that this means code that doesn't meet the rules will fail to 
 
 1. [Install Poetry](https://python-poetry.org/docs/#installation).
 2. Run `poetry install --no-root`
-3. Run `pre-commit install`
+3. Make sure the virtual environment is active, then
+4. Run `pre-commit install`
 
-You're all set up! Your local environment should include all dependencies, including dev dependencies like `pytest`.
+You're all set up! Your local environment should include all dependencies, including dev dependencies like `black`.
 This is done with Poetry via the `poetry.lock` file. As for the containerized code, that still pulls dependencies from
 `requirements.txt`. Any containerized dependency requirements need to be updated in `pyproject.toml` then exported to
 `requirements.txt`.
