@@ -33,8 +33,8 @@ TRAINING_PARAMS = {
 }
 
 SCRAPE_CONFIG = {
-    "concurrent_requests": 20,
-    "requests_per_second": None,
+    "concurrent_requests": 1,
+    "requests_per_second": 2,
 }
 
 # supported url path formats:
