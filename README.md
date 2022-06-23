@@ -21,13 +21,33 @@ Environment parameters are defined in `env.json`.
 You can add a new secret parameter [using AWS SSM](https://www.notion.so/Working-with-SSM-Parameters-82df52fd71b24762b541cc8439f40e4e).
 
 
-## Development Setup
+## Development Tools
 
-1. Set up a [virtual environment](https://docs.python.org/3/library/venv.html) (or let your IDE do it for you).
-2. Run `pip install -r requirements.txt`
-3. Run `pip install pre-commit`
+We use [Poetry](https://python-poetry.org/) to manage dependencies. It also helps with pinning dependency and python
+versions. We also use [pre-commit](https://pre-commit.com/) with hooks for [isort](https://pycqa.github.io/isort/),
+[black](https://github.com/psf/black), and [flake8](https://flake8.pycqa.org/en/latest/) for consistent code style and
+readability. Note that this means code that doesn't meet the rules will fail to commit until it is fixed.
+
+### Setup
+
+1. [Install Poetry](https://python-poetry.org/docs/#installation).
+2. Run `poetry install --no-root`
+3. Make sure the virtual environment is active, then
 4. Run `pre-commit install`
-5. To test it out, run `pre-commit run --all-files`
+
+You're all set up! Your local environment should include all dependencies, including dev dependencies like `black`.
+This is done with Poetry via the `poetry.lock` file. As for the containerized code, that still pulls dependencies from
+`requirements.txt`. Any containerized dependency requirements need to be updated in `pyproject.toml` then exported to
+`requirements.txt`.
+
+### Run Code Format and Linting
+
+To manually run isort, black, and flake8 all in one go, simply run `pre-commit run --all-files`.
+
+### Update Dependencies
+
+To update dependencies in your local environment, make changes to the `pyproject.toml` file then run `poetry update`.
+To update `requirements.txt` for the container, run `poetry export -o requirements.txt --without-hashes`.
 
 
 ## Local Usage
