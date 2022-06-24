@@ -6,7 +6,8 @@ from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 import requests as req
-from requests.models import HTTPError, Response
+from requests.exceptions import HTTPError
+from requests.models import Response
 from retrying import retry
 
 GOOGLE_TAG_MANAGER_RAW_FIELDS = {
