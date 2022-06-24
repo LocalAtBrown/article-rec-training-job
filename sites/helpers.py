@@ -1,10 +1,12 @@
+import logging
 import time
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 import requests as req
+from requests.models import HTTPError, Response
 from retrying import retry
 
 GOOGLE_TAG_MANAGER_RAW_FIELDS = {
@@ -81,3 +83,27 @@ def safe_get(
     if scrape_config.get("requests_per_second"):
         time.sleep(1 / scrape_config["requests_per_second"])
     return page
+
+
+def validate_response(page: Response, validate_funcs: List[Callable]) -> Optional[str]:
+    error_msg = None
+
+    # Go through validation functions one by one, stop as soon as a message gets returned
+    for func in validate_funcs:
+        error_msg = func(page)
+        if error_msg is not None:
+            break
+
+    return error_msg
+
+
+def validate_status_code(page: Response) -> Optional[str]:
+    try:
+        # Raise HTTPError if error code is 400 or more
+        page.raise_for_status()
+    except HTTPError as e:
+        return f'Request failed with error code {page.status_code} and message "{str(e)}"'
+
+    # Would be curious to see non-200 responses that still go through
+    if page.status_code != 200:
+        logging.info(f"Requested with resp. status {page.status_code}: {page.url}")

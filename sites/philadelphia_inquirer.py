@@ -12,6 +12,8 @@ from sites.helpers import (
     ms_timestamp,
     safe_get,
     transform_data_google_tag_manager,
+    validate_response,
+    validate_status_code,
 )
 from sites.site import Site
 
@@ -197,7 +199,7 @@ def parse_article_metadata(page: Union[Response, dict], external_id: str, path: 
     return metadata
 
 
-def validate_response(res: Response) -> Optional[str]:
+def validate_attributes(res: Response) -> Optional[Union[Exception, str]]:
     """ARC API response validator
 
     :res: ARC API JSON response payload
@@ -246,7 +248,7 @@ def fetch_article(external_id: str, path: str) -> Response:
             ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
         ) from e
 
-    error_msg = validate_response(res)
+    error_msg = validate_response(res, [validate_status_code, validate_attributes])
     if error_msg:
         raise ArticleScrapingError(ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg)
 
