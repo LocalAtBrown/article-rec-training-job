@@ -224,8 +224,6 @@ def validate_attributes(res: Response) -> Optional[str]:
     except Exception as e:
         return f"Cannot parse date of publication: {e}"
 
-    return None
-
 
 def fetch_article(external_id: str, path: str) -> Response:
     """Fetch and validate article from the ARC API

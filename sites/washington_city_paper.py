@@ -131,20 +131,18 @@ def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict
 
 
 def validate_not_excluded(page: Response) -> Optional[str]:
-    error_msg = None
     soup = BeautifulSoup(page.text, features="html.parser")
     primary = soup.find(id="primary")
 
+    # TODO: This looks very weird. Really don't think we should be returning None
     if not primary:
         # non-article page
-        return error_msg
+        return
 
     classes = {value for element in primary.find_all(class_=True) for value in element["class"]}
 
     if "tag-exclude" in classes:
-        error_msg = "Article has exclude tag"
-
-    return error_msg
+        return "Article has exclude tag"
 
 
 def fetch_article(external_id: str, path: str) -> Response:

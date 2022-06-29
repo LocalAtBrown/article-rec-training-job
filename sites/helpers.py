@@ -90,15 +90,11 @@ def safe_get(
 
 
 def validate_response(page: Response, validate_funcs: List[ResponseValidator]) -> Optional[str]:
-    error_msg = None
-
     # Go through validation functions one by one, stop as soon as a message gets returned
     for func in validate_funcs:
         error_msg = func(page)
         if error_msg is not None:
-            break
-
-    return error_msg
+            return error_msg
 
 
 def validate_status_code(page: Response) -> Optional[str]:
@@ -106,7 +102,7 @@ def validate_status_code(page: Response) -> Optional[str]:
         # Raise HTTPError if error code is 400 or more
         page.raise_for_status()
     except HTTPError as e:
-        return f'Request failed with error code {page.status_code} and message "{str(e)}"'
+        return f'Request failed with error code {page.status_code} and message "{e}"'
 
     # Would be curious to see non-200 responses that still go through
     if page.status_code != 200:
