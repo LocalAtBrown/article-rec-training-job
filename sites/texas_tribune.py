@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import datetime
+from datetime import date
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
@@ -68,7 +68,7 @@ NON_ARTICLE_PREFIXES = [
 ]
 
 
-def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     logging.info(f"Fetching articles from {start_date} to {end_date}")
 
     API_URL = f"https://{DOMAIN}/api/v2/articles"
