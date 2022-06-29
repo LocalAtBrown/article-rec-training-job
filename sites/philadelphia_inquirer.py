@@ -197,7 +197,7 @@ def parse_article_metadata(page: Union[Response, dict], external_id: str, path: 
     return metadata
 
 
-def validate_response(res: Response) -> Optional[str]:
+def validate_response(res: Response) -> Optional[Union[str, Exception]]:
     """ARC API response validator
 
     :res: ARC API JSON response payload
@@ -205,7 +205,7 @@ def validate_response(res: Response) -> Optional[str]:
     """
     try:
         res = res.json()
-    except Exception as e:
+    except AttributeError as e:
         return e
 
     if "headlines" not in res or ("headlines" in res and "basic" not in res["headlines"]):
