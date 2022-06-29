@@ -172,7 +172,7 @@ def fetch_article(
     external_id: str,
     path: str,
 ) -> Response:
-    external_id = int(external_id)
+    external_id = int(external_id)  # type: ignore
 
     api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
 
