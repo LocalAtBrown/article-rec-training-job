@@ -54,7 +54,7 @@ class Trainer:
 
         self._generate_model()
 
-    def _update_params(self, params: None) -> None:
+    def _update_params(self, params: dict = None) -> None:
         """Update the internal params"""
         self.params.update(params)
 
