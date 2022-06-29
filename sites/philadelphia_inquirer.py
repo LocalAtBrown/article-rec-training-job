@@ -181,7 +181,7 @@ def parse_article_metadata(page: Union[Response, dict], external_id: str, path: 
         ("external_id", get_external_id),
     ]
 
-    if type(page) is dict:
+    if isinstance(page, dict):
         res = page
     else:
         res = page.json()
