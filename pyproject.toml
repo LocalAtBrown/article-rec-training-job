@@ -26,6 +26,7 @@ scipy = "1.7.3"
 [tool.poetry.dev-dependencies]
 mypy = "0.961"
 pre-commit = "2.19.0"
+types-requests = "2.26.0"
 
 [tool.black]
 line-length = 122
