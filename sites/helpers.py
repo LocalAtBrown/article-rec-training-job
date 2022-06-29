@@ -72,7 +72,7 @@ def safe_get(
     headers: Dict[str, str] = None,
     params: Optional[Dict] = None,
     scrape_config={},
-) -> str:
+) -> req.Response:
     TIMEOUT_SECONDS = 30
     default_headers = {"User-Agent": "article-rec-training-job/1.0.0"}
     if headers:
