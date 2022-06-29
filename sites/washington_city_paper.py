@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -44,7 +44,7 @@ PATH_PATTERN = rf"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
 
-def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     raise NotImplementedError
 
 
