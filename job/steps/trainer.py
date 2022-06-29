@@ -54,9 +54,10 @@ class Trainer:
 
         self._generate_model()
 
-    def _update_params(self, params: dict = None) -> None:
+    def _update_params(self, params: Optional[dict] = None) -> None:
         """Update the internal params"""
-        self.params.update(params)
+        if isinstance(params, dict):
+            self.params.update(params)
 
     def _generate_datedecays(self, prepared_df: pd.DataFrame) -> pd.DataFrame:
         """Build columns with date decay and external id"""
