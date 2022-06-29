@@ -70,7 +70,7 @@ def update_model(model_id, **params) -> None:
     _update_resources(Model, Model.id == model_id, **params)
 
 
-def _update_resources(mapping_class: BaseMapping, conditions: Expression, **params: dict) -> None:
+def _update_resources(mapping_class: Type[BaseMapping], conditions: Expression, **params: dict) -> None:
     params["updated_at"] = tzaware_now()
     q = mapping_class.update(**params).where(conditions)
     q.execute()
