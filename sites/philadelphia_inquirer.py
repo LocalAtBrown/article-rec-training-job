@@ -199,7 +199,7 @@ def parse_article_metadata(page: Union[Response, dict], external_id: str, path: 
     return metadata
 
 
-def validate_attributes(res: Response) -> Optional[Union[Exception, str]]:
+def validate_attributes(res: Response) -> Optional[str]:
     """ARC API response validator
 
     :res: ARC API JSON response payload
@@ -208,7 +208,7 @@ def validate_attributes(res: Response) -> Optional[Union[Exception, str]]:
     try:
         res = res.json()
     except Exception as e:
-        return e
+        return f"Cannot parse article response JSON: {e}"
 
     if "headlines" not in res or ("headlines" in res and "basic" not in res["headlines"]):
         return "Article missing headline"
@@ -222,7 +222,7 @@ def validate_attributes(res: Response) -> Optional[Union[Exception, str]]:
     try:
         datetime.strptime(res["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
     except Exception as e:
-        return e
+        return f"Cannot parse date of publication: {e}"
 
     return None
 

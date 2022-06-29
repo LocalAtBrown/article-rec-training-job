@@ -17,6 +17,9 @@ GOOGLE_TAG_MANAGER_RAW_FIELDS = {
     "page_urlpath",
 }
 
+# Custom types
+ResponseValidator = Callable[[Response], Optional[str]]
+
 
 def ms_timestamp(dt: datetime) -> float:
     epoch = datetime.utcfromtimestamp(0)
@@ -86,7 +89,7 @@ def safe_get(
     return page
 
 
-def validate_response(page: Response, validate_funcs: List[Callable]) -> Optional[str]:
+def validate_response(page: Response, validate_funcs: List[ResponseValidator]) -> Optional[str]:
     error_msg = None
 
     # Go through validation functions one by one, stop as soon as a message gets returned
