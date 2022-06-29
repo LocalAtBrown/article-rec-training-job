@@ -24,7 +24,7 @@ scikit-learn = "1.0.1"
 scipy = "1.7.3"
 
 [tool.poetry.dev-dependencies]
-black = "22.3.0"
+mypy = "0.961"
 pre-commit = "2.19.0"
 
 [tool.black]
