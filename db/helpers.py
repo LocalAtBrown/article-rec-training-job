@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, List
+from typing import Iterable, List, Type
 
 from peewee import Expression
 
@@ -36,7 +36,7 @@ def create_rec(**params: dict) -> int:
     return create_resource(Rec, **params)
 
 
-def create_resource(mapping_class: BaseMapping, **params: dict) -> int:
+def create_resource(mapping_class: Type[BaseMapping], **params: dict) -> int:
     resource = mapping_class(**params)
     resource.save()
     return resource.id
