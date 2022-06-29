@@ -34,7 +34,7 @@ class Trainer:
         """
         super().__init__()
 
-        self.params = {
+        self.params: dict = {
             "hl": 10,
             "epochs": 2,
             "embedding_dim": 350,
