@@ -5,7 +5,7 @@ from peewee import TextField
 from db.mappings.base import BaseMapping
 
 
-class Type(enum.Enum):
+class ModelType(enum.Enum):
     ARTICLE = "article"
     USER = "user"
     POPULARITY = "popularity"

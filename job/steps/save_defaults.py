@@ -6,7 +6,7 @@ import pandas as pd
 
 from db.helpers import create_model, refresh_db, set_current_model
 from db.mappings.base import db_proxy
-from db.mappings.model import Type
+from db.mappings.model import ModelType
 from db.mappings.recommendation import Rec
 from job.helpers import time_decay
 from lib.config import config
@@ -27,7 +27,7 @@ def save_defaults(top_articles: pd.DataFrame, site: Site, experiment_date: datet
     top_articles["score"] /= np.max(top_articles["score"])
     top_articles = top_articles.nlargest(n=MAX_RECS, columns="score")
 
-    model_id = create_model(type=Type.POPULARITY.value, site=site.name)
+    model_id = create_model(type=ModelType.POPULARITY.value, site=site.name)
 
     to_create = []
     for _, row in decayed_df.iterrows():
@@ -44,5 +44,5 @@ def save_defaults(top_articles: pd.DataFrame, site: Site, experiment_date: datet
     with db_proxy.atomic():
         Rec.bulk_create(to_create, batch_size=50)
 
-    set_current_model(model_id, Type.POPULARITY.value, model_site=site.name)
+    set_current_model(model_id, ModelType.POPULARITY.value, model_site=site.name)
     return model_id

@@ -5,7 +5,7 @@ from peewee import Expression
 
 from db.mappings.article import Article
 from db.mappings.base import BaseMapping, db_proxy, tzaware_now
-from db.mappings.model import Model, Status, Type
+from db.mappings.model import Model, ModelType, Status
 from db.mappings.recommendation import Rec
 from sites.site import Site
 
@@ -90,12 +90,12 @@ def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> Non
     dq.execute()
 
 
-def set_stale_model(model_type: Type, model_site: str) -> None:
+def set_stale_model(model_type: ModelType, model_site: str) -> None:
     current_model_query = (Model.type == model_type) & (Model.status == Status.CURRENT.value) & (Model.site == model_site)
     _update_resources(Model, current_model_query, status=Status.STALE.value)
 
 
-def get_stale_model_ids(model_type: Type, model_site: str) -> List[int]:
+def get_stale_model_ids(model_type: ModelType, model_site: str) -> List[int]:
     stale_model_query = (Model.type == model_type) & (Model.status == Status.STALE.value) & (Model.site == model_site)
     query = Model.select(Model.id).where(stale_model_query)
     stale_model_ids = [res.id for res in query]
@@ -106,7 +106,7 @@ def get_stale_model_ids(model_type: Type, model_site: str) -> List[int]:
 # If an exception occurs, the current transaction/savepoint will be rolled back.
 # Otherwise the statements will be committed at the end.
 @db_proxy.atomic()
-def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
+def set_current_model(model_id: int, model_type: ModelType, model_site: str) -> None:
     MAX_DELETES = 2
     # get stale models
     stale_model_ids = get_stale_model_ids(model_type, model_site)
