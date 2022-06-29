@@ -85,7 +85,7 @@ def delete_models(model_ids: List[int]) -> None:
     _delete_resources(Model, Model.id.in_(model_ids))
 
 
-def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> None:
+def _delete_resources(mapping_class: Type[BaseMapping], conditions: Expression) -> None:
     dq = mapping_class.delete().where(conditions)
     dq.execute()
 
