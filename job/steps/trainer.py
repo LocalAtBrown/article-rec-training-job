@@ -96,7 +96,7 @@ class Trainer:
         """l2 normalize all embeddings along row dimension of matrix"""
         return normalize(embedding_matrix, axis=1, norm="l2")
 
-    def _generate_normalized_embeddings(self) -> None:
+    def _generate_normalized_embeddings(self) -> np.ndarray:
         """Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
         spotlight_ids = self.dates_df["item_id"].values
         return self._normalize_embeddings(
