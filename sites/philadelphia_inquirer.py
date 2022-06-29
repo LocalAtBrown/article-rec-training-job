@@ -204,21 +204,21 @@ def validate_response(res: Response) -> Optional[Union[str, Exception]]:
     :return: None if no errors; otherwise string describing validation issue
     """
     try:
-        res = res.json()
+        content = res.json()
     except AttributeError as e:
         return e
 
-    if "headlines" not in res or ("headlines" in res and "basic" not in res["headlines"]):
+    if "headlines" not in content or ("headlines" in content and "basic" not in content["headlines"]):
         return "Article missing headline"
 
-    if "canonical_url" not in res:
+    if "canonical_url" not in content:
         return "Article canonical URL missing"
 
-    if "publish_date" not in res:
+    if "publish_date" not in content:
         return "Article publish date missing"
 
     try:
-        datetime.strptime(res["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
+        datetime.strptime(content["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
     except Exception as e:
         return e
 
