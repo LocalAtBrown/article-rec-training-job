@@ -1,7 +1,7 @@
 import logging
 import re
 from datetime import date
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -139,7 +139,9 @@ def get_external_id(page: dict) -> str:
     return external_id
 
 
-def parse_metadata(api_info: Dict[str, Any], external_id: str, path: str) -> Dict[str, Any]:
+def parse_metadata(
+    api_info: Dict[str, Any], external_id: Optional[str] = None, path: Optional[str] = None
+) -> Dict[str, Any]:
     metadata = {}
     parsers = [
         ("title", get_title),
@@ -151,6 +153,10 @@ def parse_metadata(api_info: Dict[str, Any], external_id: str, path: str) -> Dic
         try:
             val = func(api_info)
         except Exception as e:
+            if not external_id:
+                external_id = "no_id_obtained"
+            if not path:
+                path = "no_path_obtained"
             raise ArticleScrapingError(
                 ScrapeFailure.MALFORMED_RESPONSE, external_id, path, "Error parsing metadata for article"
             ) from e
