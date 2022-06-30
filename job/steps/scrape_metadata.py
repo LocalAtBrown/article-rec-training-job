@@ -144,7 +144,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[Unio
     return results
 
 
-def scrape_article(site: Site, article: Union[Article, ArticleScrapingError]) -> Union[Article, ArticleScrapingError]:
+def scrape_article(site: Site, article: Union[Article, ArticleScrapingError]) -> Article:
     """
     Fetch the article and retrieve updated metadata. If the input is an ArticleScrapingError,
     just return it
@@ -153,7 +153,7 @@ def scrape_article(site: Site, article: Union[Article, ArticleScrapingError]) ->
     :return: List of updated Article objects, or ArticleScrapingError
     """
     if isinstance(article, ArticleScrapingError):
-        return article
+        raise article
     res = site.fetch_article(article.external_id, article.path)
     metadata = site.scrape_article_metadata(res, article.external_id, article.path)
     for key, value in metadata.items():
@@ -171,8 +171,8 @@ def scrape_articles(site: Site, articles: List[Article]) -> Tuple[List[Article],
         and ArticleScrapingError if the article could not be scraped.
     """
     futures_list = []
-    results = []
-    errors = []
+    results: List[Article] = []
+    errors: List[ArticleScrapingError] = []
     with ThreadPoolExecutor(max_workers=site.scrape_config["concurrent_requests"]) as executor:
         for article in articles:
             future = executor.submit(scrape_article, site, article=article)
