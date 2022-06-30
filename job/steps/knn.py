@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple
 
 import numpy as np
 from scipy.spatial import distance
@@ -23,9 +24,9 @@ class KNN:
 
     def _get_similar_for_indices(
         self,
-        idxs: np.array,
+        idxs: np.ndarray,
         n_recs: int,
-    ) -> (np.array, np.array):
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate n_recs decayed similarities for articles given by index array idx
         Return array idx*n_recs of indexes for the nearest articles
@@ -50,16 +51,16 @@ class KNN:
         # drop the most similar observation, which is just itself
         # then reverse so that recommendations are sorted in descending order
         sorted_indices = decayed_distances.argsort()[:, ::-1][:, :n_recs:]
-        sorted_scores = (np.array([decayed_distances[i][v] for i, v in enumerate(sorted_indices)]),)
+        sorted_scores = np.array([decayed_distances[i][v] for i, v in enumerate(sorted_indices)])
         return sorted_scores, sorted_indices
 
-    def get_similar_indices(self, n_recs: int) -> (np.ndarray, np.ndarray):
+    def get_similar_indices(self, n_recs: int) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get the nearest n_rec indices and corresponding weights
         for every article in the dataset
         """
         n = len(self.embeddings)
-        scores = np.ndarray((n, n_recs))
+        scores = np.ndarray((n, n_recs)).astype(float)
         indices = np.ndarray((n, n_recs)).astype(int)
 
         for i in batch(range(n), self.batch_size):
