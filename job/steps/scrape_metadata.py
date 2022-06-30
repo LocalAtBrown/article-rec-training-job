@@ -122,7 +122,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[Unio
         if the extraction failed
     """
     futures_list = []
-    results = []
+    results: List[Union[str, ArticleScrapingError]] = []
 
     with ThreadPoolExecutor(max_workers=site.scrape_config["concurrent_requests"]) as executor:
         for path in landing_page_paths:
