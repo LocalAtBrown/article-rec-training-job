@@ -35,12 +35,12 @@ class Config:
             pass
         return val
 
-    def is_secret(self, val: str) -> bool:
-        if not isinstance(val, str):
+    @staticmethod
+    def is_secret(val: str) -> bool:
+        try:
+            return val.startswith("/prod") or val.startswith("/dev")
+        except AttributeError:
             return False
-
-        if val.startswith("/prod") or val.startswith("/dev"):
-            return True
 
     def get(self, var_name: str) -> Any:
         try:
