@@ -24,7 +24,7 @@ def refresh_db(func):
     return wrapper
 
 
-def create_model(**params: dict) -> int:
+def create_model(**params) -> int:
     return create_resource(Model, **params)
 
 
