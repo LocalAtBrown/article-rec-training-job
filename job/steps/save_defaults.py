@@ -16,7 +16,7 @@ MAX_RECS = config.get("MAX_RECS")
 
 
 @refresh_db
-def save_defaults(top_articles: pd.DataFrame, site: Site, experiment_date: datetime.datetime.date) -> None:
+def save_defaults(top_articles: pd.DataFrame, site: Site, experiment_date: datetime.date) -> None:
     decayed_df = time_decay(
         top_articles,
         experiment_date=experiment_date,
