@@ -8,7 +8,13 @@ from bs4 import BeautifulSoup
 from requests.models import Response
 
 from lib.events import Event
-from sites.helpers import ArticleScrapingError, ScrapeFailure, safe_get
+from sites.helpers import (
+    ArticleScrapingError,
+    ScrapeFailure,
+    safe_get,
+    validate_response,
+    validate_status_code,
+)
 from sites.site import Site
 
 POPULARITY_WINDOW = 7
@@ -104,7 +110,6 @@ def scrape_path(page: Response, soup: BeautifulSoup) -> str:
 
 
 def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict:
-
     soup = BeautifulSoup(page.text, features="html.parser")
     metadata = {}
     scraper_funcs = [
@@ -125,20 +130,19 @@ def scrape_article_metadata(page: Response, external_id: str, path: str) -> dict
     return metadata
 
 
-def validate_not_excluded(page: Response, soup: BeautifulSoup) -> Optional[str]:
-    error_msg = None
+def validate_not_excluded(page: Response) -> Optional[str]:
+    soup = BeautifulSoup(page.text, features="html.parser")
     primary = soup.find(id="primary")
 
+    # TODO: This looks very weird. Really don't think we should be returning None
     if not primary:
         # non-article page
-        return error_msg
+        return
 
     classes = {value for element in primary.find_all(class_=True) for value in element["class"]}
 
     if "tag-exclude" in classes:
-        error_msg = "Article has exclude tag"
-
-    return error_msg
+        return "Article has exclude tag"
 
 
 def fetch_article(external_id: str, path: str) -> Response:
@@ -148,10 +152,9 @@ def fetch_article(external_id: str, path: str) -> Response:
         page = safe_get(url)
     except Exception as e:
         raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, str(external_id), f"Request failed for {url}") from e
-    soup = BeautifulSoup(page.text, features="html.parser")
 
-    error_msg = validate_not_excluded(page, soup)
-    if error_msg:
+    error_msg = validate_response(page, [validate_status_code, validate_not_excluded])
+    if error_msg is not None:
         raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg)
 
     return page
