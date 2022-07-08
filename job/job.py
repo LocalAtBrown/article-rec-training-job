@@ -1,4 +1,8 @@
+import json
 import logging
+import os
+import shutil
+import subprocess
 import time
 from datetime import datetime, timedelta
 
@@ -62,9 +66,45 @@ def run():
 
         save_predictions.save_predictions(site, recommendations)
 
-    except Exception:
+    except Exception as e:
         logging.exception("Job failed")
         status = "failure"
+
+        if isinstance(e, IndexError) and "Dimension out of range" in str(e):
+            logging.info(
+                "IndexError encountered, probably during model fitting. Saving training data and params for future inspection."
+            )
+
+            slug = f"{EXPERIMENT_DT.strftime('%Y%m%d-%H%M%S')}_{site.name}"
+
+            # Set up local (container) path to store training data and params
+            UPLOADS = "/uploads"
+            path_local = f"{UPLOADS}/{slug}"
+            if not os.path.isdir(path_local):
+                os.makedirs(path_local)
+
+            # Save training data
+            interactions_data.to_csv(f"{path_local}/data.csv", index=False)
+            # Save training metadata (params & timestamp)
+            with open(f"{path_local}/metadata.json", "w") as f:
+                json.dump(
+                    {
+                        "experiment_dt": str(EXPERIMENT_DT),
+                        "training_params": site.training_params,
+                    },
+                    f,
+                )
+
+            # S3 remote destination
+            path_s3 = f"s3://lnl-sandbox/duy.nguyen/training-job-model-indexerror/{slug}"
+            cmd = f"aws s3 cp --recursive {path_local} {path_s3}".split(" ")
+
+            # Copy local folder to S3
+            logging.info(" ".join(cmd))
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL).wait()
+
+            # Remove directory when done
+            shutil.rmtree(UPLOADS)
 
     latency = time.time() - start_ts
     write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
