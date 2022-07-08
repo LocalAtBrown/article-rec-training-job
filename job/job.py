@@ -70,6 +70,9 @@ def run():
         logging.exception("Job failed")
         status = "failure"
 
+        # TODO: This if-block is only here while we're trying to fix the PyTorch IndexError
+        # (https://github.com/LocalAtBrown/article-rec-training-job/pull/140).
+        # Once no longer necessary, it'll need to be removed.
         if isinstance(e, IndexError) and "Dimension out of range" in str(e):
             logging.info(
                 "IndexError encountered, probably during model fitting. Saving training data and params for future inspection."
