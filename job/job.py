@@ -66,14 +66,14 @@ def run():
 
         save_predictions.save_predictions(site, recommendations)
 
-    except Exception as e:
+    # TODO: This execpt-block is only here while we're trying to fix the PyTorch IndexError
+    # (https://github.com/LocalAtBrown/article-rec-training-job/pull/140).
+    # Once no longer necessary, it'll need to be removed.
+    except IndexError as e:
         logging.exception("Job failed")
         status = "failure"
 
-        # TODO: This if-block is only here while we're trying to fix the PyTorch IndexError
-        # (https://github.com/LocalAtBrown/article-rec-training-job/pull/140).
-        # Once no longer necessary, it'll need to be removed.
-        if isinstance(e, IndexError) and "Dimension out of range" in str(e):
+        if "Dimension out of range" in str(e):
             logging.info(
                 "IndexError encountered, probably during model fitting. Saving training data and params for future inspection."
             )
@@ -98,7 +98,7 @@ def run():
                     f,
                 )
 
-            # S3 remote destination
+            # S3 remote destination. TODO: Parametrize if we end up keeping this check.
             path_s3 = f"s3://lnl-sandbox/duy.nguyen/training-job-model-indexerror/{slug}"
             cmd = f"aws s3 cp --recursive {path_local} {path_s3}".split(" ")
 
@@ -108,6 +108,10 @@ def run():
 
             # Remove directory when done
             shutil.rmtree(UPLOADS)
+
+    except Exception:
+        logging.exception("Job failed")
+        status = "failure"
 
     latency = time.time() - start_ts
     write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
