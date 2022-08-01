@@ -12,6 +12,8 @@ from sites.helpers import (
     ms_timestamp,
     safe_get,
     transform_data_google_tag_manager,
+    validate_response,
+    validate_status_code,
 )
 from sites.site import Site
 
@@ -197,7 +199,7 @@ def parse_article_metadata(page: Union[Response, dict], external_id: str, path: 
     return metadata
 
 
-def validate_response(res: Response) -> Optional[Union[str, Exception]]:
+def validate_attributes(res: Response) -> Optional[str]:
     """ARC API response validator
 
     :res: ARC API JSON response payload
@@ -205,8 +207,8 @@ def validate_response(res: Response) -> Optional[Union[str, Exception]]:
     """
     try:
         content = res.json()
-    except AttributeError as e:
-        return e
+    except Exception as e:
+        return f"Cannot parse article response JSON: {e}"
 
     if "headlines" not in content or ("headlines" in content and "basic" not in content["headlines"]):
         return "Article missing headline"
@@ -220,9 +222,7 @@ def validate_response(res: Response) -> Optional[Union[str, Exception]]:
     try:
         datetime.strptime(content["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
     except Exception as e:
-        return e
-
-    return None
+        return f"Cannot parse date of publication: {e}"
 
 
 def fetch_article(external_id: str, path: str) -> Response:
@@ -246,7 +246,7 @@ def fetch_article(external_id: str, path: str) -> Response:
             ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
         ) from e
 
-    error_msg = validate_response(res)
+    error_msg = validate_response(res, [validate_status_code, validate_attributes])
     if error_msg:
         raise ArticleScrapingError(ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg)
 
