@@ -1,7 +1,7 @@
 import logging
 import re
-from datetime import datetime
-from typing import Any, Dict, List
+from datetime import date
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -70,15 +70,13 @@ NON_ARTICLE_PREFIXES = [
 ]
 
 
-def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     logging.info(f"Fetching articles from {start_date} to {end_date}")
 
     API_URL = f"https://{DOMAIN}/api/v2/articles"
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
-    start_date = start_date.strftime(DATE_FORMAT)
-    end_date = end_date.strftime(DATE_FORMAT)
     # texas tribune publishes 5-10 articles per day
-    params = {"start_date": start_date, "end_date": end_date, "limit": 100}
+    params = {"start_date": start_date.strftime(DATE_FORMAT), "end_date": end_date.strftime(DATE_FORMAT), "limit": 100}
     res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
     json_res = res.json()
 
@@ -143,7 +141,9 @@ def get_external_id(page: dict) -> str:
     return external_id
 
 
-def parse_metadata(api_info: Dict[str, Any], external_id: str, path: str) -> Dict[str, Any]:
+def parse_metadata(
+    api_info: Dict[str, Any], external_id: Optional[str] = None, path: Optional[str] = None
+) -> Dict[str, Any]:
     metadata = {}
     parsers = [
         ("title", get_title),
@@ -155,6 +155,10 @@ def parse_metadata(api_info: Dict[str, Any], external_id: str, path: str) -> Dic
         try:
             val = func(api_info)
         except Exception as e:
+            if not external_id:
+                external_id = "no_id_obtained"
+            if not path:
+                path = "no_path_obtained"
             raise ArticleScrapingError(
                 ScrapeFailure.MALFORMED_RESPONSE, external_id, path, "Error parsing metadata for article"
             ) from e
@@ -176,7 +180,7 @@ def fetch_article(
     external_id: str,
     path: str,
 ) -> Response:
-    external_id = int(external_id)
+    external_id = int(external_id)  # type: ignore
 
     api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
 

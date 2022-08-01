@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Union
 
 from requests.models import Response
@@ -49,7 +49,7 @@ SCRAPE_CONFIG = {
 }
 
 
-def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     logging.info(f"Fetching articles from {start_date} to {end_date}")
     start_dt = datetime.combine(start_date, datetime.min.time())
     end_dt = datetime.combine(end_date, datetime.min.time())
@@ -183,7 +183,7 @@ def parse_article_metadata(page: Union[Response, dict], external_id: str, path: 
         ("external_id", get_external_id),
     ]
 
-    if type(page) is dict:
+    if isinstance(page, dict):
         res = page
     else:
         res = page.json()
@@ -206,23 +206,25 @@ def validate_attributes(res: Response) -> Optional[str]:
     :return: None if no errors; otherwise string describing validation issue
     """
     try:
-        res = res.json()
+        content = res.json()
     except Exception as e:
         return f"Cannot parse article response JSON: {e}"
 
-    if "headlines" not in res or ("headlines" in res and "basic" not in res["headlines"]):
+    if "headlines" not in content or ("headlines" in content and "basic" not in content["headlines"]):
         return "Article missing headline"
 
-    if "canonical_url" not in res:
+    if "canonical_url" not in content:
         return "Article canonical URL missing"
 
-    if "publish_date" not in res:
+    if "publish_date" not in content:
         return "Article publish date missing"
 
     try:
-        datetime.strptime(res["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
+        datetime.strptime(content["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
     except Exception as e:
         return f"Cannot parse date of publication: {e}"
+
+    return None
 
 
 def fetch_article(external_id: str, path: str) -> Response:

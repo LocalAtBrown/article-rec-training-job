@@ -78,7 +78,7 @@ def safe_get(
     headers: Dict[str, str] = None,
     params: Optional[Dict] = None,
     scrape_config={},
-) -> str:
+) -> req.Response:
     TIMEOUT_SECONDS = 30
     default_headers = {"User-Agent": "article-rec-training-job/1.0.0"}
     if headers:
@@ -95,15 +95,16 @@ def validate_response(page: Response, validate_funcs: List[ResponseValidator]) -
         error_msg = func(page)
         if error_msg is not None:
             return error_msg
+    return None
 
 
 def validate_status_code(page: Response) -> Optional[str]:
-    try:
-        # Raise HTTPError if error code is 400 or more
-        page.raise_for_status()
-    except HTTPError as e:
-        return f'Request failed with error code {page.status_code} and message "{e}"'
-
     # Would be curious to see non-200 responses that still go through
     if page.status_code != 200:
         logging.info(f"Requested with resp. status {page.status_code}: {page.url}")
+    try:
+        # Raise HTTPError if error code is 400 or more
+        page.raise_for_status()
+        return None
+    except HTTPError as e:
+        return f'Request failed with error code {page.status_code} and message "{e}"'

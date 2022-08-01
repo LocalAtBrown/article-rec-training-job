@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import pandas as pd
 
@@ -25,7 +25,7 @@ def chunk_name(dt: datetime) -> str:
 
 def time_decay(
     data_df: pd.DataFrame,
-    experiment_date: datetime.date,
+    experiment_date: date,
     half_life: float,
     date_col="session_date",
     duration_col="duration",
@@ -39,7 +39,7 @@ def time_decay(
     return data_df
 
 
-def decay_fn(experiment_date: datetime.date, df_column: pd.Series, half_life: float) -> pd.Series:
+def decay_fn(experiment_date: date, df_column: pd.Series, half_life: float) -> pd.Series:
     """half life decay a pandas Series"""
     return 0.5 ** ((experiment_date - df_column).dt.days / half_life)
 
