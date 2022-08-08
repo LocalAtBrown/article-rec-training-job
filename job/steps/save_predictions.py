@@ -32,7 +32,7 @@ def save_predictions(
         time.sleep(0.05)
 
     logging.info(f"Updating model objects in DB")
-    set_current_model(model_id, ModelType.ARTICLE.value, site.name)
+    set_current_model(model_id, ModelType.ARTICLE, site.name)
 
     latency = time.time() - start_ts
     write_metric("rec_creation_time", latency, unit=Unit.SECONDS)
