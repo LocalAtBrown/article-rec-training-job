@@ -91,15 +91,19 @@ def _delete_resources(mapping_class: Type[BaseMapping], conditions: Expression) 
 
 
 def set_stale_model(model_type: ModelType, model_site: str) -> None:
-    current_model_query = (Model.type == model_type) & (Model.status == Status.CURRENT.value) & (Model.site == model_site)
+    current_model_query = (
+        (Model.type == model_type.value) & (Model.status == Status.CURRENT.value) & (Model.site == model_site)
+    )
     _update_resources(Model, current_model_query, status=Status.STALE.value)
 
 
 def get_stale_model_ids(model_type: ModelType, model_site: str) -> List[int]:
-    stale_model_query = (Model.type == model_type) & (Model.status == Status.STALE.value) & (Model.site == model_site)
+    stale_model_query = (
+        (Model.type == model_type.value) & (Model.status == Status.STALE.value) & (Model.site == model_site)
+    )
     query = Model.select(Model.id).where(stale_model_query)
     stale_model_ids = [res.id for res in query]
-    logging.info(f"Found {len(stale_model_ids)} stale '{model_type}' models")
+    logging.info(f"Found {len(stale_model_ids)} stale '{model_type.value}' models")
     return stale_model_ids
 
 
@@ -117,7 +121,7 @@ def set_current_model(model_id: int, model_type: ModelType, model_site: str) -> 
     # delete stale models
     delete_models(stale_model_ids[:MAX_DELETES])
 
-    logging.info(f"Successfully updated model id {model_id} as current '{model_type}' model'")
+    logging.info(f"Successfully updated model id {model_id} as current '{model_type.value}' model'")
 
 
 def get_articles_by_path(site: str, paths: List[str]) -> List[Article]:

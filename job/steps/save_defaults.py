@@ -44,5 +44,5 @@ def save_defaults(top_articles: pd.DataFrame, site: Site, experiment_date: datet
     with db_proxy.atomic():
         Rec.bulk_create(to_create, batch_size=50)
 
-    set_current_model(model_id, ModelType.POPULARITY.value, model_site=site.name)
+    set_current_model(model_id, ModelType.POPULARITY, model_site=site.name)
     return model_id
