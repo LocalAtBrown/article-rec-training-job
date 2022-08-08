@@ -1,6 +1,11 @@
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from dataclasses import dataclass
+from datetime import date
+from typing import Any, Dict, List, Optional, Union
+
+import pandas as pd
+from requests.models import Response
 
 Site = namedtuple(
     "Site",
@@ -33,23 +38,23 @@ class NewSite(ABC):
         return f"lnl-snowplow-{self.name}"
 
     @abstractmethod
-    def transform_raw_data(self):
+    def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
 
     @abstractmethod
-    def extract_external_id(self):
+    def extract_external_id(self, path: str) -> Optional[str]:
         pass
 
     @abstractmethod
-    def scrape_article_metadata(self):
+    def scrape_article_metadata(self, page: Union[Response, dict], external_id: str, path: str) -> dict:
         pass
 
     @abstractmethod
-    def fetch_article(self):
+    def fetch_article(self, external_id: str, path: str) -> Response:
         pass
 
     @abstractmethod
-    def bulk_fetch(self):
+    def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
         pass
 
 
