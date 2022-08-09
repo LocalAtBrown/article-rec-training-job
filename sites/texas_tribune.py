@@ -260,7 +260,22 @@ class TexasTribune(NewSite):
         return metadata
 
     def fetch_article(self, external_id: str, path: str) -> Response:
-        pass
+        external_id = int(external_id)  # type: ignore
+
+        api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
+
+        try:
+            res = safe_get(api_url, scrape_config=SCRAPE_CONFIG)
+        except Exception as e:
+            raise ArticleScrapingError(
+                ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article url: {api_url}"
+            ) from e
+
+        error_msg = validate_response(res, [validate_status_code])
+        if error_msg is not None:
+            raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg)
+
+        return res
 
     def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
         pass
