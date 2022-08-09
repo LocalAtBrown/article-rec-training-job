@@ -7,21 +7,22 @@ import time
 from datetime import datetime, timedelta
 
 from job.helpers import get_site
-from job.steps.collaborative_filtering import (
-    fetch_data,
-    save_defaults,
-    save_predictions,
-    scrape_metadata,
-    train_model,
-    warehouse,
-)
+from job.steps.collaborative_filtering import fetch_data as cf_fetch_data
+from job.steps.collaborative_filtering import save_defaults as cf_save_defaults
+from job.steps.collaborative_filtering import save_predictions as cf_save_predictions
+from job.steps.collaborative_filtering import scrape_metadata as cf_scrape_metadata
+from job.steps.collaborative_filtering import train_model as cf_train_model
+from job.steps.collaborative_filtering import warehouse as cf_warehouse
+from job.steps.semantic_similarity import fetch_data as ss_fetch_data
 from lib.config import config
 from lib.metrics import Unit, write_metric
 from sites.site import Site
 
 
 def run():
-    run_collaborative_filtering()
+    EXPERIMENT_DT = datetime.now()
+    # run_collaborative_filtering(EXPERIMENT_DT)
+    run_semantic_similarity(EXPERIMENT_DT)
 
 
 def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):
@@ -32,15 +33,15 @@ def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_D
     """
     dts = [dt - timedelta(hours=i) for i in range(hours)]
 
-    fetch_data.fetch_transform_upload_chunks(site, dts)
-    scrape_metadata.scrape_upload_metadata(site, dts)
+    cf_fetch_data.fetch_transform_upload_chunks(site, dts)
+    cf_scrape_metadata.scrape_upload_metadata(site, dts)
 
     for date in set([dt.date() for dt in dts]):
-        warehouse.update_dwell_times(site, date)
+        cf_warehouse.update_dwell_times(site, date)
 
 
-def run_collaborative_filtering():
-    logging.info("Running job...")
+def run_collaborative_filtering(experiment_dt: datetime):
+    logging.info("Running job: Collaborative Filtering...")
 
     site = get_site(config.get("SITE_NAME"))
     logging.info(f"Using site {site.name}")
@@ -50,25 +51,23 @@ def run_collaborative_filtering():
 
     try:
 
-        EXPERIMENT_DT = datetime.now()
-
         # Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
-        fetch_and_upload_data(site, EXPERIMENT_DT)
+        fetch_and_upload_data(site, experiment_dt)
 
         # Step 2: Train models by pulling data from the warehouse and uploading new recommendation objects
-        top_articles = warehouse.get_default_recs(site=site)
-        save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
+        top_articles = cf_warehouse.get_default_recs(site=site)
+        cf_save_defaults.save_defaults(top_articles, site, experiment_dt.date())
 
-        interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+        interactions_data = cf_warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
-        recommendations = train_model.get_recommendations(
+        recommendations = cf_train_model.get_recommendations(
             interactions_data,
             site.training_params,
-            EXPERIMENT_DT,
+            experiment_dt,
         )
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
 
-        save_predictions.save_predictions(site, recommendations)
+        cf_save_predictions.save_predictions(site, recommendations)
 
     # TODO: This execpt-block is only here while we're trying to fix the PyTorch IndexError
     # (https://github.com/LocalAtBrown/article-rec-training-job/pull/140).
@@ -82,7 +81,7 @@ def run_collaborative_filtering():
                 "IndexError encountered, probably during model fitting. Saving training data and params for future inspection."
             )
 
-            slug = f"{EXPERIMENT_DT.strftime('%Y%m%d-%H%M%S')}_{site.name}"
+            slug = f"{experiment_dt.strftime('%Y%m%d-%H%M%S')}_{site.name}"
 
             # Set up local (container) path to store training data and params
             UPLOADS = "/uploads"
@@ -96,7 +95,7 @@ def run_collaborative_filtering():
             with open(f"{path_local}/metadata.json", "w") as f:
                 json.dump(
                     {
-                        "experiment_dt": str(EXPERIMENT_DT),
+                        "experiment_dt": str(experiment_dt),
                         "training_params": site.training_params,
                     },
                     f,
@@ -122,5 +121,31 @@ def run_collaborative_filtering():
 
 
 # Added to accommodate SS
-def run_semantic_similarity():
-    pass
+def run_semantic_similarity(experiment_dt: datetime):
+    logging.info("Running job: Semantic Similarity...")
+
+    site = get_site(config.get("SITE_NAME"))
+
+    # Currently only accepting Texas Tribune
+    if site.name != "texas-tribune":
+        logging.info(
+            "Can only run semantic similarity job for the Texas Tribune. Specify 'texas-tribune' as SITE_NAME in env.json."
+        )
+        return
+
+    logging.info(f"Using site {site.name}")
+
+    start_ts = time.time()
+    # status = "success"
+
+    try:
+        # If implement after experimentation phase, move to sites/texas_tribune.py
+        # (or some post-refactoring equivalent) as a constant
+        SS_BULK_FETCH_START = datetime(1999, 3, 15)
+        _ = ss_fetch_data.run(site, SS_BULK_FETCH_START, experiment_dt)
+    except Exception as e:
+        logging.exception(f"Job failed. Exception encountered: {e}")
+        # status = "failure"
+
+    latency = time.time() - start_ts
+    logging.info(f"Time taken: {timedelta(seconds=latency)}s")
