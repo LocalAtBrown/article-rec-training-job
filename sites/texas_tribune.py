@@ -227,7 +227,7 @@ class TexasTribune(NewSite):
 
         article_url = f"https://{DOMAIN}{path}"
         try:
-            page = safe_get(article_url, scrape_config=SCRAPE_CONFIG)
+            page = safe_get(article_url, scrape_config=self.scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR,
@@ -265,7 +265,7 @@ class TexasTribune(NewSite):
         api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
 
         try:
-            res = safe_get(api_url, scrape_config=SCRAPE_CONFIG)
+            res = safe_get(api_url, scrape_config=self.scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article url: {api_url}"
@@ -288,7 +288,7 @@ class TexasTribune(NewSite):
             "end_date": end_date.strftime(DATE_FORMAT),
             "limit": 100,
         }
-        res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
+        res = safe_get(API_URL, params=params, scrape_config=self.scrape_config)
         json_res = res.json()
 
         metadata = [parse_metadata(article) for article in json_res["results"]]
