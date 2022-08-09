@@ -252,7 +252,12 @@ class TexasTribune(NewSite):
             )
 
     def scrape_article_metadata(self, page: Union[Response, dict], external_id: str, path: str) -> dict:
-        pass
+        try:
+            api_info = page.json()
+        except Exception as e:
+            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, "Response JSON parse failed") from e
+        metadata = parse_metadata(api_info, external_id, path)
+        return metadata
 
     def fetch_article(self, external_id: str, path: str) -> Response:
         pass
