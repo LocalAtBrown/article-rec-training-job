@@ -5,7 +5,7 @@ import pandas as pd
 
 from db.mappings.article import Article
 from db.mappings.path import Path
-from job.steps.scrape_metadata import scrape_upload_metadata
+from job.steps.collaborative_filtering.scrape_metadata import scrape_upload_metadata
 from sites.helpers import ArticleScrapingError, ScrapeFailure
 from sites.site import Site
 from sites.sites import Sites
@@ -79,9 +79,9 @@ class TestScrapeMetadata(BaseTest):
         ]
         super().setUp()
 
-    @patch("job.steps.warehouse.get_paths_to_update", return_value=NEW_VALID)
+    @patch("job.steps.collaborative_filtering.warehouse.get_paths_to_update", return_value=NEW_VALID)
     @patch(
-        "job.steps.scrape_metadata.scrape_article",
+        "job.steps.collaborative_filtering.scrape_metadata.scrape_article",
         return_value=VALID_SCRAPE,
     )
     def test_scrape_metadata__new_valid_recs(self, _, __) -> None:
@@ -89,9 +89,9 @@ class TestScrapeMetadata(BaseTest):
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 3
 
-    @patch("job.steps.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
+    @patch("job.steps.collaborative_filtering.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
     @patch(
-        "job.steps.scrape_metadata.scrape_article",
+        "job.steps.collaborative_filtering.scrape_metadata.scrape_article",
         return_value=VALID_SCRAPE,
     )
     def test_scrape_metadata__existing_valid_recs(self, _, __) -> None:
@@ -101,9 +101,9 @@ class TestScrapeMetadata(BaseTest):
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 3
 
-    @patch("job.steps.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
+    @patch("job.steps.collaborative_filtering.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
     @patch(
-        "job.steps.scrape_metadata.scrape_article",
+        "job.steps.collaborative_filtering.scrape_metadata.scrape_article",
         return_value=None,
         side_effect=scrape_error,
     )
@@ -116,9 +116,9 @@ class TestScrapeMetadata(BaseTest):
         res = Path.select().where(Path.site == self.site.name)
         assert len(res) == 0
 
-    @patch("job.steps.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
+    @patch("job.steps.collaborative_filtering.warehouse.get_paths_to_update", return_value=EXISTING_VALID)
     @patch(
-        "job.steps.scrape_metadata.scrape_article",
+        "job.steps.collaborative_filtering.scrape_metadata.scrape_article",
         return_value=None,
         side_effect=scrape_error,
     )
@@ -130,9 +130,9 @@ class TestScrapeMetadata(BaseTest):
         res = Article.select().where(Article.site == self.site.name)
         assert len(res) == 0
 
-    @patch("job.steps.warehouse.get_paths_to_update", return_value=NEW_VALID)
+    @patch("job.steps.collaborative_filtering.warehouse.get_paths_to_update", return_value=NEW_VALID)
     @patch(
-        "job.steps.scrape_metadata.scrape_article",
+        "job.steps.collaborative_filtering.scrape_metadata.scrape_article",
         return_value=None,
         side_effect=safe_scrape_error,
     )

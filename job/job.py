@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timedelta
 
 from job.helpers import get_site
-from job.steps import (
+from job.steps.collaborative_filtering import (
     fetch_data,
     save_defaults,
     save_predictions,
@@ -18,6 +18,10 @@ from job.steps import (
 from lib.config import config
 from lib.metrics import Unit, write_metric
 from sites.site import Site
+
+
+def run():
+    run_collaborative_filtering()
 
 
 def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):
@@ -35,7 +39,7 @@ def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_D
         warehouse.update_dwell_times(site, date)
 
 
-def run():
+def run_collaborative_filtering():
     logging.info("Running job...")
 
     site = get_site(config.get("SITE_NAME"))
@@ -115,3 +119,8 @@ def run():
 
     latency = time.time() - start_ts
     write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
+
+
+# Added to accommodate SS
+def run_semantic_similarity():
+    pass
