@@ -124,6 +124,11 @@ def get_title(res: dict) -> str:
     return title
 
 
+# Added to accommodate SS
+def get_summary(res: dict) -> str:
+    return res["summary"]
+
+
 def get_published_at(res: dict) -> str:
     # example published_at: '2021-11-12T12:45:35-06:00'
     pub_date = res["pub_date"]
@@ -150,6 +155,8 @@ def parse_metadata(
         ("published_at", get_published_at),
         ("path", get_path),
         ("external_id", get_external_id),
+        # Added to accommodate SS; won't be save to database because not a field in Article mapping
+        ("summary", get_summary),
     ]
     for prop, func in parsers:
         try:
