@@ -1,9 +1,10 @@
 import logging
 import re
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlparse
 
+import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
@@ -16,7 +17,7 @@ from sites.helpers import (
     validate_response,
     validate_status_code,
 )
-from sites.site import Site
+from sites.site import NewSite, Site
 
 """
 TT API documentation
@@ -210,4 +211,31 @@ TT_SITE = Site(
     bulk_fetch,
     POPULARITY_WINDOW,
     MAX_ARTICLE_AGE,
+)
+
+
+class TexasTribune(NewSite):
+    def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        pass
+
+    def extract_external_id(self, path: str) -> Optional[str]:
+        pass
+
+    def scrape_article_metadata(self, page: Union[Response, dict], external_id: str, path: str) -> dict:
+        pass
+
+    def fetch_article(self, external_id: str, path: str) -> Response:
+        pass
+
+    def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
+        pass
+
+
+NEW_TT_SITE = TexasTribune(
+    name=NAME,
+    fields=FIELDS,
+    training_params=TRAINING_PARAMS,
+    scrape_config=SCRAPE_CONFIG,
+    popularity_window=POPULARITY_WINDOW,
+    max_article_age=MAX_ARTICLE_AGE,
 )
