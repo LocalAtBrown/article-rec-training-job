@@ -216,7 +216,7 @@ TT_SITE = Site(
 
 class TexasTribune(NewSite):
     def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        pass
+        return transform_data_google_tag_manager(df=df)
 
     def extract_external_id(self, path: str) -> Optional[str]:
         pass
