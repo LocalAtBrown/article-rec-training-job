@@ -219,7 +219,37 @@ class TexasTribune(NewSite):
         return transform_data_google_tag_manager(df=df)
 
     def extract_external_id(self, path: str) -> Optional[str]:
-        pass
+        for prefix in NON_ARTICLE_PREFIXES:
+            if path.startswith(prefix):
+                raise ArticleScrapingError(
+                    ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="Skipping non-article path"
+                )
+
+        article_url = f"https://{DOMAIN}{path}"
+        try:
+            page = safe_get(article_url, scrape_config=SCRAPE_CONFIG)
+        except Exception as e:
+            raise ArticleScrapingError(
+                ScrapeFailure.FETCH_ERROR,
+                path,
+                external_id=None,
+                msg=f"API request failed for {article_url}",
+            ) from e
+        soup = BeautifulSoup(page.text, features="html.parser")
+
+        html_content = soup.html
+        matched = re.search(r"contentID: '\d+'", str(html_content))
+        if matched and matched.group(0):
+            token = matched.group(0)
+            content_id = token.split("'")[1]
+            return str(int(content_id))
+        else:
+            raise ArticleScrapingError(
+                ScrapeFailure.NO_EXTERNAL_ID,
+                path,
+                external_id=None,
+                msg="External ID not found",
+            )
 
     def scrape_article_metadata(self, page: Union[Response, dict], external_id: str, path: str) -> dict:
         pass
