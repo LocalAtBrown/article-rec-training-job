@@ -17,7 +17,7 @@ from sites.helpers import (
     validate_response,
     validate_status_code,
 )
-from sites.site import NewSite
+from sites.site import Site
 
 """
 TT API documentation
@@ -71,7 +71,7 @@ NON_ARTICLE_PREFIXES = [
 ]
 
 
-class TexasTribune(NewSite):
+class TexasTribune(Site):
     def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
         return transform_data_google_tag_manager(df=df)
 

@@ -16,7 +16,7 @@ from sites.helpers import (
     validate_response,
     validate_status_code,
 )
-from sites.site import NewSite
+from sites.site import Site
 
 """
 ARC API documentation
@@ -52,7 +52,7 @@ SCRAPE_CONFIG = {
 INVALID_PREFIXES = ["/author", "/wires", "/zzz-systest"]
 
 
-class PhiladelphiaInquirer(NewSite):
+class PhiladelphiaInquirer(Site):
     def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
         return transform_data_google_tag_manager(df=df)
 
@@ -259,7 +259,7 @@ class PhiladelphiaInquirer(NewSite):
         return external_id
 
 
-PI_SITE = NewSite(
+PI_SITE = PhiladelphiaInquirer(
     name=NAME,
     fields=FIELDS,
     training_params=TRAINING_PARAMS,

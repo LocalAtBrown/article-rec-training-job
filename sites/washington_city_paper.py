@@ -15,7 +15,7 @@ from sites.helpers import (
     validate_response,
     validate_status_code,
 )
-from sites.site import NewSite
+from sites.site import Site
 
 POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
@@ -50,7 +50,7 @@ PATH_PATTERN = rf"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
 
-class WashingtonCityPaper(NewSite):
+class WashingtonCityPaper(Site):
     def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         requires a dataframe with the following fields:
