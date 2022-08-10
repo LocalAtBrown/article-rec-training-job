@@ -32,6 +32,7 @@ def run():
         fetch_and_upload_data(site, EXPERIMENT_DT)
 
         # Step 2: Fetch top articles from warehouse and save them as default recs
+        # TODO: Post-experiment refactoring: Move modules used by both CF and SS out of collaborative_filtering package
         top_articles = cf_warehouse.get_default_recs(site=site)
         cf_save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
 
