@@ -1,5 +1,4 @@
 import logging
-import pdb
 import re
 from datetime import date
 from typing import Any, Dict, List, Optional
@@ -80,7 +79,6 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     params = {"start_date": start_date.strftime(DATE_FORMAT), "end_date": end_date.strftime(DATE_FORMAT), "limit": 100}
     res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
     json_res = res.json()
-    pdb.set_trace()
 
     metadata = [parse_metadata(article) for article in json_res["results"]]
     return metadata

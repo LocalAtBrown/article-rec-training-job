@@ -6,6 +6,8 @@ import subprocess
 import time
 from datetime import datetime, timedelta
 
+import pandas as pd
+
 from job.helpers import get_site
 from job.steps.collaborative_filtering import fetch_data as cf_fetch_data
 from job.steps.collaborative_filtering import save_defaults as cf_save_defaults
@@ -20,9 +22,43 @@ from sites.site import Site
 
 
 def run():
+    site = get_site(config.get("SITE_NAME"))
+    logging.info(f"Using site {site.name}")
+
     EXPERIMENT_DT = datetime.now()
-    # run_collaborative_filtering(EXPERIMENT_DT)
-    run_semantic_similarity(EXPERIMENT_DT)
+
+    try:
+        # Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
+        fetch_and_upload_data(site, EXPERIMENT_DT)
+
+        # Step 2: Fetch top articles from warehouse and save them as default recs
+        top_articles = cf_warehouse.get_default_recs(site=site)
+        cf_save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
+
+        # Step 3: Fetch newest interaction data from the warehouse to fetch CF and SS models
+        interactions_data = cf_warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+
+        # Step 4: Train CF and SS models and save their recommendations
+
+        # run_collaborative_filtering(site, interactions_data, EXPERIMENT_DT)
+
+        # Unlike CF, SS doesn't need user-article activity in interactions_data in order to run,
+        # but we're passing interactions_data to run_semantic_similarity because, in this experimentation
+        # phase, we only want to run SS on a subset of Texas Tribune articles that CF could "see".
+        #
+        # There are two reasons for this:
+        #
+        # - We want to ensure an apples-to-apples comparison between SS and CF. An article recommended via SS
+        # has to be, at the very least, considered by the CF model.
+        #
+        # - Running SS on every article ever published is very memory-intensive, especially in the KNN phase,
+        # in which the similarity score array has a dimension of <num_articles> x <num_articles> and therefore
+        # grows in memory at a O(n^2) rate. (There are currently 40,000 articles published by the Tribune,
+        # whereas during a normal job run, interactions_data has around 7,000 unique articles.)
+        run_semantic_similarity(site, interactions_data, EXPERIMENT_DT)
+
+    except Exception as e:
+        logging.exception(f"Job failed. Exception encountered: {e}")
 
 
 def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):
@@ -40,26 +76,15 @@ def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_D
         cf_warehouse.update_dwell_times(site, date)
 
 
-def run_collaborative_filtering(experiment_dt: datetime):
-    logging.info("Running job: Collaborative Filtering...")
-
-    site = get_site(config.get("SITE_NAME"))
-    logging.info(f"Using site {site.name}")
+def run_collaborative_filtering(site: Site, interactions_data: pd.DataFrame, experiment_dt: datetime):
+    logging.info("Running Collaborative Filtering...")
 
     start_ts = time.time()
     status = "success"
 
+    exception = None
+
     try:
-
-        # Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
-        fetch_and_upload_data(site, experiment_dt)
-
-        # Step 2: Train models by pulling data from the warehouse and uploading new recommendation objects
-        top_articles = cf_warehouse.get_default_recs(site=site)
-        cf_save_defaults.save_defaults(top_articles, site, experiment_dt.date())
-
-        interactions_data = cf_warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
-
         recommendations = cf_train_model.get_recommendations(
             interactions_data,
             site.training_params,
@@ -73,8 +98,8 @@ def run_collaborative_filtering(experiment_dt: datetime):
     # (https://github.com/LocalAtBrown/article-rec-training-job/pull/140).
     # Once no longer necessary, it'll need to be removed.
     except IndexError as e:
-        logging.exception("Job failed")
         status = "failure"
+        exception = e
 
         if "Dimension out of range" in str(e):
             logging.info(
@@ -112,19 +137,20 @@ def run_collaborative_filtering(experiment_dt: datetime):
             # Remove directory when done
             shutil.rmtree(UPLOADS)
 
-    except Exception:
-        logging.exception("Job failed")
+    except Exception as e:
         status = "failure"
+        exception = e
 
     latency = time.time() - start_ts
     write_metric("job_time", latency, unit=Unit.SECONDS, tags={"status": status})
 
+    # Raise exception to be handled by upper-level run()
+    if exception is not None:
+        raise exception
 
-# Added to accommodate SS
-def run_semantic_similarity(experiment_dt: datetime):
-    logging.info("Running job: Semantic Similarity...")
 
-    site = get_site(config.get("SITE_NAME"))
+def run_semantic_similarity(site: Site, interactions_data: pd.DataFrame, experiment_dt: datetime):
+    logging.info("Running Semantic Similarity...")
 
     # Currently only accepting Texas Tribune
     if site.name != "texas-tribune":
@@ -133,19 +159,9 @@ def run_semantic_similarity(experiment_dt: datetime):
         )
         return
 
-    logging.info(f"Using site {site.name}")
-
     start_ts = time.time()
-    # status = "success"
 
-    try:
-        # If implement after experimentation phase, move to sites/texas_tribune.py
-        # (or some post-refactoring equivalent) as a constant
-        SS_BULK_FETCH_START = datetime(1999, 3, 15)
-        _ = ss_fetch_data.run(site, SS_BULK_FETCH_START, experiment_dt)
-    except Exception as e:
-        logging.exception(f"Job failed. Exception encountered: {e}")
-        # status = "failure"
+    ss_fetch_data.run(site, interactions_data)
 
     latency = time.time() - start_ts
     logging.info(f"Time taken: {timedelta(seconds=latency)}s")

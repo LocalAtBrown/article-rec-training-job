@@ -1,11 +1,11 @@
-from datetime import datetime
+import pandas as pd
 
 from sites.site import Site
 
 
-def run(site: Site, start_dt: datetime, end_dt: datetime):
+def run(site: Site, interactions_data: pd.DataFrame):
     """
     Main script.
     """
-    data = site.bulk_fetch(start_date=start_dt.date(), end_date=end_dt.date())
-    return data
+    assert isinstance(interactions_data, pd.DataFrame)
+    pass
