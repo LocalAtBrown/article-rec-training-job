@@ -2,7 +2,7 @@ from abc import abstractmethod
 from collections import namedtuple
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import pandas as pd
 from requests.models import Response
@@ -30,7 +30,7 @@ Site = namedtuple(
 @dataclass
 class NewSite(metaclass=SingletonABCMeta):
     name: str
-    fields: dict  # needs better name
+    fields: Set[str]  # needs better name
     training_params: dict  # should define with more specifics unless it needs to be flexible
     scrape_config: dict  # should define with more specifics unless it needs to be flexible
     popularity_window: int  # what does this mean to a human? days?
