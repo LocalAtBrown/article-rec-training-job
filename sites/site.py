@@ -8,23 +8,6 @@ from requests.models import Response
 
 from sites.singleton import SingletonABCMeta
 
-# Site = namedtuple(
-#     "Site",
-#     [
-#         "name",  # property, string
-#         "fields",  # property, dict
-#         "training_params",  # property, dict (class candidate)
-#         "scrape_config",  # property, dict (class candidate)
-#         "transform_raw_data",  # function, (df) -> df
-#         "extract_external_id",  # function, (path: str) -> optional(str)
-#         "scrape_article_metadata",  # function, (page, id, path) -> dict
-#         "fetch_article",  # function, (id, path) -> response
-#         "bulk_fetch",  # (start_date, end_date) -> list[dict[str???]]
-#         "popularity_window",  # property, int
-#         "max_article_age",  # property, int
-#     ],
-# )
-
 
 @dataclass
 class Site(metaclass=SingletonABCMeta):
