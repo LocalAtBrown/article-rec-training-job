@@ -1,7 +1,7 @@
 import logging
 import re
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -82,6 +82,31 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
 
     metadata = [parse_metadata(article) for article in json_res["results"]]
     return metadata
+
+
+# Added to accommodate SS
+def get_article_text(metadata: Dict[str, Any]) -> str:
+    """
+    Get text representation of any article.
+    """
+    return metadata["headline"] + ". " + metadata["summary"]
+
+
+# Added to accommodate SS
+# TODO: Rewrite once Liam gets back with suggestions on querying for arbitrary IDs efficiently
+def bulk_fetch_by_external_id(external_ids: Set[str]) -> List[Dict[str, Any]]:
+    """
+    Fetch articles by their IDs.
+    """
+    logging.info(f"Fetching {len(external_ids)} articles by their IDs")
+
+    API_URL = f"https://{DOMAIN}/api/v2/articles"
+
+    def fetch_by_external_id(external_id: str) -> Dict[str, Any]:
+        res = safe_get(f"{API_URL}/{external_id}", scrape_config=SCRAPE_CONFIG)
+        return parse_metadata(res.json())
+
+    return [fetch_by_external_id(external_id) for external_id in external_ids]
 
 
 def extract_external_id(path: str) -> str:
@@ -215,6 +240,8 @@ TT_SITE = Site(
     scrape_article_metadata,
     fetch_article,
     bulk_fetch,
+    bulk_fetch_by_external_id,
+    get_article_text,
     POPULARITY_WINDOW,
     MAX_ARTICLE_AGE,
 )

@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+
+# import pdb
 import shutil
 import subprocess
 import time
@@ -38,6 +40,9 @@ def run():
 
         # Step 3: Fetch newest interaction data from the warehouse to fetch CF and SS models
         interactions_data = cf_warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
+        # Texas Tribune article IDs in dev Article table has duplicates that end with ".0"
+        if site.name == "texas-tribune":
+            interactions_data["external_id"] = interactions_data["external_id"].str.replace(".0", "", regex=False)
 
         # Step 4: Train CF and SS models and save their recommendations
 
@@ -161,8 +166,17 @@ def run_semantic_similarity(site: Site, interactions_data: pd.DataFrame, experim
         return
 
     start_ts = time.time()
+    exception = None
 
-    ss_fetch_data.run(site, interactions_data)
+    try:
+        # Fetch article data from publication API
+        _ = ss_fetch_data.run(site, interactions_data)
+    except Exception as e:
+        exception = e
 
     latency = time.time() - start_ts
     logging.info(f"Time taken: {timedelta(seconds=latency)}s")
+
+    # Raise exception to be handled by upper-level run()
+    if exception is not None:
+        raise exception
