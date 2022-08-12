@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-
-# import pdb
 import shutil
 import subprocess
 import time
@@ -41,11 +39,12 @@ def run():
         # Step 3: Fetch newest interaction data from the warehouse to fetch CF and SS models
         interactions_data = cf_warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
         # Texas Tribune article IDs in dev Article table has duplicates that end with ".0"
-        if site.name == "texas-tribune":
+        # TODO: Remove this bit of code once that's fixed
+        if os.environ["STAGE"] != "prod" and site.name == "texas-tribune":
             interactions_data["external_id"] = interactions_data["external_id"].str.replace(".0", "", regex=False)
 
         # Step 4: Train CF and SS models and save their recommendations
-
+        # TODO: Uncomment the following line before pushing to production
         # run_collaborative_filtering(site, interactions_data, EXPERIMENT_DT)
 
         # Unlike CF, SS doesn't need user-article activity in interactions_data in order to run,
