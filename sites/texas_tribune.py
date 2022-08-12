@@ -180,7 +180,7 @@ def parse_metadata(
         ("published_at", get_published_at),
         ("path", get_path),
         ("external_id", get_external_id),
-        # Added to accommodate SS; won't be save to database because not a field in Article mapping
+        # Added to accommodate SS; won't be saved to database because not a field in Article mapping
         ("summary", get_summary),
     ]
     for prop, func in parsers:
