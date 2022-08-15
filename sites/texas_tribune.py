@@ -98,6 +98,7 @@ def get_article_text(metadata: Dict[str, Any]) -> str:
     return metadata["headline"] + ". " + metadata["summary"]
 
 
+# Added to accommodate SS
 def batch_fetch_by_external_id(batch_external_ids: List[str]) -> Dict[str, Any]:
     """
     Helper for bulk_fetch_by_external_id. Sends a request for a batch of IDs.
