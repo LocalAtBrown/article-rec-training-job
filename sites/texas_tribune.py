@@ -1,7 +1,7 @@
 import logging
 import re
 from datetime import date
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -27,6 +27,8 @@ POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
+BULK_FETCH_LIMIT = 100  # Texas Tribune places a hard 100-article max limit on pagination
+BULK_FETCH_LOG_INTERVAL = 500
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 TRAINING_PARAMS = {
     "hl": 90,
@@ -76,7 +78,11 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     API_URL = f"https://{DOMAIN}/api/v2/articles"
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
     # texas tribune publishes 5-10 articles per day
-    params = {"start_date": start_date.strftime(DATE_FORMAT), "end_date": end_date.strftime(DATE_FORMAT), "limit": 100}
+    params = {
+        "start_date": start_date.strftime(DATE_FORMAT),
+        "end_date": end_date.strftime(DATE_FORMAT),
+        "limit": BULK_FETCH_LIMIT,
+    }
     res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
     json_res = res.json()
 
@@ -93,20 +99,37 @@ def get_article_text(metadata: Dict[str, Any]) -> str:
 
 
 # Added to accommodate SS
-# TODO: Rewrite once Liam gets back with suggestions on querying for arbitrary IDs efficiently
-def bulk_fetch_by_external_id(external_ids: Set[str]) -> List[Dict[str, Any]]:
+def batch_fetch_by_external_id(batch_external_ids: List[str]) -> Dict[str, Any]:
+    """
+    Helper for bulk_fetch_by_external_id. Sends a request for a batch of IDs.
+    """
+    # For instance: https://www.texastribune.org/api/v2/articles/?id=40916&id=40930 returns both of the articles with the corresponding IDs
+    query = "&".join([f"id={i}" for i in batch_external_ids])
+    url = f"https://{DOMAIN}/api/v2/articles/?{query}"
+    params = {"limit": BULK_FETCH_LIMIT}
+    # Request
+    res = safe_get(url, params=params, scrape_config=SCRAPE_CONFIG)
+    return [parse_metadata(article) for article in res.json()["results"]]
+
+
+# Added to accommodate SS
+def bulk_fetch_by_external_id(external_ids: List[str]) -> List[Dict[str, Any]]:
     """
     Fetch articles by their IDs.
     """
-    logging.info(f"Fetching {len(external_ids)} articles by their IDs")
+    num_articles = len(external_ids)
+    logging.info(f"Fetching {num_articles} articles by their IDs")
 
-    API_URL = f"https://{DOMAIN}/api/v2/articles"
+    data = []
+    for i in range(0, num_articles, BULK_FETCH_LIMIT):
+        batch_external_ids = external_ids[i : i + 100]
+        batch_data = batch_fetch_by_external_id(batch_external_ids)
+        data.extend(batch_data)
+        # Log every 500 articles fetched
+        if len(data) % BULK_FETCH_LOG_INTERVAL == 0 or len(data) == num_articles:
+            logging.info(f"Fetched {len(data)}/{num_articles} articles")
 
-    def fetch_by_external_id(external_id: str) -> Dict[str, Any]:
-        res = safe_get(f"{API_URL}/{external_id}", scrape_config=SCRAPE_CONFIG)
-        return parse_metadata(res.json())
-
-    return [fetch_by_external_id(external_id) for external_id in external_ids]
+    return data
 
 
 def extract_external_id(path: str) -> str:
