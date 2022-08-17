@@ -27,6 +27,8 @@ def _spotlight_transform(prepared_df: pd.DataFrame, batch_size: int, random_seed
     #
     # Until this Spotlight bug is fixed, as a short-term measure, we randomly remove 1 entry from the
     # DataFrame corresponding to the article with the highest view count so as to minimally affect performance.
+    #
+    # There's a also a test for this: test_article_recommendations_spotlight_batchsize() in tests/test_helpers.py
     num_interactions = prepared_df.shape[0]
     if num_interactions % batch_size == 1:
         # External ID of most read article
