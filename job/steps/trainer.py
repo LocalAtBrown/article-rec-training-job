@@ -44,7 +44,8 @@ class Trainer:
             "random_seed": 42,
             "loss": "pointwise",
         }
-        self._update_params({"random_state": np.random.RandomState(self.params["random_seed"]), **params})
+        self._update_params({"random_state": np.random.RandomState(self.params["random_seed"])})
+        self._update_params(params)
         self.experiment_time = pd.to_datetime(experiment_time)
 
         if warehouse_transform:
