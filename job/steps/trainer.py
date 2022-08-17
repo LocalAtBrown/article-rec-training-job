@@ -84,6 +84,7 @@ class Trainer:
                 loss=self.params["loss"],
                 random_state=self.params["random_state"],
                 embedding_dim=self.params["embedding_dim"],
+                batch_size=self.params["batch_size"],
             )
         elif self.params["model"] == "EMF":
             self.model = ExplicitFactorizationModel(
@@ -91,6 +92,7 @@ class Trainer:
                 loss=self.params["loss"],
                 random_state=self.params["random_state"],
                 embedding_dim=self.params["embedding_dim"],
+                batch_size=self.params["batch_size"],
             )
 
     def _normalize_embeddings(self, embedding_matrix: np.ndarray) -> np.ndarray:
