@@ -37,7 +37,7 @@ def _spotlight_transform(prepared_df: pd.DataFrame, batch_size: int, random_seed
         index_to_drop = np.random.default_rng(random_seed).choice(
             prepared_df[prepared_df["external_id"] == id_article_most_read].index, size=1, replace=False, shuffle=False
         )
-        # Drop in-place
+        # Drop row with said index
         prepared_df = prepared_df.drop(index=index_to_drop)
         logging.warning(
             f"Found {num_interactions} reader-article interactions, which leaves a remainder of 1 when divided by a batch size of {batch_size} and would trigger a Spotlight bug. "
