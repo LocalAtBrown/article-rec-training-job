@@ -1,7 +1,7 @@
 import datetime
 import logging
 import time
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -14,12 +14,34 @@ from lib.config import config
 MAX_RECS = config.get("MAX_RECS")
 
 
-def _spotlight_transform(prepared_df: pd.DataFrame) -> pd.DataFrame:
+def _spotlight_transform(prepared_df: pd.DataFrame, batch_size: int, random_seed: int, **kwargs: Any) -> pd.DataFrame:
     """Transform data for Spotlight
     :prepared_df: Dataframe with user-article interactions
     :return: (prepared_df)
     """
     prepared_df = prepared_df.dropna()
+
+    # If DataFrame length divides batch_size with a remainder of 1, Spotlight's BilinearNet inside IMF will
+    # throw an IndexError (see https://github.com/maciejkula/spotlight/issues/107) that in the past was
+    # responsible for a few failed job runs (see https://github.com/LocalAtBrown/article-rec-training-job/pull/140).
+    #
+    # Until this Spotlight bug is fixed, as a short-term measure, we randomly remove 1 entry from the
+    # DataFrame corresponding to the article with the highest view count so as to minimally affect performance.
+    num_interactions = prepared_df.shape[0]
+    if num_interactions % batch_size == 1:
+        # External ID of most read article
+        id_article_most_read = prepared_df[["external_id"]].groupby("external_id").size().idxmax()
+        # Randomly chooses an index among interactions involving most interacted article
+        index_to_drop = np.random.default_rng(random_seed).choice(
+            prepared_df[prepared_df["external_id"] == id_article_most_read].index, size=1, replace=False, shuffle=False
+        )
+        # Drop in-place
+        prepared_df = prepared_df.drop(index=index_to_drop)
+        logging.warning(
+            f"Found {num_interactions} reader-article interactions, which leaves a remainder of 1 when divided by a batch size of {batch_size} and would trigger a Spotlight bug. "
+            + f"To prevent this, 1 random interaction corresponding to external ID {id_article_most_read} has been dropped."
+        )
+
     prepared_df["published_at"] = pd.to_datetime(prepared_df["published_at"])
     prepared_df["session_date"] = pd.to_datetime(prepared_df["session_date"])
     prepared_df["session_date"] = prepared_df["session_date"].dt.date
