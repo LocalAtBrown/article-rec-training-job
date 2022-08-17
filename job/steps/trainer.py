@@ -34,7 +34,7 @@ class Trainer:
         """
         super().__init__()
 
-        self.params = {
+        self.params: dict = {
             "hl": 10,
             "epochs": 2,
             "embedding_dim": 350,
@@ -54,9 +54,10 @@ class Trainer:
 
         self._generate_model()
 
-    def _update_params(self, params: None) -> None:
+    def _update_params(self, params: Optional[dict] = None) -> None:
         """Update the internal params"""
-        self.params.update(params)
+        if isinstance(params, dict):
+            self.params.update(params)
 
     def _generate_datedecays(self, prepared_df: pd.DataFrame) -> pd.DataFrame:
         """Build columns with date decay and external id"""
@@ -95,7 +96,7 @@ class Trainer:
         """l2 normalize all embeddings along row dimension of matrix"""
         return normalize(embedding_matrix, axis=1, norm="l2")
 
-    def _generate_normalized_embeddings(self) -> None:
+    def _generate_normalized_embeddings(self) -> np.ndarray:
         """Get l2 normalized embeddings from Spotlight model for all spotlight_ids"""
         spotlight_ids = self.dates_df["item_id"].values
         return self._normalize_embeddings(

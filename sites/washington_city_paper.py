@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -50,7 +50,7 @@ PATH_PATTERN = rf"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
 
-def bulk_fetch(start_date: datetime.date, end_date: datetime.date) -> List[Dict[str, Any]]:
+def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     raise NotImplementedError
 
 
@@ -134,15 +134,12 @@ def validate_not_excluded(page: Response) -> Optional[str]:
     soup = BeautifulSoup(page.text, features="html.parser")
     primary = soup.find(id="primary")
 
-    # TODO: This looks very weird. Really don't think we should be returning None
-    if not primary:
-        # non-article page
-        return
+    if primary:
+        classes = {value for element in primary.find_all(class_=True) for value in element["class"]}
+        if "tag-exclude" in classes:
+            return "Article has exclude tag"
 
-    classes = {value for element in primary.find_all(class_=True) for value in element["class"]}
-
-    if "tag-exclude" in classes:
-        return "Article has exclude tag"
+    return None
 
 
 def fetch_article(external_id: str, path: str) -> Response:

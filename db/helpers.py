@@ -1,11 +1,11 @@
 import logging
-from typing import Iterable, List
+from typing import Iterable, List, Type
 
 from peewee import Expression
 
 from db.mappings.article import Article
 from db.mappings.base import BaseMapping, db_proxy, tzaware_now
-from db.mappings.model import Model, Status, Type
+from db.mappings.model import Model, ModelType, Status
 from db.mappings.recommendation import Rec
 from sites.site import Site
 
@@ -24,7 +24,7 @@ def refresh_db(func):
     return wrapper
 
 
-def create_model(**params: dict) -> int:
+def create_model(**params) -> int:
     return create_resource(Model, **params)
 
 
@@ -36,7 +36,7 @@ def create_rec(**params: dict) -> int:
     return create_resource(Rec, **params)
 
 
-def create_resource(mapping_class: BaseMapping, **params: dict) -> int:
+def create_resource(mapping_class: Type[BaseMapping], **params: dict) -> int:
     resource = mapping_class(**params)
     resource.save()
     return resource.id
@@ -47,7 +47,7 @@ def get_resource(mapping_class: BaseMapping, _id: int) -> dict:
     return instance.to_dict()
 
 
-def get_articles_by_external_ids(site: Site, external_ids: Iterable[str]) -> List[dict]:
+def get_articles_by_external_ids(site: Site, external_ids: Iterable[str]) -> List[Article]:
     res = Article.select().where((Article.site == site.name) & Article.external_id.in_(list(external_ids)))
     if res:
         return [r for r in res]
@@ -70,7 +70,7 @@ def update_model(model_id, **params) -> None:
     _update_resources(Model, Model.id == model_id, **params)
 
 
-def _update_resources(mapping_class: BaseMapping, conditions: Expression, **params: dict) -> None:
+def _update_resources(mapping_class: Type[BaseMapping], conditions: Expression, **params) -> None:
     params["updated_at"] = tzaware_now()
     q = mapping_class.update(**params).where(conditions)
     q.execute()
@@ -85,28 +85,32 @@ def delete_models(model_ids: List[int]) -> None:
     _delete_resources(Model, Model.id.in_(model_ids))
 
 
-def _delete_resources(mapping_class: BaseMapping, conditions: Expression) -> None:
+def _delete_resources(mapping_class: Type[BaseMapping], conditions: Expression) -> None:
     dq = mapping_class.delete().where(conditions)
     dq.execute()
 
 
-def set_stale_model(model_type: Type, model_site: str) -> None:
-    current_model_query = (Model.type == model_type) & (Model.status == Status.CURRENT.value) & (Model.site == model_site)
+def set_stale_model(model_type: ModelType, model_site: str) -> None:
+    current_model_query = (
+        (Model.type == model_type.value) & (Model.status == Status.CURRENT.value) & (Model.site == model_site)
+    )
     _update_resources(Model, current_model_query, status=Status.STALE.value)
 
 
-def get_stale_model_ids(model_type: Type, model_site: str) -> List[int]:
-    stale_model_query = (Model.type == model_type) & (Model.status == Status.STALE.value) & (Model.site == model_site)
+def get_stale_model_ids(model_type: ModelType, model_site: str) -> List[int]:
+    stale_model_query = (
+        (Model.type == model_type.value) & (Model.status == Status.STALE.value) & (Model.site == model_site)
+    )
     query = Model.select(Model.id).where(stale_model_query)
     stale_model_ids = [res.id for res in query]
-    logging.info(f"Found {len(stale_model_ids)} stale '{model_type}' models")
+    logging.info(f"Found {len(stale_model_ids)} stale '{model_type.value}' models")
     return stale_model_ids
 
 
 # If an exception occurs, the current transaction/savepoint will be rolled back.
 # Otherwise the statements will be committed at the end.
 @db_proxy.atomic()
-def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
+def set_current_model(model_id: int, model_type: ModelType, model_site: str) -> None:
     MAX_DELETES = 2
     # get stale models
     stale_model_ids = get_stale_model_ids(model_type, model_site)
@@ -117,7 +121,7 @@ def set_current_model(model_id: int, model_type: Type, model_site: str) -> None:
     # delete stale models
     delete_models(stale_model_ids[:MAX_DELETES])
 
-    logging.info(f"Successfully updated model id {model_id} as current '{model_type}' model'")
+    logging.info(f"Successfully updated model id {model_id} as current '{model_type.value}' model'")
 
 
 def get_articles_by_path(site: str, paths: List[str]) -> List[Article]:

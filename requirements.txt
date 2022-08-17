@@ -52,7 +52,7 @@ s3transfer==0.5.2
 scikit-learn==1.0.1; python_version >= "3.7"
 scipy==1.7.3; python_version >= "3.7" and python_version < "3.11"
 scramp==1.4.1; python_version >= "3.6"
-setuptools-scm==6.4.2; python_version >= "3.7"
+setuptools-scm==7.0.3; python_version >= "3.7"
 six==1.16.0
 soupsieve==2.3.2.post1; python_version >= "3.6" and python_full_version > "3.0.0"
 threadpoolctl==3.1.0; python_version >= "3.7"

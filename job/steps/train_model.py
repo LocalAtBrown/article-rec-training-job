@@ -31,7 +31,7 @@ def _spotlight_transform(prepared_df: pd.DataFrame) -> pd.DataFrame:
     return prepared_df
 
 
-def train_model(X: pd.DataFrame, params: dict, experiment_time: datetime.datetime) -> Tuple[Trainer, pd.DataFrame]:
+def train_model(X: pd.DataFrame, params: dict, experiment_time: datetime.datetime) -> Tuple[np.ndarray, pd.DataFrame]:
     """Train spotlight model
 
     X: pandas dataframe of interactions
@@ -48,7 +48,7 @@ def train_model(X: pd.DataFrame, params: dict, experiment_time: datetime.datetim
     """
     model = Trainer(X, experiment_time, _spotlight_transform, params)
     model.fit()
-    return (model.model_embeddings, model.model_dates_df)
+    return model.model_embeddings, model.model_dates_df
 
 
 def map_nearest(

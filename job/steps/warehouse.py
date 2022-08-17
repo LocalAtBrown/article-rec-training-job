@@ -42,7 +42,7 @@ def get_connection():
 def dts_to_chunk_name_sql(dts: List[datetime.datetime]) -> str:
     """Converts a list of dts to SQL-style array string of chunk names"""
     chunk_names = (chunk_name(dt) for dt in dts)
-    chunk_names = [f"'{name}'" for name in set(chunk_names)]
+    chunk_names = [f"'{name}'" for name in set(chunk_names)]  # type: ignore
     return f"({','.join(chunk_names)})"
 
 

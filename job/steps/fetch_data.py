@@ -47,7 +47,7 @@ def fast_read(path: str, fields: Set[str]) -> pd.DataFrame:
     This is 2x as fast as pd.read_json(gzip=True) for some reason
     """
     with gzip.open(path, "rt") as f:
-        records = deque()
+        records: deque = deque()
         for line in f:
             record = json.loads(line)
             try:
