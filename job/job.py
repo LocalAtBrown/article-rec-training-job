@@ -168,8 +168,11 @@ def run_semantic_similarity(site: Site, interactions_data: pd.DataFrame, experim
     exception = None
 
     try:
+        # Unique external IDs to fetch
+        # https://stackoverflow.com/questions/46839277/series-unique-vs-list-of-set-performance
+        external_ids_to_fetch = list(set(interactions_data["external_id"]))
         # Fetch article data from publication API
-        _ = ss_fetch_data.run(site, interactions_data)
+        _ = ss_fetch_data.run(site, external_ids_to_fetch)
     except Exception as e:
         exception = e
 
