@@ -95,7 +95,10 @@ def get_article_text(metadata: Dict[str, Any]) -> str:
     """
     Get text representation of any article.
     """
-    return metadata["headline"] + ". " + metadata["summary"]
+    # Assuming every article must have a headline but not necessarily a summary
+    headline = metadata["title"]
+    summary = metadata.get("summary") or ""
+    return f"{headline}. {summary}"
 
 
 # Added to accommodate SS

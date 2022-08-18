@@ -64,6 +64,7 @@ class Config:
         * `DISPLAY_PROGRESS` (boolean): whether or not to display training progress in logs (_e.g. false_)
         * `MAX_RECS` (int): How many recommendations to save to the database for each article (_e.g. 20_)
         * `DAYS_OF_DATA` (int): How many days worth of data to fetch and train on (_e.g. 28_)
+        * `SS_ENCODER` (str): name of pretrained model used to create article text embeddings, for semantic-similarity method (https://www.sbert.net/docs/pretrained_models.html)
         """
         with open(INPUT_FILEPATH) as json_file:
             env_vars = json.load(json_file)
