@@ -38,6 +38,7 @@ class Trainer:
             "hl": 10,
             "epochs": 2,
             "embedding_dim": 350,
+            "batch_size": 256,
             "model": "EMF",
             "tune": False,
             "random_state": np.random.RandomState(42),
@@ -83,6 +84,7 @@ class Trainer:
                 loss=self.params["loss"],
                 random_state=self.params["random_state"],
                 embedding_dim=self.params["embedding_dim"],
+                batch_size=self.params["batch_size"],
             )
         elif self.params["model"] == "EMF":
             self.model = ExplicitFactorizationModel(
@@ -90,6 +92,7 @@ class Trainer:
                 loss=self.params["loss"],
                 random_state=self.params["random_state"],
                 embedding_dim=self.params["embedding_dim"],
+                batch_size=self.params["batch_size"],
             )
 
     def _normalize_embeddings(self, embedding_matrix: np.ndarray) -> np.ndarray:
@@ -108,7 +111,44 @@ class Trainer:
     def _fit(self, training_dataset: Interactions) -> None:
         """Fit the spotlight model to an Interactions dataset
         :training_dataset: Spotlight Interactions object"""
-        self.model.fit(training_dataset, verbose=True)
+        # If DataFrame length L divides batch_size with a remainder of 1, Spotlight's BilinearNet inside IMF will
+        # throw an IndexError (see https://github.com/maciejkula/spotlight/issues/107) that in the past was
+        # responsible for a few failed job runs (see https://github.com/LocalAtBrown/article-rec-training-job/pull/140).
+        #
+        # Until this Spotlight bug is fixed, as a workaround, we split the interactions DataFrame into two
+        # DataFrames, one with length L - 2 and one with length 2, then make 2 successive model.fit() calls.
+
+        num_interactions = len(training_dataset)  # L
+        batch_size = self.params["batch_size"]
+
+        # Length of second split
+        # Two passes using a roughly 50-50 split performs on par with a single pass using the entire dataset
+        # while ensuring degenerate loss doesn't happen
+        split = int(num_interactions / 2 / batch_size) * batch_size + 2
+
+        will_trigger_squeeze_bug = num_interactions % batch_size == 1
+        # If L % batch_size != 1, fit the entire dataset as usual
+        if not will_trigger_squeeze_bug:
+            self.model.fit(training_dataset, verbose=True)
+            return
+
+        # Error-prevention code starts here
+        logging.info(
+            f"Found {num_interactions} reader-article interactions, which leaves a remainder of 1 when divided by a batch size of {batch_size} and would trigger a Spotlight bug. "
+            + f"To prevent this, splitting the interactions into to datasets of length {num_interactions - split} and {split} and fitting the model once with each split."
+        )
+
+        # Hijacking this Spotlight native CV method because writing custom code that works with Spotlight's Interactions object is too much work
+        training_dataset_1, training_dataset_2 = random_train_test_split(
+            training_dataset, test_percentage=split / num_interactions, random_state=self.params["random_state"]
+        )
+
+        # Two-pass fitting
+        logging.info("Fitting first split")
+        self.model.fit(training_dataset_1, verbose=True)
+        # If successive fits work, in the second pass we should see the model's final-epoch loss is less than that in the first pass
+        logging.info("Fitting second split")
+        self.model.fit(training_dataset_2, verbose=True)
 
     def _tune(self) -> None:
         """Perform grid seach over tune_params and tune_ranges lists
