@@ -117,6 +117,8 @@ class Trainer:
         #
         # Until this Spotlight bug is fixed, as a workaround, we split the interactions DataFrame into two
         # DataFrames, one with length L - 2 and one with length 2, then make 2 successive model.fit() calls.
+        #
+        # There's a also a test for this: test_article_recommendations_spotlight_batchsize() in tests/test_helpers.py.
 
         num_interactions = len(training_dataset)  # L
         batch_size = self.params["batch_size"]
