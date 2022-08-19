@@ -114,7 +114,6 @@ def test_article_recommendations(external_ids, user_ids, durations, session_date
         }
     )
     params = {"epochs": 35, "embedding_dim": 16, "model": "IMF"}
-    _spotlight_transform(warehouse_df)
     model = Trainer(warehouse_df, datetime.now().date(), _spotlight_transform, params)
     model.fit()
     embeddings = model.model_embeddings
