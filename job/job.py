@@ -170,6 +170,7 @@ def run_semantic_similarity(site: Site, interactions_data: pd.DataFrame, experim
 
     try:
         # Fetch article data from publication API
+        # TODO: Remove next line once move to prod/testing
         interactions_data = interactions_data.sample(n=100)
         data = ss_fetch_data.run(site, interactions_data)
 
