@@ -13,7 +13,7 @@ from spotlight.factorization.explicit import ExplicitFactorizationModel
 from spotlight.factorization.implicit import ImplicitFactorizationModel
 from spotlight.interactions import Interactions
 
-from job.helpers import decay_fn
+from job.helpers.datetime import decay_fn
 from lib.metrics import Unit, write_metric
 
 

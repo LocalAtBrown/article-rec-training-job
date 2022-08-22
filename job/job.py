@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from job.helpers import get_site
+from job.helpers.site import get_site
 from job.steps.collaborative_filtering import fetch_data as cf_fetch_data
 from job.steps.collaborative_filtering import save_defaults as cf_save_defaults
 from job.steps.collaborative_filtering import save_predictions as cf_save_predictions

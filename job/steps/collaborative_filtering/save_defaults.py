@@ -8,7 +8,7 @@ from db.helpers import create_model, refresh_db, set_current_model
 from db.mappings.base import db_proxy
 from db.mappings.model import ModelType
 from db.mappings.recommendation import Rec
-from job.helpers import time_decay
+from job.helpers.datetime import time_decay
 from lib.config import config
 from sites.site import Site
 

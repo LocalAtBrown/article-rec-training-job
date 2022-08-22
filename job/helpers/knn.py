@@ -4,7 +4,7 @@ from typing import Tuple
 import numpy as np
 from scipy.spatial import distance
 
-from job.helpers import batch
+from job.helpers.itertools import batch
 from lib.metrics import write_metric
 
 DEFAULT_BATCH_SIZE = 2000

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from db.mappings.recommendation import Rec
-from job.steps.collaborative_filtering.knn import KNN
+from job.helpers.knn import KNN
 from job.steps.collaborative_filtering.trainer import Trainer
 from lib.config import config
 

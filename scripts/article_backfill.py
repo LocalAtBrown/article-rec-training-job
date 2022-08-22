@@ -14,7 +14,7 @@ from typing import Any, Dict
 
 from db.helpers import create_article, db_proxy, update_article
 from db.mappings.article import Article
-from job.helpers import get_site
+from job.helpers.site import get_site
 from lib.config import config
 from sites.site import Site
 
