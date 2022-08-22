@@ -17,6 +17,7 @@ from job.steps.collaborative_filtering import train_model as cf_train_model
 from job.steps.collaborative_filtering import warehouse as cf_warehouse
 from job.steps.semantic_similarity import fetch_data as ss_fetch_data
 from job.steps.semantic_similarity import generate_embeddings as ss_generate_embeddings
+from job.steps.semantic_similarity import generate_recs as ss_generate_recs
 from lib.config import config
 from lib.metrics import Unit, write_metric
 from sites.site import Site
@@ -175,7 +176,11 @@ def run_semantic_similarity(site: Site, interactions_data: pd.DataFrame, experim
         data = ss_fetch_data.run(site, interactions_data)
 
         # Generate article-level embeddings
-        _ = ss_generate_embeddings.run(site, data, config.get("SS_ENCODER"))
+        embeddings = ss_generate_embeddings.run(site, data, config.get("SS_ENCODER"))
+        external_ids = [str(article["external_id"]) for article in data]
+
+        # Create recs from embeddings
+        ss_generate_recs.run(embeddings, external_ids)
     except Exception as e:
         exception = e
 
