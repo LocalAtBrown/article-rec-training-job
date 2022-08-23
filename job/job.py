@@ -45,9 +45,6 @@ def run():
         if os.environ["STAGE"] != "prod" and site.name == "texas-tribune":
             interactions_data["external_id"] = interactions_data["external_id"].str.replace(".0", "", regex=False)
 
-        # TODO: Remove next line once move to prod/testing
-        interactions_data = interactions_data.sample(n=100)
-
         # Step 4: Train CF and SS models and save their recommendations
         # TODO: Uncomment the following line before pushing to production
         # run_collaborative_filtering(site, interactions_data, EXPERIMENT_DT)
@@ -173,14 +170,14 @@ def run_semantic_similarity(site: Site, interactions_data: pd.DataFrame, experim
     exception = None
 
     try:
-        # Fetch article data from publication API
+        # Fetch article data from publication API. Preprocess all data so that they're ready for next steps
         article_data = ss_fetch_data.run(site, interactions_data)
 
         # Generate article-level embeddings
         embeddings = ss_generate_embeddings.run(article_data, config.get("SS_ENCODER"))
 
         # Create recs from embeddings
-        ss_generate_recs.run(embeddings, article_data, config.get("MAX_RECS"))
+        _ = ss_generate_recs.run(embeddings, article_data, config.get("MAX_RECS"))
     except Exception as e:
         exception = e
 
