@@ -15,7 +15,9 @@ from job.steps.collaborative_filtering import save_predictions as cf_save_predic
 from job.steps.collaborative_filtering import scrape_metadata as cf_scrape_metadata
 from job.steps.collaborative_filtering import train_model as cf_train_model
 from job.steps.collaborative_filtering import warehouse as cf_warehouse
-from job.steps.semantic_similarity import fetch_data as ss_fetch_data
+from job.steps.semantic_similarity import (
+    fetch_and_preprocess_data as ss_fetch_and_preprocess_data,
+)
 from job.steps.semantic_similarity import generate_embeddings as ss_generate_embeddings
 from job.steps.semantic_similarity import generate_recs as ss_generate_recs
 from lib.config import config
@@ -171,7 +173,8 @@ def run_semantic_similarity(site: Site, interactions_data: pd.DataFrame, experim
 
     try:
         # Fetch article data from publication API. Preprocess all data so that they're ready for next steps
-        article_data = ss_fetch_data.run(site, interactions_data)
+        # TODO: Maybe split into separate fetch and preprocess scripts?
+        article_data = ss_fetch_and_preprocess_data.run(site, interactions_data)
 
         # Generate article-level embeddings
         embeddings = ss_generate_embeddings.run(article_data, config.get("SS_ENCODER"))

@@ -18,6 +18,7 @@ def run(site: Site, interactions_data: pd.DataFrame) -> pd.DataFrame:
     """
     Fetch text data of all articles included in the `interactions_data` table and join them with article ID metadata values.
     """
+    # FETCH
     # Grab unique external IDs from interactions table
     # https://stackoverflow.com/questions/46839277/series-unique-vs-list-of-set-performance
     external_ids = list(set(interactions_data["external_id"]))
@@ -28,7 +29,7 @@ def run(site: Site, interactions_data: pd.DataFrame) -> pd.DataFrame:
     # Validation
     validate(data_fetched, external_ids)
 
-    # From now on everything is preprocessing
+    # PREPROCESS
     # Create text representation of each article
     data = [{"external_id": article["external_id"], "text": site.get_article_text(article)} for article in data_fetched]
     df_data = pd.DataFrame(data, dtype=str)
