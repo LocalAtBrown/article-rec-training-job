@@ -102,7 +102,7 @@ def get_article_text(metadata: Dict[str, Any]) -> str:
 
 
 # Added to accommodate SS
-def batch_fetch_by_external_id(batch_external_ids: List[str]) -> Dict[str, Any]:
+def batch_fetch_by_external_id(batch_external_ids: List[str]) -> List[Dict[str, Any]]:
     """
     Helper for bulk_fetch_by_external_id. Sends a request for a batch of IDs.
     """
@@ -123,7 +123,7 @@ def bulk_fetch_by_external_id(external_ids: List[str]) -> List[Dict[str, Any]]:
     num_articles = len(external_ids)
     logging.info(f"Fetching {num_articles} articles by their IDs")
 
-    data = []
+    data: List[Dict[str, Any]] = []
     for i in range(0, num_articles, BULK_FETCH_LIMIT):
         batch_external_ids = external_ids[i : i + 100]
         batch_data = batch_fetch_by_external_id(batch_external_ids)

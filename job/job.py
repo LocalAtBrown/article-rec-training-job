@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import time
 from datetime import datetime, timedelta
+from typing import Optional
 
 import pandas as pd
 
@@ -91,7 +92,7 @@ def run_collaborative_filtering(site: Site, interactions_data: pd.DataFrame, exp
     start_ts = time.time()
     status = "success"
 
-    exception = None
+    exception: Optional[Exception] = None
 
     try:
         recommendations = cf_train_model.get_recommendations(
