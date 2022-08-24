@@ -68,7 +68,7 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     return metadata
 
 
-def bulk_fetch_by_article_id() -> None:
+def bulk_fetch_by_external_id() -> None:
     # https://stackoverflow.com/questions/16706956/is-there-a-difference-between-raise-exception-and-raise-exception-without
     raise NotImplementedError
 
@@ -274,7 +274,7 @@ PI_SITE = Site(
     parse_article_metadata,
     fetch_article,
     bulk_fetch,
-    bulk_fetch_by_article_id,
+    bulk_fetch_by_external_id,
     get_article_text,
     POPULARITY_WINDOW,
     MAX_ARTICLE_AGE,

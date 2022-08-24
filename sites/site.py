@@ -12,7 +12,7 @@ Site = namedtuple(
         "scrape_article_metadata",
         "fetch_article",
         "bulk_fetch",
-        "bulk_fetch_by_article_id",
+        "bulk_fetch_by_external_id",
         "get_article_text",
         "popularity_window",
         "max_article_age",
