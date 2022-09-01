@@ -6,7 +6,7 @@ import pandas as pd
 from sites.site import Site
 
 
-def run(site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
+def fetch_data(site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
     """
     Main script. Fetch data of all articles included in the `interactions_data` table.
     """
