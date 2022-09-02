@@ -8,7 +8,7 @@ from sites.site import Site
 
 def fetch_data(site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
     """
-    Main script. Fetch data of all articles included in the `interactions_data` table.
+    Fetch data of all articles included in the interactions table.
     """
     # Grab unique external IDs from Interactions table
     # https://stackoverflow.com/questions/46839277/series-unique-vs-list-of-set-performance
@@ -24,3 +24,25 @@ def fetch_data(site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, An
         logging.warning(f"No. articles fetched ({num_fetched}) doesn't match no. articles to fetch ({num_to_fetch}).")
 
     return data
+
+
+def preprocess_data(site: Site, article_data: List[Dict[str]], interactions_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Preprocess fetched data into a DataFrame ready for training. Steps include:
+    - Get a text representation for each article. The rule for creating such representations may differ between sites.
+    - Merge fetched data with article metadata (LNL DB article ID, etc.)
+    """
+    # Create text representation of each article
+    data = [{"external_id": article["external_id"], "text": site.get_article_text(article)} for article in article_data]
+    df_data = pd.DataFrame(data, dtype=str)
+
+    # Extract article metadata (LNL DB article ID, categorial item ID, publish date) from interactions_data
+    df_metadata = interactions_data[["article_id", "external_id", "published_at"]].dropna().drop_duplicates()
+
+    # Merge article metadata with article text representations; the result is a DataFrame with 4 columns:
+    # article_id, external_id, published_at and text.
+    # TODO: The schema for df will only include these 4 columns, which means we would benefit from type-enforcing
+    # it, maybe with something like pandera (https://stackoverflow.com/questions/61386477/type-hints-for-a-pandas-dataframe-with-mixed-dtypes)?
+    df = df_metadata.merge(df_data, how="inner", on="external_id")
+
+    return df
