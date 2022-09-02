@@ -72,6 +72,7 @@ class KNN:
         return scores, indices
 
 
+# TODO: Once refactor CF, maybe better for this to be an abstract class method rather than a KNN utility?
 def map_nearest(
     model_index: int,
     nearest_indices: np.ndarray,
