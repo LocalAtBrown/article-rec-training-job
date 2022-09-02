@@ -8,7 +8,7 @@ import pandas as pd
 import redshift_connector as rc
 import s3fs
 
-from job.helpers import chunk_name
+from job.helpers.datetime import chunk_name
 from lib.config import config
 from lib.events import PING_INTERVAL, Event
 from sites.site import Site
