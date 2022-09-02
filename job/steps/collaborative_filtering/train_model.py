@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from db.mappings.recommendation import Rec
-from job.helpers.knn import KNN
+from job.helpers.knn import KNN, map_nearest
 from job.steps.collaborative_filtering.trainer import Trainer
 from lib.config import config
 
@@ -49,16 +49,6 @@ def train_model(X: pd.DataFrame, params: dict, experiment_time: datetime.datetim
     model = Trainer(X, experiment_time, _spotlight_transform, params)
     model.fit()
     return model.model_embeddings, model.model_dates_df
-
-
-def map_nearest(
-    spotlight_id: int,
-    nearest_indices: np.ndarray,
-    distances: np.ndarray,
-    article_ids: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances"""
-    return (article_ids[nearest_indices[spotlight_id][1:]], distances[spotlight_id][1:])
 
 
 def get_recommendations(X: pd.DataFrame, params: dict, dt: datetime.datetime) -> List[Rec]:

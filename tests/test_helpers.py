@@ -4,11 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from job.helpers.knn import KNN
-from job.steps.collaborative_filtering.train_model import (
-    _spotlight_transform,
-    map_nearest,
-)
+from job.helpers.knn import KNN, map_nearest
+from job.steps.collaborative_filtering.train_model import _spotlight_transform
 from job.steps.collaborative_filtering.trainer import Trainer
 
 

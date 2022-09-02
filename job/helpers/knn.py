@@ -70,3 +70,13 @@ class KNN:
             logging.info(f"running knn batch {i} of {n}")
 
         return scores, indices
+
+
+def map_nearest(
+    model_index: int,
+    nearest_indices: np.ndarray,
+    distances: np.ndarray,
+    article_ids: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances"""
+    return (article_ids[nearest_indices[model_index][1:]], distances[model_index][1:])
