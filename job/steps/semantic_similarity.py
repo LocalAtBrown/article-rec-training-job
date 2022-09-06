@@ -1,9 +1,16 @@
 import logging
 from typing import Any, Dict, List
 
+import numpy as np
 import pandas as pd
+from sentence_transformers import SentenceTransformer
 
+from lib.config import config
 from sites.site import Site
+
+# TODO: When adding functions to job.py in the future, maybe move config grab to job.py
+# and pass pretrained model name to generate_embeddings() as a parameter?
+PRETRAINED_MODEL_NAME = config.get("SS_ENCODER")
 
 
 def fetch_data(site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -46,3 +53,13 @@ def preprocess_data(site: Site, article_data: List[Dict[str]], interactions_data
     df = df_metadata.merge(df_data, how="inner", on="external_id")
 
     return df
+
+
+def generate_embeddings(train_data: pd.DataFrame) -> np.ndarray:
+    """
+    Given article data DataFrame with a text column, create article-level text embeddings.
+    """
+    texts = train_data["text"].tolist()
+    model = SentenceTransformer(PRETRAINED_MODEL_NAME, device="cpu")
+
+    return model.encode(texts, convert_to_numpy=True)
