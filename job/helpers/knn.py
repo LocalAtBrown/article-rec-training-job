@@ -1,9 +1,10 @@
 import logging
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 from scipy.spatial import distance
 
+from db.mappings.recommendation import Rec
 from job.helpers.itertools import batch
 from lib.metrics import write_metric
 
@@ -70,3 +71,45 @@ class KNN:
             logging.info(f"running knn batch {i} of {n}")
 
         return scores, indices
+
+
+def map_neighbors_to_recommendations(
+    model_item_ids: np.ndarray,
+    external_ids: np.ndarray,
+    article_ids: np.ndarray,
+    model_item_neighbor_indices: np.ndarray,
+    similarities: np.ndarray,
+) -> List[Rec]:
+    """
+    Create (source, target) recommendations from a list of articles and their nearest neighbors and corresponding similarity scores.
+
+    Parameters
+    ----------
+    model_item_ids : np.ndarray
+        Article IDs as used by the model
+    external_ids : np.ndarray
+        Article IDs native to site
+    article_ids : np.ndarray
+        Article IDs native to LNL DB
+    model_item_neighbor_indices : np.ndarray
+        2D array documenting each article's nearest neighbors using indices in the `article_ids` list
+    similarities : np.ndarray
+        2D array documenting similarity scores corresponding to entries in `model_item_neighbor_indices`
+    ----------
+    """
+    recs = []
+
+    for i in model_item_ids:
+        item_source_external_id = external_ids[i]
+
+        # Map the K nearest neighbors indexes to the map LNL DB article_id, also get the distances
+        item_neighbors = article_ids[model_item_neighbor_indices[i][1:]]
+        item_neighbor_scores = similarities[i][1:]
+
+        item_recs = [
+            Rec(source_entity_id=item_source_external_id, recommend_article_id=recommended_item_id, score=similarity)
+            for (recommended_item_id, similarity) in zip(item_neighbors, item_neighbor_scores)
+        ]
+        recs.extend(item_recs)
+
+    return recs

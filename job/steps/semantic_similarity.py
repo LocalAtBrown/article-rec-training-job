@@ -1,16 +1,20 @@
 import logging
+import time
 from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
+from sklearn.preprocessing import normalize
 
+from db.mappings.recommendation import Rec
+from job.helpers.knn import KNN, map_neighbors_to_recommendations
 from lib.config import config
 from sites.site import Site
 
-# TODO: When adding functions to job.py in the future, maybe move config grab to job.py
-# and pass pretrained model name to generate_embeddings() as a parameter?
+# TODO: When adding functions to job.py in the future, maybe move these job.py and pass to respective functions as a parameter?
 PRETRAINED_MODEL_NAME = config.get("SS_ENCODER")
+MAX_RECS = config.get("MAX_RECS")
 
 
 def fetch_data(site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -63,3 +67,29 @@ def generate_embeddings(train_data: pd.DataFrame) -> np.ndarray:
     model = SentenceTransformer(PRETRAINED_MODEL_NAME, device="cpu")
 
     return model.encode(texts, convert_to_numpy=True)
+
+
+def generate_recommendations(train_embeddings: np.ndarray, train_data: pd.DataFrame) -> List[Rec]:
+    """
+    Run article-level embeddings through a KNN and create recs from resulting neighbors.
+    """
+    embeddings_normalized = normalize(train_embeddings, axis=1, norm="l2")
+    # TODO: Not doing time decay on SS for time being
+    decays = np.ones(embeddings_normalized.shape[0])
+    searcher = KNN(embeddings_normalized, decays)
+
+    logging.info("Calculating KNN...")
+    start_ts = time.time()
+
+    # MAX_RECS + 1 because an article's top match is always itself
+    similarities, nearest_indices = searcher.get_similar_indices(MAX_RECS + 1)
+
+    logging.info(f"Total latency to find K-Nearest Neighbors: {time.time() - start_ts}")
+
+    return map_neighbors_to_recommendations(
+        model_item_ids=train_data["external_id"].factorize()[0],
+        external_ids=train_data["external_id"].values,
+        article_ids=train_data["article_id"].values,
+        model_item_neighbor_indices=nearest_indices,
+        similarities=similarities,
+    )
