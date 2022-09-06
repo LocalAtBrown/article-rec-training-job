@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timedelta
 
 from job.helpers import get_site
-from job.steps import (
+from job.steps.collaborative_filtering import (
     fetch_data,
     save_defaults,
     save_predictions,

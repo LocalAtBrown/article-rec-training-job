@@ -54,6 +54,15 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     raise NotImplementedError
 
 
+def bulk_fetch_by_external_id() -> None:
+    # https://stackoverflow.com/questions/16706956/is-there-a-difference-between-raise-exception-and-raise-exception-without
+    raise NotImplementedError
+
+
+def get_article_text() -> None:
+    raise NotImplementedError
+
+
 def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     requires a dataframe with the following fields:
@@ -167,6 +176,8 @@ WCP_SITE = Site(
     scrape_article_metadata,
     fetch_article,
     bulk_fetch,
+    bulk_fetch_by_external_id,
+    get_article_text,
     POPULARITY_WINDOW,
     MAX_ARTICLE_AGE,
 )

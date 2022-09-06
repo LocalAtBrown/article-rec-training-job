@@ -9,6 +9,7 @@ from requests.models import Response
 
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    ArticleBatchScrapingError,
     ArticleScrapingError,
     ScrapeFailure,
     safe_get,
@@ -27,6 +28,8 @@ POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
+BULK_FETCH_LIMIT = 100  # Texas Tribune places a hard 100-article max limit on pagination
+BULK_FETCH_LOG_INTERVAL = 500
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 TRAINING_PARAMS = {
     "hl": 90,
@@ -76,12 +79,70 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     API_URL = f"https://{DOMAIN}/api/v2/articles"
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
     # texas tribune publishes 5-10 articles per day
-    params = {"start_date": start_date.strftime(DATE_FORMAT), "end_date": end_date.strftime(DATE_FORMAT), "limit": 100}
+    params = {
+        "start_date": start_date.strftime(DATE_FORMAT),
+        "end_date": end_date.strftime(DATE_FORMAT),
+        "limit": BULK_FETCH_LIMIT,
+    }
     res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
     json_res = res.json()
 
     metadata = [parse_metadata(article) for article in json_res["results"]]
     return metadata
+
+
+# Added to accommodate SS
+def get_article_text(metadata: Dict[str, Any]) -> str:
+    """
+    Get text representation of any article.
+    """
+    return metadata["headline"] + ". " + metadata["summary"]
+
+
+# Added to accommodate SS
+def batch_fetch_by_external_id(batch_external_ids: List[str]) -> List[Dict[str, Any]]:
+    """
+    Helper for bulk_fetch_by_external_id. Sends a request for a batch of IDs.
+    """
+    # For instance: https://www.texastribune.org/api/v2/articles/?id=40916&id=40930 returns both of the articles with the corresponding IDs
+    query = "&".join([f"id={i}" for i in batch_external_ids])
+    url = f"https://{DOMAIN}/api/v2/articles/?{query}"
+    params = {"limit": BULK_FETCH_LIMIT}
+
+    # Request
+    res = safe_get(url, params=params, scrape_config=SCRAPE_CONFIG)
+    error_msg = validate_response(res, [validate_status_code])
+
+    if error_msg is not None:
+        raise ArticleBatchScrapingError(external_ids=batch_external_ids, url=url, msg=error_msg)
+
+    return [parse_metadata(article) for article in res.json()["results"]]
+
+
+# Added to accommodate SS
+def bulk_fetch_by_external_id(external_ids: List[str]) -> List[Dict[str, Any]]:
+    """
+    Fetch articles by their IDs.
+    """
+    num_articles = len(external_ids)
+    logging.info(f"Fetching {num_articles} articles by their IDs")
+
+    data = []
+    for i in range(0, num_articles, BULK_FETCH_LIMIT):
+        batch_external_ids = external_ids[i : i + BULK_FETCH_LIMIT]
+
+        batch_data = []
+        try:
+            batch_data = batch_fetch_by_external_id(batch_external_ids)
+        except ArticleBatchScrapingError as e:
+            logging.warning(f"Failed to fetch {len(e.external_ids)} via the following URL: {e.url}. Message: {e.msg}")
+
+        data.extend(batch_data)
+        # Log every BULK_FETCH_LOG_INTERVAL articles fetched
+        if len(data) % BULK_FETCH_LOG_INTERVAL == 0 or len(data) == num_articles:
+            logging.info(f"Fetched {len(data)}/{num_articles} articles")
+
+    return data
 
 
 def extract_external_id(path: str) -> str:
@@ -124,6 +185,11 @@ def get_title(res: dict) -> str:
     return title
 
 
+# Added to accommodate SS
+def get_summary(res: dict) -> str:
+    return res["summary"]
+
+
 def get_published_at(res: dict) -> str:
     # example published_at: '2021-11-12T12:45:35-06:00'
     pub_date = res["pub_date"]
@@ -150,6 +216,8 @@ def parse_metadata(
         ("published_at", get_published_at),
         ("path", get_path),
         ("external_id", get_external_id),
+        # Added to accommodate SS; won't be saved to database because not a field in Article mapping
+        ("summary", get_summary),
     ]
     for prop, func in parsers:
         try:
@@ -208,6 +276,8 @@ TT_SITE = Site(
     scrape_article_metadata,
     fetch_article,
     bulk_fetch,
+    bulk_fetch_by_external_id,
+    get_article_text,
     POPULARITY_WINDOW,
     MAX_ARTICLE_AGE,
 )

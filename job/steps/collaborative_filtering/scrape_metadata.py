@@ -13,7 +13,7 @@ from db.helpers import (
 from db.mappings.article import Article
 from db.mappings.base import db_proxy
 from db.mappings.path import Path
-from job.steps import warehouse
+from job.steps.collaborative_filtering import warehouse
 from lib.metrics import Unit, write_metric
 from sites.helpers import ArticleScrapingError, ScrapeFailure
 from sites.site import Site

@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 from db.mappings.recommendation import Rec
-from job.steps.knn import KNN
-from job.steps.trainer import Trainer
+from job.steps.collaborative_filtering.knn import KNN
+from job.steps.collaborative_filtering.trainer import Trainer
 from lib.config import config
 
 MAX_RECS = config.get("MAX_RECS")
