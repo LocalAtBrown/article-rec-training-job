@@ -195,6 +195,14 @@ class PhiladelphiaInquirer(Site):
         dt = self.try_parsing_date(res_val["publish_date"], formats)
         return dt.isoformat()
 
+    def bulk_fetch_by_external_id(self, external_ids) -> None:
+        # https://stackoverflow.com/questions/16706956/is-there-a-difference-between-raise-exception-and-raise-exception-without
+        raise NotImplementedError
+
+    @staticmethod
+    def get_article_text(metadata: Dict[str, Any]) -> None:
+        raise NotImplementedError
+
     @staticmethod
     def validate_attributes(res: Response) -> Optional[str]:
         """ARC API response validator

@@ -43,6 +43,15 @@ class Site(metaclass=SingletonABCMeta):
     def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
         pass
 
+    @abstractmethod
+    def bulk_fetch_by_external_id(self, external_ids: List[str]) -> List[Dict[str, Any]]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_article_text(metadata: Dict[str, Any]) -> str:
+        pass
+
 
 def get_bucket_name(site: Site):
     return f"lnl-snowplow-{site.name}"

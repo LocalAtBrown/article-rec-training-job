@@ -10,6 +10,7 @@ from requests.models import Response
 
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    ArticleBatchScrapingError,
     ArticleScrapingError,
     ScrapeFailure,
     safe_get,
@@ -28,6 +29,8 @@ POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
+BULK_FETCH_LIMIT = 100  # Texas Tribune places a hard 100-article max limit on pagination
+BULK_FETCH_LOG_INTERVAL = 500
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 TRAINING_PARAMS = {
     "hl": 90,
@@ -143,7 +146,7 @@ class TexasTribune(Site):
         params = {
             "start_date": start_date.strftime(DATE_FORMAT),
             "end_date": end_date.strftime(DATE_FORMAT),
-            "limit": 100,
+            "limit": BULK_FETCH_LIMIT,
         }
         res = safe_get(API_URL, params=params, scrape_config=self.scrape_config)
         json_res = res.json()
@@ -160,6 +163,8 @@ class TexasTribune(Site):
             ("published_at", self.get_published_at),
             ("path", self.get_path),
             ("external_id", self.get_external_id),
+            # Added to accommodate SS; won't be saved to database because not a field in Article mapping
+            ("summary", self.get_summary),
         ]
         for prop, func in parsers:
             try:
@@ -175,6 +180,50 @@ class TexasTribune(Site):
             metadata[prop] = val
 
         return metadata
+
+    # Added to accommodate SS
+    def batch_fetch_by_external_id(self, batch_external_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Helper for bulk_fetch_by_external_id. Sends a request for a batch of IDs.
+        """
+        # For instance: https://www.texastribune.org/api/v2/articles/?id=40916&id=40930 returns both of the articles with the corresponding IDs
+        query = "&".join([f"id={i}" for i in batch_external_ids])
+        url = f"https://{DOMAIN}/api/v2/articles/?{query}"
+        params = {"limit": BULK_FETCH_LIMIT}
+
+        # Request
+        res = safe_get(url, params=params, scrape_config=SCRAPE_CONFIG)
+        error_msg = validate_response(res, [validate_status_code])
+
+        if error_msg is not None:
+            raise ArticleBatchScrapingError(external_ids=batch_external_ids, url=url, msg=error_msg)
+
+        return [self.parse_metadata(article) for article in res.json()["results"]]
+
+    # Added to accommodate SS
+    def bulk_fetch_by_external_id(self, external_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Fetch articles by their IDs.
+        """
+        num_articles = len(external_ids)
+        logging.info(f"Fetching {num_articles} articles by their IDs")
+
+        data = []
+        for i in range(0, num_articles, BULK_FETCH_LIMIT):
+            batch_external_ids = external_ids[i : i + BULK_FETCH_LIMIT]
+
+            batch_data = []
+            try:
+                batch_data = self.batch_fetch_by_external_id(batch_external_ids)
+            except ArticleBatchScrapingError as e:
+                logging.warning(f"Failed to fetch {len(e.external_ids)} via the following URL: {e.url}. Message: {e.msg}")
+
+            data.extend(batch_data)
+            # Log every BULK_FETCH_LOG_INTERVAL articles fetched
+            if len(data) % BULK_FETCH_LOG_INTERVAL == 0 or len(data) == num_articles:
+                logging.info(f"Fetched {len(data)}/{num_articles} articles")
+
+        return data
 
     @staticmethod
     def get_title(res: dict) -> str:
@@ -197,6 +246,19 @@ class TexasTribune(Site):
     def get_external_id(page: dict) -> str:
         external_id = page["id"]
         return external_id
+
+    @staticmethod
+    def get_summary(res: dict) -> str:
+        # Added to accommodate SS
+        return res["summary"]
+
+    # Added to accommodate SS
+    @staticmethod
+    def get_article_text(metadata: Dict[str, Any]) -> str:
+        """
+        Get text representation of any article.
+        """
+        return metadata["headline"] + ". " + metadata["summary"]
 
 
 TT_SITE = TexasTribune(

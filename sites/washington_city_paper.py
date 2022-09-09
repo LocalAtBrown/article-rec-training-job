@@ -122,6 +122,14 @@ class WashingtonCityPaper(Site):
 
         return page
 
+    def bulk_fetch_by_external_id(self, external_ids) -> None:
+        # https://stackoverflow.com/questions/16706956/is-there-a-difference-between-raise-exception-and-raise-exception-without
+        raise NotImplementedError
+
+    @staticmethod
+    def get_article_text(metadata: Dict[str, Any]) -> None:
+        raise NotImplementedError
+
     def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
         raise NotImplementedError
 

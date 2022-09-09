@@ -4,9 +4,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from job.steps.knn import KNN
-from job.steps.train_model import _spotlight_transform, map_nearest
-from job.steps.trainer import Trainer
+from job.helpers.knn import KNN
+from job.steps.collaborative_filtering.train_model import (
+    _spotlight_transform,
+    map_nearest,
+)
+from job.steps.collaborative_filtering.trainer import Trainer
 
 
 @pytest.fixture(scope="module")
