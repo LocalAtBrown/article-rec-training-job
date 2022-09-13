@@ -51,7 +51,3 @@ class Site(metaclass=SingletonABCMeta):
     @abstractmethod
     def get_article_text(metadata: Dict[str, Any]) -> str:
         pass
-
-
-def get_bucket_name(site: Site):
-    return f"lnl-snowplow-{site.name}"

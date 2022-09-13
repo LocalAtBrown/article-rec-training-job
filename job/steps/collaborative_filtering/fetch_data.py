@@ -15,7 +15,7 @@ from job.helpers.datetime import chunk_name
 from job.steps.collaborative_filtering import warehouse
 from lib.events import Event
 from lib.metrics import Unit, write_metric
-from sites.site import Site, get_bucket_name
+from sites.site import Site
 
 PATH = "/downloads"
 MEM_THRESHOLD = 100000
@@ -32,7 +32,7 @@ def download_chunk(site: Site, dt: datetime.datetime):
     if not os.path.isdir(path):
         os.makedirs(path)
 
-    s3_path = f"s3://{get_bucket_name(site)}/enriched/good/{chunk_name(dt)}"
+    s3_path = f"s3://{site.get_bucket_name()}/enriched/good/{chunk_name(dt)}"
     s3_sync_cmd = f"aws s3 sync {s3_path} {path}".split(" ")
     logging.info(" ".join(s3_sync_cmd))
     return subprocess.Popen(
