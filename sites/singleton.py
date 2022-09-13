@@ -1,3 +1,4 @@
+import logging
 from abc import ABCMeta
 
 
@@ -16,4 +17,6 @@ class SingletonABCMeta(ABCMeta):
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super(SingletonABCMeta, cls).__call__(*args, **kwargs)
+        else:
+            logging.warning(f"You tried to instantiate an instance of {cls.__name__} but one already exists.")
         return cls._instances[cls]
