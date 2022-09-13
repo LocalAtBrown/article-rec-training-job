@@ -10,6 +10,8 @@ class SingletonABCMeta(ABCMeta):
     And stackoverflow: https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
     Inheriting from `ABCMeta` ensures behavior of both a singleton, defined here, and an abstract base
     class, defined by `ABCMeta`.
+
+    For why we decided to use the singleton pattern here, visit https://github.com/LocalAtBrown/article-rec-training-job/pull/149#discussion_r968885680
     """
 
     _instances = {}
