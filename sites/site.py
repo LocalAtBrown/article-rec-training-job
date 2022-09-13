@@ -24,10 +24,6 @@ class Site(metaclass=SingletonABCMeta):
         return f"lnl-snowplow-{self.name}"
 
     @abstractmethod
-    def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        pass
-
-    @abstractmethod
     def extract_external_id(self, path: str) -> Optional[str]:
         pass
 
@@ -45,6 +41,11 @@ class Site(metaclass=SingletonABCMeta):
 
     @abstractmethod
     def bulk_fetch_by_external_id(self, external_ids: List[str]) -> List[Dict[str, Any]]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
         pass
 
     @staticmethod

@@ -53,9 +53,6 @@ INVALID_PREFIXES = ["/author", "/wires", "/zzz-systest"]
 
 
 class PhiladelphiaInquirer(Site):
-    def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        return transform_data_google_tag_manager(df=df)
-
     def extract_external_id(self, path: str) -> Optional[str]:
         """Request content ID from a url from ARC API
 
@@ -198,6 +195,10 @@ class PhiladelphiaInquirer(Site):
     def bulk_fetch_by_external_id(self, external_ids) -> None:
         # https://stackoverflow.com/questions/16706956/is-there-a-difference-between-raise-exception-and-raise-exception-without
         raise NotImplementedError
+
+    @staticmethod
+    def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
+        return transform_data_google_tag_manager(df=df)
 
     @staticmethod
     def get_article_text(metadata: Dict[str, Any]) -> None:

@@ -75,9 +75,6 @@ NON_ARTICLE_PREFIXES = [
 
 
 class TexasTribune(Site):
-    def transform_raw_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        return transform_data_google_tag_manager(df=df)
-
     def extract_external_id(self, path: str) -> Optional[str]:
         for prefix in NON_ARTICLE_PREFIXES:
             if path.startswith(prefix):
@@ -224,6 +221,10 @@ class TexasTribune(Site):
                 logging.info(f"Fetched {len(data)}/{num_articles} articles")
 
         return data
+
+    @staticmethod
+    def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
+        return transform_data_google_tag_manager(df=df)
 
     @staticmethod
     def get_title(res: dict) -> str:
