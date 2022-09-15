@@ -7,7 +7,10 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import normalize
 
+from db.helpers import create_model, refresh_db, set_current_model
+from db.mappings.model import ModelType
 from db.mappings.recommendation import Rec
+from job.helpers.itertools import batch
 from job.helpers.knn import KNN, map_neighbors_to_recommendations
 from lib.config import config
 from sites.site import Site
@@ -93,3 +96,30 @@ def generate_recommendations(train_embeddings: np.ndarray, train_data: pd.DataFr
         model_item_neighbor_indices=nearest_indices,
         similarities=similarities,
     )
+
+
+@refresh_db
+def save_recommendations(site: Site, recs: List[Rec], model_type: ModelType) -> None:
+    """
+    Save generated recommendations to database.
+    """
+    start_ts = time.time()
+    # Create new model object in DB
+    model_id = create_model(type=model_type.value, site=site.name)
+    logging.info(f"Created model with id {model_id}")
+    for rec in recs:
+        rec.model_id = model_id
+
+    logging.info(f"Writing {len(recs)} recommendations...")
+    # Insert a small delay to avoid overwhelming the DB
+    for rec_batch in batch(recs, n=50):
+        Rec.bulk_create(rec_batch)
+        time.sleep(0.05)
+
+    logging.info(f"Updaing model objects in DB")
+    set_current_model(model_id, model_type, site.name)
+
+    latency = time.time() - start_ts
+    # TODO: Unlike save_predictions in CF, not writing metrics to CloudWatch for now
+    logging.info(f"rec_creation_time: {latency}s")
+    logging.info(f"recs_creation_total: {len(recs)}")
