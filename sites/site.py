@@ -1,24 +1,21 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 from requests.models import Response
 
+from sites.config import SiteConfig
 from sites.singleton import SingletonABCMeta
+from sites.strategy import Strategy
 
 
 @dataclass
 class Site(metaclass=SingletonABCMeta):
     name: str
-    fields: Set[str]  # needs better name
-    training_params: dict  # should define with more specifics unless it needs to be flexible
-    scrape_config: dict  # should define with more specifics unless it needs to be flexible
-    # this is a number of days; will only recommend articles within the past X days
-    popularity_window: int
-    # this is a number of years; will grab dwell time data for any article within the past X years
-    max_article_age: int
+    strategy: Strategy
+    config: SiteConfig
 
     def get_bucket_name(self):
         return f"lnl-snowplow-{self.name}"

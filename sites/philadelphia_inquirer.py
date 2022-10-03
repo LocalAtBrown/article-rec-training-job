@@ -6,6 +6,7 @@ import pandas as pd
 from requests.models import Response
 
 from lib.config import config
+from sites.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
     ArticleScrapingError,
@@ -17,6 +18,7 @@ from sites.helpers import (
     validate_status_code,
 )
 from sites.site import Site
+from sites.strategy import Strategy
 
 """
 ARC API documentation
@@ -27,13 +29,13 @@ POPULARITY_WINDOW = 1
 MAX_ARTICLE_AGE = 2
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
-FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
+SNOWPLOW_FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 
 API_URL = "https://api.pmn.arcpublishing.com/content/v4"
 API_KEY = config.get("INQUIRER_TOKEN")
 API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
-TRAINING_PARAMS = {
+TRAINING_PARAMS: TrainParamsCF = {
     "hl": 120,
     "embedding_dim": 256,
     "epochs": 2,
@@ -44,7 +46,7 @@ TRAINING_PARAMS = {
     "loss": "adaptive_hinge",
 }
 
-SCRAPE_CONFIG = {
+SCRAPE_CONFIG: ScrapeConfig = {
     "concurrent_requests": 2,
     "requests_per_second": 4,
 }
@@ -76,7 +78,7 @@ class PhiladelphiaInquirer(Site):
                 )
 
         try:
-            res = safe_get(API_URL, API_HEADER, params, self.scrape_config)
+            res = safe_get(API_URL, API_HEADER, params, self.config.collaborative_filtering.scrape_config)
             res = res.json()
         except Exception as e:
             raise ArticleScrapingError(
@@ -149,7 +151,7 @@ class PhiladelphiaInquirer(Site):
         }
 
         try:
-            res = safe_get(API_URL, API_HEADER, params, self.scrape_config)
+            res = safe_get(API_URL, API_HEADER, params, self.config.collaborative_filtering.scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
@@ -174,7 +176,9 @@ class PhiladelphiaInquirer(Site):
             "website": API_SITE,
             "size": 100,  # inquirer publishes ~50 articles per day
         }
-        res = safe_get(f"{API_URL}/search/published", API_HEADER, params, self.scrape_config)
+        res = safe_get(
+            f"{API_URL}/search/published", API_HEADER, params, self.config.collaborative_filtering.scrape_config
+        )
         json_res = res.json()
         metadata = [self.scrape_article_metadata(a, a["_id"], a["canonical_url"]) for a in json_res["content_elements"]]
         return metadata
@@ -270,9 +274,19 @@ class PhiladelphiaInquirer(Site):
 
 PI_SITE = PhiladelphiaInquirer(
     name=NAME,
-    fields=FIELDS,
-    training_params=TRAINING_PARAMS,
-    scrape_config=SCRAPE_CONFIG,
-    popularity_window=POPULARITY_WINDOW,
-    max_article_age=MAX_ARTICLE_AGE,
+    strategy=Strategy.COLLABORATIVE_FILTERING,
+    config=SiteConfig(
+        collaborative_filtering=ConfigCF(
+            snowplow_fields=SNOWPLOW_FIELDS,
+            scrape_config=SCRAPE_CONFIG,
+            training_params=TRAINING_PARAMS,
+            max_article_age=MAX_ARTICLE_AGE,
+        ),
+        popularity=ConfigPop(popularity_window=POPULARITY_WINDOW),
+    )
+    # fields=FIELDS,
+    # training_params=TRAINING_PARAMS,
+    # scrape_config=SCRAPE_CONFIG,
+    # popularity_window=POPULARITY_WINDOW,
+    # max_article_age=MAX_ARTICLE_AGE,
 )
