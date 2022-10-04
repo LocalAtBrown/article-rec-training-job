@@ -14,7 +14,10 @@ from sites.strategy import Strategy
 @dataclass
 class Site(metaclass=SingletonABCMeta):
     name: str
+    # Main recs-generating approach, e.g., CF or SS
     strategy: Strategy
+    # Backup/default recs-generating approach, e.g., popularity
+    strategy_fallback: Strategy
     config: SiteConfig
 
     def get_bucket_name(self):

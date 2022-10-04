@@ -170,6 +170,7 @@ class WashingtonCityPaper(Site):
 WCP_SITE = WashingtonCityPaper(
     name=NAME,
     strategy=Strategy.COLLABORATIVE_FILTERING,
+    strategy_fallback=Strategy.POPULARITY,
     config=SiteConfig(
         collaborative_filtering=ConfigCF(
             snowplow_fields=SNOWPLOW_FIELDS,

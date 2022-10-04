@@ -267,6 +267,7 @@ class TexasTribune(Site):
 TT_SITE = TexasTribune(
     name=NAME,
     strategy=Strategy.COLLABORATIVE_FILTERING,
+    strategy_fallback=Strategy.POPULARITY,
     config=SiteConfig(
         collaborative_filtering=ConfigCF(
             snowplow_fields=SNOWPLOW_FIELDS,
