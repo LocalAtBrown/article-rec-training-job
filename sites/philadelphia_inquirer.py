@@ -283,10 +283,5 @@ PI_SITE = PhiladelphiaInquirer(
             max_article_age=MAX_ARTICLE_AGE,
         ),
         popularity=ConfigPop(popularity_window=POPULARITY_WINDOW),
-    )
-    # fields=FIELDS,
-    # training_params=TRAINING_PARAMS,
-    # scrape_config=SCRAPE_CONFIG,
-    # popularity_window=POPULARITY_WINDOW,
-    # max_article_age=MAX_ARTICLE_AGE,
+    ),
 )

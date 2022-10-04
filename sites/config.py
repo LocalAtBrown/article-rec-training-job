@@ -42,6 +42,7 @@ class ConfigCF:
     snowplow_fields: Set[str]
     scrape_config: ScrapeConfig
     training_params: TrainParamsCF
+    # this is a number of years; will grab dwell time data for any article within the past X years
     max_article_age: int
 
 
@@ -57,9 +58,10 @@ class ConfigSS:
 @dataclass
 class ConfigPop:
     """
-    Default popularity model configs.
+    Default popularity-model site configs.
     """
 
+    # this is a number of days; will only recommend articles within the past X days
     popularity_window: int
 
 
