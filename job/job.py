@@ -59,7 +59,7 @@ def run():
 
         recommendations = train_model.get_recommendations(
             interactions_data,
-            site.training_params,
+            site.config.collaborative_filtering.training_params,
             EXPERIMENT_DT,
         )
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")

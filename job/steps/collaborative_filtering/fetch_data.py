@@ -67,13 +67,14 @@ def transform_chunk(site: Site, dt: datetime.datetime) -> List[pd.DataFrame]:
 
     path = os.path.join(PATH, chunk_name(dt))
     filenames = gen_files(path)
+    fields = site.config.collaborative_filtering.snowplow_fields
 
     dfs = []
 
     for filename in filenames:
         file_path = os.path.join(path, filename)
 
-        df = fast_read(file_path, site.fields)
+        df = fast_read(file_path, fields)
         df = site.transform_raw_data(df)
         df = aggregate_page_pings(df)
 
