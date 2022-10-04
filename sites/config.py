@@ -70,6 +70,11 @@ class ConfigPop:
 class SiteConfig:
     """
     Site config object for different model configs
+
+    In order to add a new model (not a new approach/strategy, which may or may not require adding a new model)
+    to the site:
+    1. Create a Config<ModelName> dataclass with appropriate config variables and variable types
+    2. Add created config dataclass to this class as a property
     """
 
     # Popularity model is fallback and therefore its config is not optional
