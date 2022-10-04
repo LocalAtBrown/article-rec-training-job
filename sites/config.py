@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import List, Optional, Set, TypedDict
 
 # Custom types
-# TypedDict (as opposed to dataclass) doesn't require changing existing CF code in the job directory
-# to work with it, but open to stricter suggestions.
+# TypedDict (as opposed to dataclass) doesn't require changing existing CF code to work with it
+# (especially when CF train_model.py requires train_params to be a dict in order to run dict.update),
+# but open to stricter suggestions.
 
 
 class ScrapeConfig(TypedDict):
