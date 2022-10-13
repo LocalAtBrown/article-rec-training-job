@@ -8,6 +8,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
+from sites.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
     ArticleBatchScrapingError,
@@ -19,6 +20,7 @@ from sites.helpers import (
     validate_status_code,
 )
 from sites.site import Site
+from sites.strategy import Strategy
 
 """
 TT API documentation
@@ -31,8 +33,8 @@ DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 BULK_FETCH_LIMIT = 100  # Texas Tribune places a hard 100-article max limit on pagination
 BULK_FETCH_LOG_INTERVAL = 500
-FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
-TRAINING_PARAMS = {
+SNOWPLOW_FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
+TRAINING_PARAMS: TrainParamsCF = {
     "hl": 90,
     "embedding_dim": 100,
     "epochs": 3,
@@ -43,7 +45,7 @@ TRAINING_PARAMS = {
     "tune_ranges": [[5, 11, 2], [160, 360, 100]],
 }
 
-SCRAPE_CONFIG = {
+SCRAPE_CONFIG: ScrapeConfig = {
     "concurrent_requests": 1,
     "requests_per_second": 2,
 }
@@ -84,7 +86,7 @@ class TexasTribune(Site):
 
         article_url = f"https://{DOMAIN}{path}"
         try:
-            page = safe_get(article_url, scrape_config=self.scrape_config)
+            page = safe_get(article_url, scrape_config=self.config.collaborative_filtering.scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR,
@@ -122,7 +124,7 @@ class TexasTribune(Site):
         api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
 
         try:
-            res = safe_get(api_url, scrape_config=self.scrape_config)
+            res = safe_get(api_url, scrape_config=self.config.collaborative_filtering.scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article url: {api_url}"
@@ -145,7 +147,7 @@ class TexasTribune(Site):
             "end_date": end_date.strftime(DATE_FORMAT),
             "limit": BULK_FETCH_LIMIT,
         }
-        res = safe_get(API_URL, params=params, scrape_config=self.scrape_config)
+        res = safe_get(API_URL, params=params, scrape_config=self.config.collaborative_filtering.scrape_config)
         json_res = res.json()
 
         metadata = [self.parse_metadata(article) for article in json_res["results"]]
@@ -264,9 +266,15 @@ class TexasTribune(Site):
 
 TT_SITE = TexasTribune(
     name=NAME,
-    fields=FIELDS,
-    training_params=TRAINING_PARAMS,
-    scrape_config=SCRAPE_CONFIG,
-    popularity_window=POPULARITY_WINDOW,
-    max_article_age=MAX_ARTICLE_AGE,
+    strategy=Strategy.COLLABORATIVE_FILTERING,
+    strategy_fallback=Strategy.POPULARITY,
+    config=SiteConfig(
+        collaborative_filtering=ConfigCF(
+            snowplow_fields=SNOWPLOW_FIELDS,
+            scrape_config=SCRAPE_CONFIG,
+            training_params=TRAINING_PARAMS,
+            max_article_age=MAX_ARTICLE_AGE,
+        ),
+        popularity=ConfigPop(popularity_window=POPULARITY_WINDOW),
+    ),
 )

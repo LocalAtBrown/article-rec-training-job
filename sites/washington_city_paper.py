@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from requests.models import Response
 
 from lib.events import Event
+from sites.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
 from sites.helpers import (
     ArticleScrapingError,
     ScrapeFailure,
@@ -16,18 +17,19 @@ from sites.helpers import (
     validate_status_code,
 )
 from sites.site import Site
+from sites.strategy import Strategy
 
 POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
-FIELDS = {
+SNOWPLOW_FIELDS = {
     "collector_tstamp",
     "page_urlpath",
     "contexts_dev_amp_snowplow_amp_id_1",
     "event_name",
 }
-TRAINING_PARAMS = {
+TRAINING_PARAMS: TrainParamsCF = {
     "hl": 30,
     "embedding_dim": 144,
     "epochs": 3,
@@ -38,7 +40,7 @@ TRAINING_PARAMS = {
     "tune_ranges": [[1, 5, 1], [40, 300, 20]],
 }
 
-SCRAPE_CONFIG = {
+SCRAPE_CONFIG: ScrapeConfig = {
     "concurrent_requests": 1,
     "requests_per_second": 2,
 }
@@ -167,9 +169,15 @@ class WashingtonCityPaper(Site):
 
 WCP_SITE = WashingtonCityPaper(
     name=NAME,
-    fields=FIELDS,
-    training_params=TRAINING_PARAMS,
-    scrape_config=SCRAPE_CONFIG,
-    popularity_window=POPULARITY_WINDOW,
-    max_article_age=MAX_ARTICLE_AGE,
+    strategy=Strategy.COLLABORATIVE_FILTERING,
+    strategy_fallback=Strategy.POPULARITY,
+    config=SiteConfig(
+        collaborative_filtering=ConfigCF(
+            snowplow_fields=SNOWPLOW_FIELDS,
+            scrape_config=SCRAPE_CONFIG,
+            training_params=TRAINING_PARAMS,
+            max_article_age=MAX_ARTICLE_AGE,
+        ),
+        popularity=ConfigPop(popularity_window=POPULARITY_WINDOW),
+    ),
 )
