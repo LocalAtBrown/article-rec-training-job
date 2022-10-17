@@ -16,15 +16,13 @@ jobs:
       - name: Install brew
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/runner/.bash_profile
+          echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: |
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew tap "aljohri/-" && brew install "AlJohri/-/kar"
+        run: brew tap "aljohri/-" && brew install "AlJohri/-/kar"
 
       - name: Build container
-        run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && kar build
+        run: kar build
 
       - name: Run tests
-        run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && kar test
+        run: kar test
