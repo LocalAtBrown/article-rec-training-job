@@ -24,7 +24,7 @@ jobs:
           brew tap "aljohri/-" && brew install "AlJohri/-/kar"
 
       - name: Build container
-        run: kar build
+        run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && kar build
 
       - name: Run tests
-        run: kar test
+        run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && kar test
