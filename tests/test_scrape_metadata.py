@@ -9,12 +9,19 @@ from job.steps.scrape_metadata import scrape_upload_metadata
 from sites.helpers import ArticleScrapingError, ScrapeFailure
 from sites.site import Site
 from sites.sites import Sites
+from sites.washington_city_paper import ERROR_MSG_TAG_EXCLUDE
 from tests.base import BaseTest
 from tests.factories.article import ArticleFactory
 
 
 def scrape_error(site, article):
     raise ArticleScrapingError(ScrapeFailure.UNKNOWN, article.path, article.external_id)
+
+
+def invalid_scrape_error(site, article):
+    raise ArticleScrapingError(
+        ScrapeFailure.FAILED_SITE_VALIDATION, article.path, article.external_id, ERROR_MSG_TAG_EXCLUDE
+    )
 
 
 def safe_scrape_error(site, article):
@@ -120,7 +127,7 @@ class TestScrapeMetadata(BaseTest):
     @patch(
         "job.steps.scrape_metadata.scrape_article",
         return_value=None,
-        side_effect=scrape_error,
+        side_effect=invalid_scrape_error,
     )
     def test_scrape_metadata__existing_invalid_recs(self, _, __) -> None:
         for external_id in self.external_ids:
