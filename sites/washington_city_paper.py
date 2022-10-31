@@ -49,6 +49,9 @@ SCRAPE_CONFIG = {
 PATH_PATTERN = rf"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
+# TODO: Once merged Site object PR, make this a WCP class attribute
+ERROR_MSG_TAG_EXCLUDE = "Article has exclude tag"
+
 
 def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     raise NotImplementedError
@@ -137,7 +140,7 @@ def validate_not_excluded(page: Response) -> Optional[str]:
     if primary:
         classes = {value for element in primary.find_all(class_=True) for value in element["class"]}
         if "tag-exclude" in classes:
-            return "Article has exclude tag"
+            return ERROR_MSG_TAG_EXCLUDE
 
     return None
 
