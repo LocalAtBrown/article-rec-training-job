@@ -13,8 +13,6 @@ from sites.helpers import (
     ScrapeFailure,
     safe_get,
     transform_data_google_tag_manager,
-    validate_response,
-    validate_status_code,
 )
 from sites.site import Site
 
@@ -190,10 +188,6 @@ def fetch_article(
         raise ArticleScrapingError(
             ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article url: {api_url}"
         ) from e
-
-    error_msg = validate_response(res, [validate_status_code])
-    if error_msg is not None:
-        raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg)
 
     return res
 

@@ -13,7 +13,6 @@ from sites.helpers import (
     safe_get,
     transform_data_google_tag_manager,
     validate_response,
-    validate_status_code,
 )
 from sites.site import Site
 
@@ -248,7 +247,7 @@ def fetch_article(external_id: str, path: str) -> Response:
             ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
         ) from e
 
-    error_msg = validate_response(res, [validate_status_code, validate_attributes])
+    error_msg = validate_response(res, [validate_attributes])
     if error_msg:
         raise ArticleScrapingError(ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg)
 
