@@ -84,6 +84,16 @@ def safe_get(
     page = req.get(url, timeout=TIMEOUT_SECONDS, params=params, headers=default_headers)
     if scrape_config.get("requests_per_second"):
         time.sleep(1 / scrape_config["requests_per_second"])
+
+    # Many times, the request hits a 4xx or 5xx, but no exception is raised
+    # This makes sure an exception is raised and allows the retry decorator to work.
+    #
+    # Some notes:
+    # - Since we already have exponential backoff, no need to treat 429 error any differently.
+    # - During the last retry attempt, if this still raises an exception, that exception's already handled
+    # by a try-except block in each site's fetch_article method.
+    page.raise_for_status()
+
     return page
 
 
