@@ -6,7 +6,9 @@ import pandas as pd
 from db.mappings.article import Article
 from db.mappings.path import Path
 from job.steps.scrape_metadata import scrape_upload_metadata
-from sites.helpers import ArticleScrapingError, ScrapeFailure
+from sites.article_scraping_error import (
+    ArticleScrapingError,
+    ScrapeFailure)
 from sites.site import Site
 from sites.sites import Sites
 from tests.base import BaseTest

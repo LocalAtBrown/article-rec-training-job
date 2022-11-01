@@ -7,15 +7,22 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from sites.helpers import (
-    GOOGLE_TAG_MANAGER_RAW_FIELDS,
-    ArticleScrapingError,
-    ScrapeFailure,
-    safe_get,
+from sites.google_tag_manager import (
     transform_data_google_tag_manager,
+    GOOGLE_TAG_MANAGER_RAW_FIELDS
+)
+
+from sites.article_scraping_error import (
+    ArticleScrapingError,
+    ScrapeFailure)
+
+from sites.safe_get import safe_get
+
+from sites.validate import (
     validate_response,
     validate_status_code,
 )
+
 from sites.site import Site
 
 """
