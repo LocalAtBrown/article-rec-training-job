@@ -80,7 +80,7 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     try:
         res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
     except Exception as e:
-        raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e))
+        raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e)) from e
     json_res = res.json()
 
     metadata = [parse_metadata(article) for article in json_res["results"]]
