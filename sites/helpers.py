@@ -67,7 +67,12 @@ class ArticleScrapingError(Exception):
         self.msg = msg
         self.external_id = external_id
 
-    pass
+
+# TODO: Once merging SS, combine this with SS ArticleBatchScrapingError
+class ArticleBulkScrapingError(Exception):
+    def __init__(self, errorType: ScrapeFailure, msg: str):
+        self.errorType = errorType
+        self.msg = msg
 
 
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)

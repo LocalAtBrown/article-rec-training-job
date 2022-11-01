@@ -7,6 +7,7 @@ from requests.models import Response
 from lib.config import config
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    ArticleBulkScrapingError,
     ArticleScrapingError,
     ScrapeFailure,
     ms_timestamp,
@@ -61,8 +62,13 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
         "website": API_SITE,
         "size": 100,  # inquirer publishes ~50 articles per day
     }
-    res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
-    json_res = res.json()
+
+    try:
+        res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
+        json_res = res.json()
+    except Exception as e:
+        raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e)) from e
+
     metadata = [parse_article_metadata(a, a["_id"], a["canonical_url"]) for a in json_res["content_elements"]]
     return metadata
 

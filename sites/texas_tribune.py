@@ -9,6 +9,7 @@ from requests.models import Response
 
 from sites.helpers import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    ArticleBulkScrapingError,
     ArticleScrapingError,
     ScrapeFailure,
     safe_get,
@@ -75,7 +76,11 @@ def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
     # texas tribune publishes 5-10 articles per day
     params = {"start_date": start_date.strftime(DATE_FORMAT), "end_date": end_date.strftime(DATE_FORMAT), "limit": 100}
-    res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
+
+    try:
+        res = safe_get(API_URL, params=params, scrape_config=SCRAPE_CONFIG)
+    except Exception as e:
+        raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e))
     json_res = res.json()
 
     metadata = [parse_metadata(article) for article in json_res["results"]]
