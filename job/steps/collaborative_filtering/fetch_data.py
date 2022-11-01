@@ -11,11 +11,11 @@ from typing import List, Set
 
 import pandas as pd
 
-from job.helpers import chunk_name
-from job.steps import warehouse
+from job.helpers.datetime import chunk_name
+from job.steps.collaborative_filtering import warehouse
 from lib.events import Event
 from lib.metrics import Unit, write_metric
-from sites.site import Site, get_bucket_name
+from sites.site import Site
 
 PATH = "/downloads"
 MEM_THRESHOLD = 100000
@@ -32,7 +32,7 @@ def download_chunk(site: Site, dt: datetime.datetime):
     if not os.path.isdir(path):
         os.makedirs(path)
 
-    s3_path = f"s3://{get_bucket_name(site)}/enriched/good/{chunk_name(dt)}"
+    s3_path = f"s3://{site.get_bucket_name()}/enriched/good/{chunk_name(dt)}"
     s3_sync_cmd = f"aws s3 sync {s3_path} {path}".split(" ")
     logging.info(" ".join(s3_sync_cmd))
     return subprocess.Popen(
@@ -67,13 +67,14 @@ def transform_chunk(site: Site, dt: datetime.datetime) -> List[pd.DataFrame]:
 
     path = os.path.join(PATH, chunk_name(dt))
     filenames = gen_files(path)
+    fields = site.config.collaborative_filtering.snowplow_fields
 
     dfs = []
 
     for filename in filenames:
         file_path = os.path.join(path, filename)
 
-        df = fast_read(file_path, site.fields)
+        df = fast_read(file_path, fields)
         df = site.transform_raw_data(df)
         df = aggregate_page_pings(df)
 

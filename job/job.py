@@ -2,8 +2,8 @@ import logging
 import time
 from datetime import datetime, timedelta
 
-from job.helpers import get_site
-from job.steps import (
+from job.helpers.site import get_site
+from job.steps.collaborative_filtering import (
     fetch_data,
     save_defaults,
     save_predictions,
@@ -55,7 +55,7 @@ def run():
 
         recommendations = train_model.get_recommendations(
             interactions_data,
-            site.training_params,
+            site.config.collaborative_filtering.training_params,
             EXPERIMENT_DT,
         )
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")

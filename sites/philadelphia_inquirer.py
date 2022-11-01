@@ -2,11 +2,14 @@ import logging
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Union
 
+import pandas as pd
 from requests.models import Response
 
 from lib.config import config
+
 from sites.ms_timestamp import ms_timestamp
 
+from sites.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
 from sites.google_tag_manager import (
     transform_data_google_tag_manager,
     GOOGLE_TAG_MANAGER_RAW_FIELDS
@@ -23,6 +26,7 @@ from sites.validate import (
     validate_status_code,
 )
 from sites.site import Site
+from sites.strategy import Strategy
 
 """
 ARC API documentation
@@ -33,13 +37,13 @@ POPULARITY_WINDOW = 1
 MAX_ARTICLE_AGE = 2
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
-FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
+SNOWPLOW_FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 
 API_URL = "https://api.pmn.arcpublishing.com/content/v4"
 API_KEY = config.get("INQUIRER_TOKEN")
 API_HEADER = {"Authorization": API_KEY}
 API_SITE = "philly-media-network"
-TRAINING_PARAMS = {
+TRAINING_PARAMS: TrainParamsCF = {
     "hl": 120,
     "embedding_dim": 256,
     "epochs": 2,
@@ -50,228 +54,243 @@ TRAINING_PARAMS = {
     "loss": "adaptive_hinge",
 }
 
-SCRAPE_CONFIG = {
+SCRAPE_CONFIG: ScrapeConfig = {
     "concurrent_requests": 2,
     "requests_per_second": 4,
 }
 
-
-def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
-    logging.info(f"Fetching articles from {start_date} to {end_date}")
-    start_dt = datetime.combine(start_date, datetime.min.time())
-    end_dt = datetime.combine(end_date, datetime.min.time())
-    start_ts = ms_timestamp(start_dt)
-    end_ts = ms_timestamp(end_dt)
-    params = {
-        "q": f"publish_date:[{start_ts} TO {end_ts}]",
-        "include_distributor_category": "staff",
-        "_sourceInclude": "headlines,publish_date,_id,canonical_url",
-        "website": API_SITE,
-        "size": 100,  # inquirer publishes ~50 articles per day
-    }
-    res = safe_get(f"{API_URL}/search/published", API_HEADER, params, SCRAPE_CONFIG)
-    json_res = res.json()
-    metadata = [parse_article_metadata(a, a["_id"], a["canonical_url"]) for a in json_res["content_elements"]]
-    return metadata
-
-
 INVALID_PREFIXES = ["/author", "/wires", "/zzz-systest"]
 
 
-def extract_external_id(path: str) -> Optional[str]:
-    """Request content ID from a url from ARC API
+class PhiladelphiaInquirer(Site):
+    def extract_external_id(self, path: str) -> Optional[str]:
+        """Request content ID from a url from ARC API
 
-    :path:an Inquirer url
-    :return contentID: Unique ID of url
-    """
-    params = {
-        "website_url": path,
-        "published": "true",
-        "website": API_SITE,
-        "included_fields": "_id,source,taxonomy",
-    }
+        :path:an Inquirer url
+        :return contentID: Unique ID of url
+        """
+        params = {
+            "website_url": path,
+            "published": "true",
+            "website": API_SITE,
+            "included_fields": "_id,source,taxonomy",
+        }
 
-    for prefix in INVALID_PREFIXES:
-        if path.startswith(prefix):
+        for prefix in INVALID_PREFIXES:
+            if path.startswith(prefix):
+                raise ArticleScrapingError(
+                    ScrapeFailure.FAILED_SITE_VALIDATION,
+                    path,
+                    external_id=None,
+                    msg="Skipping path with invalid prefix",
+                )
+
+        try:
+            res = safe_get(API_URL, API_HEADER, params, self.config.collaborative_filtering.scrape_config)
+            res = res.json()
+        except Exception as e:
             raise ArticleScrapingError(
-                ScrapeFailure.FAILED_SITE_VALIDATION,
-                path,
-                external_id=None,
-                msg="Skipping path with invalid prefix",
+                ScrapeFailure.FETCH_ERROR, path, external_id=None, msg="ARC API request failed"
+            ) from e
+
+        if "_id" not in res:
+            raise ArticleScrapingError(
+                ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="External ID not detected in response"
             )
 
-    try:
-        res = safe_get(API_URL, API_HEADER, params, SCRAPE_CONFIG)
-        res = res.json()
-    except Exception as e:
-        raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id=None, msg="ARC API request failed") from e
+        external_id = res["_id"]
 
-    if "_id" not in res:
-        raise ArticleScrapingError(
-            ScrapeFailure.NO_EXTERNAL_ID, path, external_id=None, msg="External ID not detected in response"
-        )
+        IN_HOUSE_PLATFORMS = {"composer", "ellipsis"}
+        if res.get("source", {}).get("system") not in IN_HOUSE_PLATFORMS:
+            raise ArticleScrapingError(
+                ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Not in-house article"
+            )
 
-    external_id = res["_id"]
+        TEST_SITE = "/zzz-systest"
+        sites = res.get("taxonomy", {}).get("sites", [])
+        if sites and sites[0].get("_id") == TEST_SITE:
+            raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Test article")
 
-    IN_HOUSE_PLATFORMS = {"composer", "ellipsis"}
-    if res.get("source", {}).get("system") not in IN_HOUSE_PLATFORMS:
-        raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Not in-house article")
+        return external_id
 
-    TEST_SITE = "/zzz-systest"
-    sites = res.get("taxonomy", {}).get("sites", [])
-    if sites and sites[0].get("_id") == TEST_SITE:
-        raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Test article")
+    def scrape_article_metadata(self, page: Union[Response, dict], external_id: str, path: str) -> dict:
+        """ARC API JSON parser
 
-    return external_id
+        :page: JSON Payload from ARC for an external_id
+        :external_id: Unique identifier for URL
+        :return: Relevant metadata from an API response
+        """
 
+        metadata = {}
+        parse_keys = [
+            ("title", self.get_headline),
+            ("path", self.get_path),
+            ("published_at", self.get_date),
+            ("external_id", self.get_external_id),
+        ]
 
-def try_parsing_date(text: str, formats: List[str]) -> datetime:
-    for fmt in formats:
+        if isinstance(page, dict):
+            res = page
+        else:
+            res = page.json()
+
+        for prop, func in parse_keys:
+            val = None
+            try:
+                val = func(res)
+            except Exception as e:
+                raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, f"Error parsing {prop}") from e
+            metadata[prop] = val
+
+        return metadata
+
+    def fetch_article(self, external_id: str, path: str) -> Response:
+        """Fetch and validate article from the ARC API
+
+        :external_id: Unique identifier for a URL
+        :return: API response
+        :throws: ArticleScrapingError
+        """
+        params = {
+            "_id": external_id,
+            "website": API_SITE,
+            "published": "true",
+            "included_fields": "headlines,publish_date,_id,canonical_url",
+        }
+
         try:
-            return datetime.strptime(text, fmt)
-        except ValueError:
-            pass
-    raise ValueError("no valid date format found")
-
-
-def get_date(res_val: dict) -> str:
-    """ARC response date parser. PI response includes timezone
-
-    :res_val: JSON payload from ARC API
-    :return: Isoformat date string
-    """
-    formats = [
-        "%Y-%m-%dT%H:%M:%SZ",  # 2021-12-01T15:53:20Z
-        "%Y-%m-%dT%H:%M:%S.%fZ",  # 2021-11-17T00:44:12.319Z
-    ]
-    dt = try_parsing_date(res_val["publish_date"], formats)
-    return dt.isoformat()
-
-
-def get_path(res_val: dict) -> str:
-    """ARC response canonical path parser
-
-    :res_val: JSON payload from ARC API
-    :return: Canonical URL Path for external_ID
-    E.g.,: /news/philadelphia-mayor-jim-kenney-johnny-doc-bobby-henon-convicted-20211116.html
-    """
-    return res_val["canonical_url"]
-
-
-def get_headline(res_val: dict) -> str:
-    """ARC response headline parser
-
-    :res_val: JSON payload from ARC API
-    :return: meta_title (if available) or basic title
-    """
-    res_val = res_val["headlines"]
-
-    return res_val.get("meta_title") or res_val["basic"]
-
-
-def get_external_id(res_val: dict) -> str:
-    external_id = res_val["_id"]
-    return external_id
-
-
-def parse_article_metadata(page: Union[Response, dict], external_id: str, path: str) -> dict:
-    """ARC API JSON parser
-
-    :page: JSON Payload from ARC for an external_id
-    :external_id: Unique identifier for URL
-    :return: Relevant metadata from an API response
-    """
-
-    metadata = {}
-    parse_keys = [
-        ("title", get_headline),
-        ("path", get_path),
-        ("published_at", get_date),
-        ("external_id", get_external_id),
-    ]
-
-    if isinstance(page, dict):
-        res = page
-    else:
-        res = page.json()
-
-    for prop, func in parse_keys:
-        val = None
-        try:
-            val = func(res)
+            res = safe_get(API_URL, API_HEADER, params, self.config.collaborative_filtering.scrape_config)
         except Exception as e:
-            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, f"Error parsing {prop}") from e
-        metadata[prop] = val
+            raise ArticleScrapingError(
+                ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
+            ) from e
 
-    return metadata
+        error_msg = validate_response(res, [validate_status_code, self.validate_attributes])
+        if error_msg:
+            raise ArticleScrapingError(ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg)
+
+        return res
+
+    def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
+        logging.info(f"Fetching articles from {start_date} to {end_date}")
+        start_dt = datetime.combine(start_date, datetime.min.time())
+        end_dt = datetime.combine(end_date, datetime.min.time())
+        start_ts = ms_timestamp(start_dt)
+        end_ts = ms_timestamp(end_dt)
+        params = {
+            "q": f"publish_date:[{start_ts} TO {end_ts}]",
+            "include_distributor_category": "staff",
+            "_sourceInclude": "headlines,publish_date,_id,canonical_url",
+            "website": API_SITE,
+            "size": 100,  # inquirer publishes ~50 articles per day
+        }
+        res = safe_get(
+            f"{API_URL}/search/published", API_HEADER, params, self.config.collaborative_filtering.scrape_config
+        )
+        json_res = res.json()
+        metadata = [self.scrape_article_metadata(a, a["_id"], a["canonical_url"]) for a in json_res["content_elements"]]
+        return metadata
+
+    def get_date(self, res_val: dict) -> str:
+        """ARC response date parser. PI response includes timezone
+
+        :res_val: JSON payload from ARC API
+        :return: Isoformat date string
+        """
+        formats = [
+            "%Y-%m-%dT%H:%M:%SZ",  # 2021-12-01T15:53:20Z
+            "%Y-%m-%dT%H:%M:%S.%fZ",  # 2021-11-17T00:44:12.319Z
+        ]
+        dt = self.try_parsing_date(res_val["publish_date"], formats)
+        return dt.isoformat()
+
+    def bulk_fetch_by_external_id(self, external_ids) -> None:
+        # https://stackoverflow.com/questions/16706956/is-there-a-difference-between-raise-exception-and-raise-exception-without
+        raise NotImplementedError
+
+    @staticmethod
+    def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
+        return transform_data_google_tag_manager(df=df)
+
+    @staticmethod
+    def get_article_text(metadata: Dict[str, Any]) -> None:
+        raise NotImplementedError
+
+    @staticmethod
+    def validate_attributes(res: Response) -> Optional[str]:
+        """ARC API response validator
+
+        :res: ARC API JSON response payload
+        :return: None if no errors; otherwise string describing validation issue
+        """
+        try:
+            content = res.json()
+        except Exception as e:
+            return f"Cannot parse article response JSON: {e}"
+
+        if "headlines" not in content or ("headlines" in content and "basic" not in content["headlines"]):
+            return "Article missing headline"
+
+        if "canonical_url" not in content:
+            return "Article canonical URL missing"
+
+        if "publish_date" not in content:
+            return "Article publish date missing"
+
+        try:
+            datetime.strptime(content["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
+        except Exception as e:
+            return f"Cannot parse date of publication: {e}"
+
+        return None
+
+    @staticmethod
+    def try_parsing_date(text: str, formats: List[str]) -> datetime:
+        for fmt in formats:
+            try:
+                return datetime.strptime(text, fmt)
+            except ValueError:
+                pass
+        raise ValueError("no valid date format found")
+
+    @staticmethod
+    def get_path(res_val: dict) -> str:
+        """ARC response canonical path parser
+
+        :res_val: JSON payload from ARC API
+        :return: Canonical URL Path for external_ID
+        E.g.,: /news/philadelphia-mayor-jim-kenney-johnny-doc-bobby-henon-convicted-20211116.html
+        """
+        return res_val["canonical_url"]
+
+    @staticmethod
+    def get_headline(res_val: dict) -> str:
+        """ARC response headline parser
+
+        :res_val: JSON payload from ARC API
+        :return: meta_title (if available) or basic title
+        """
+        res_val = res_val["headlines"]
+
+        return res_val.get("meta_title") or res_val["basic"]
+
+    @staticmethod
+    def get_external_id(res_val: dict) -> str:
+        external_id = res_val["_id"]
+        return external_id
 
 
-def validate_attributes(res: Response) -> Optional[str]:
-    """ARC API response validator
-
-    :res: ARC API JSON response payload
-    :return: None if no errors; otherwise string describing validation issue
-    """
-    try:
-        content = res.json()
-    except Exception as e:
-        return f"Cannot parse article response JSON: {e}"
-
-    if "headlines" not in content or ("headlines" in content and "basic" not in content["headlines"]):
-        return "Article missing headline"
-
-    if "canonical_url" not in content:
-        return "Article canonical URL missing"
-
-    if "publish_date" not in content:
-        return "Article publish date missing"
-
-    try:
-        datetime.strptime(content["publish_date"], "%Y-%m-%dT%H:%M:%S.%fZ").isoformat()
-    except Exception as e:
-        return f"Cannot parse date of publication: {e}"
-
-    return None
-
-
-def fetch_article(external_id: str, path: str) -> Response:
-    """Fetch and validate article from the ARC API
-
-    :external_id: Unique identifier for a URL
-    :return: API response
-    :throws: ArticleScrapingError
-    """
-    params = {
-        "_id": external_id,
-        "website": API_SITE,
-        "published": "true",
-        "included_fields": "headlines,publish_date,_id,canonical_url",
-    }
-
-    try:
-        res = safe_get(API_URL, API_HEADER, params, SCRAPE_CONFIG)
-    except Exception as e:
-        raise ArticleScrapingError(
-            ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
-        ) from e
-
-    error_msg = validate_response(res, [validate_status_code, validate_attributes])
-    if error_msg:
-        raise ArticleScrapingError(ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg)
-
-    return res
-
-
-PI_SITE = Site(
-    NAME,
-    FIELDS,
-    TRAINING_PARAMS,
-    SCRAPE_CONFIG,
-    transform_data_google_tag_manager,
-    extract_external_id,
-    parse_article_metadata,
-    fetch_article,
-    bulk_fetch,
-    POPULARITY_WINDOW,
-    MAX_ARTICLE_AGE,
+PI_SITE = PhiladelphiaInquirer(
+    name=NAME,
+    strategy=Strategy.COLLABORATIVE_FILTERING,
+    strategy_fallback=Strategy.POPULARITY,
+    config=SiteConfig(
+        collaborative_filtering=ConfigCF(
+            snowplow_fields=SNOWPLOW_FIELDS,
+            scrape_config=SCRAPE_CONFIG,
+            training_params=TRAINING_PARAMS,
+            max_article_age=MAX_ARTICLE_AGE,
+        ),
+        popularity=ConfigPop(popularity_window=POPULARITY_WINDOW),
+    ),
 )
