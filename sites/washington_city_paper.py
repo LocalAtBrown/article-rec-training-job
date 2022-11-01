@@ -13,7 +13,6 @@ from sites.helpers import (
     ScrapeFailure,
     safe_get,
     validate_response,
-    validate_status_code,
 )
 from sites.site import Site
 
@@ -153,7 +152,7 @@ def fetch_article(external_id: str, path: str) -> Response:
     except Exception as e:
         raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, str(external_id), f"Request failed for {url}") from e
 
-    error_msg = validate_response(page, [validate_status_code, validate_not_excluded])
+    error_msg = validate_response(page, [validate_not_excluded])
     if error_msg is not None:
         raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg)
 

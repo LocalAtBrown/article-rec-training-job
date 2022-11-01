@@ -1,4 +1,3 @@
-import logging
 import time
 from datetime import datetime
 from enum import Enum
@@ -6,7 +5,6 @@ from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 import requests as req
-from requests.exceptions import HTTPError
 from requests.models import Response
 from retrying import retry
 
@@ -69,7 +67,12 @@ class ArticleScrapingError(Exception):
         self.msg = msg
         self.external_id = external_id
 
-    pass
+
+# TODO: Once merging SS, combine this with SS ArticleBatchScrapingError
+class ArticleBulkScrapingError(Exception):
+    def __init__(self, errorType: ScrapeFailure, msg: str):
+        self.errorType = errorType
+        self.msg = msg
 
 
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -84,8 +87,19 @@ def safe_get(
     if headers:
         default_headers.update(headers)
     page = req.get(url, timeout=TIMEOUT_SECONDS, params=params, headers=default_headers)
+
+    # Many times, the request hits a 4xx or 5xx, but no exception is raised
+    # This makes sure an exception is raised and allows the retry decorator to work.
+    #
+    # Some notes:
+    # - Since we already have exponential backoff, no need to treat 429 error any differently.
+    # - During the last retry attempt, if this still raises an exception, that exception's already handled
+    # by a try-except block in each site's fetch_article method.
+    page.raise_for_status()
+
     if scrape_config.get("requests_per_second"):
         time.sleep(1 / scrape_config["requests_per_second"])
+
     return page
 
 
@@ -96,15 +110,3 @@ def validate_response(page: Response, validate_funcs: List[ResponseValidator]) -
         if error_msg is not None:
             return error_msg
     return None
-
-
-def validate_status_code(page: Response) -> Optional[str]:
-    # Would be curious to see non-200 responses that still go through
-    if page.status_code != 200:
-        logging.info(f"Requested with resp. status {page.status_code}: {page.url}")
-    try:
-        # Raise HTTPError if error code is 400 or more
-        page.raise_for_status()
-        return None
-    except HTTPError as e:
-        return f'Request failed with error code {page.status_code} and message "{e}"'
