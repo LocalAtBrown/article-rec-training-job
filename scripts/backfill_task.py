@@ -10,7 +10,7 @@ import argparse
 import datetime
 import logging
 
-from job.helpers.site import get_site
+from job.helpers import get_site
 from job.job import fetch_and_upload_data
 from lib.config import config
 from sites.site import Site

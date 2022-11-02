@@ -2,6 +2,15 @@ from datetime import date, datetime
 
 import pandas as pd
 
+from sites.site import Site
+from sites.sites import Sites
+
+
+def batch(iterable, n=1):
+    total_length = len(iterable)
+    for ndx in range(0, total_length, n):
+        yield iterable[ndx : min(ndx + n, total_length)]
+
 
 def pad_date(date_expr: int) -> str:
     return str(date_expr).zfill(2)
@@ -33,3 +42,10 @@ def time_decay(
 def decay_fn(experiment_date: date, df_column: pd.Series, half_life: float) -> pd.Series:
     """half life decay a pandas Series"""
     return 0.5 ** ((experiment_date - df_column).dt.days / half_life)
+
+
+def get_site(site_name) -> Site:
+    site = Sites.mapping.get(site_name)
+    if site is None:
+        raise Exception(f"Could not find site {site_name} in sites.py")
+    return site

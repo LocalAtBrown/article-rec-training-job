@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 
 from db.mappings.recommendation import Rec
-from job.steps.collaborative_filtering.save_defaults import save_defaults
+from job.steps.save_defaults import save_defaults
 from sites.sites import Sites
 from tests.base import BaseTest
 

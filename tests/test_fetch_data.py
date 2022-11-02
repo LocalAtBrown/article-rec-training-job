@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from lib.config import ROOT_DIR
-from sites.washington_city_paper import WCP_SITE
+from sites.washington_city_paper import transform_raw_data
 
 
 @pytest.fixture(scope="module")
@@ -14,7 +14,7 @@ def snowplow_df():
 
 
 def test_transform_raw_data(snowplow_df):
-    df = WCP_SITE.transform_raw_data(snowplow_df)
+    df = transform_raw_data(snowplow_df)
     assert (df.session_date == pd.to_datetime("2021-02-11")).all()
     assert set(df.columns) == {
         "activity_time",

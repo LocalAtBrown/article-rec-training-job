@@ -72,15 +72,6 @@ class ArticleScrapingError(Exception):
     pass
 
 
-class ArticleBatchScrapingError(Exception):
-    def __init__(self, external_ids: List[str], url: str, msg: str = "") -> None:
-        self.url = url
-        self.msg = msg
-        self.external_ids = external_ids
-
-    pass
-
-
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
 def safe_get(
     url: str,
