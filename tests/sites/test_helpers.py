@@ -1,10 +1,7 @@
 import pytest
 from requests.models import Response
 
-from sites.validate import (
-    validate_response,
-    validate_status_code,
-)
+from sites.helpers import validate_response, validate_status_code
 
 
 def _create_response(status_code: int) -> Response:

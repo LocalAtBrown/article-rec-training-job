@@ -8,18 +8,13 @@ from bs4 import BeautifulSoup
 from requests.models import Response
 
 from lib.events import Event
-
-from sites.article_scraping_error import (
+from sites.helpers import (
     ArticleScrapingError,
-    ScrapeFailure)
-
-from sites.safe_get import safe_get
-
-from sites.validate import (
+    ScrapeFailure,
+    safe_get,
     validate_response,
     validate_status_code,
 )
-
 from sites.site import Site
 
 POPULARITY_WINDOW = 7
