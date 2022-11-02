@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-import sites.philadelphia_inquirer as site
+from sites.philadelphia_inquirer import PI_SITE
 from tests.base import BaseTest
 
 
@@ -19,10 +19,10 @@ class TestPhiladelphiaInquirer(BaseTest):
         super().setUp()
 
     def test_get_headline(self) -> None:
-        title = site.get_headline(self.res)
+        title = PI_SITE.get_headline(self.res)
         assert title == self.res["headlines"]["meta_title"]
 
     def test_get_headline__empty_meta_title(self) -> None:
         self.res["headlines"]["meta_title"] = ""
-        title = site.get_headline(self.res)
+        title = PI_SITE.get_headline(self.res)
         assert title == self.res["headlines"]["basic"]

@@ -8,7 +8,7 @@ import pandas as pd
 import redshift_connector as rc
 import s3fs
 
-from job.helpers import chunk_name
+from job.helpers.datetime import chunk_name
 from lib.config import config
 from lib.events import PING_INTERVAL, Event
 from sites.site import Site
@@ -242,7 +242,7 @@ def get_dwell_times(site: Site, days=28) -> pd.DataFrame:
     and num_articles_per_user > 2
     and duration between 30 and 600
     and duration_per_user > 60
-    and {article_table}.published_at > current_date - {site.max_article_age * 365}
+    and {article_table}.published_at > current_date - {site.config.collaborative_filtering.max_article_age * 365}
     """
     conn = get_connection()
     with conn.cursor() as cursor:
@@ -265,7 +265,7 @@ def get_default_recs(site: Site, limit=50):
     """
     Pull the articles that were the most popular in the last {days} days
     """
-    days = site.popularity_window
+    days = site.config.popularity.popularity_window
     logging.info(f"Fetching default recs for {days}-day window")
     table = get_table(Table.DWELL_TIMES)
     query = f"""
