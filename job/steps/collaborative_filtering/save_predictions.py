@@ -5,7 +5,7 @@ from typing import List
 from db.helpers import create_model, refresh_db, set_current_model
 from db.mappings.model import ModelType
 from db.mappings.recommendation import Rec
-from job.helpers import batch
+from job.helpers.itertools import batch
 from lib.metrics import Unit, write_metric
 from sites.site import Site
 

@@ -13,7 +13,7 @@ from db.helpers import (
 from db.mappings.article import Article
 from db.mappings.base import db_proxy
 from db.mappings.path import Path
-from job.steps import warehouse
+from job.steps.collaborative_filtering import warehouse
 from lib.metrics import Unit, write_metric
 from sites.helpers import ArticleScrapingError, ScrapeFailure
 from sites.site import Site
@@ -124,7 +124,8 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[Unio
     futures_list = []
     results: List[Union[str, ArticleScrapingError]] = []
 
-    with ThreadPoolExecutor(max_workers=site.scrape_config["concurrent_requests"]) as executor:
+    max_workers = site.config.collaborative_filtering.scrape_config["concurrent_requests"]
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
             futures_list.append((path, future))
@@ -173,7 +174,9 @@ def scrape_articles(site: Site, articles: List[Article]) -> Tuple[List[Article],
     futures_list = []
     results: List[Article] = []
     errors: List[ArticleScrapingError] = []
-    with ThreadPoolExecutor(max_workers=site.scrape_config["concurrent_requests"]) as executor:
+
+    max_workers = site.config.collaborative_filtering.scrape_config["concurrent_requests"]
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for article in articles:
             future = executor.submit(scrape_article, site, article=article)
             futures_list.append(future)
