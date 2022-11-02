@@ -19,12 +19,3 @@ class ArticleScrapingError(Exception):
         self.external_id = external_id
 
     pass
-
-
-class ArticleBatchScrapingError(Exception):
-    def __init__(self, external_ids: List[str], url: str, msg: str = "") -> None:
-        self.url = url
-        self.msg = msg
-        self.external_ids = external_ids
-
-    pass
