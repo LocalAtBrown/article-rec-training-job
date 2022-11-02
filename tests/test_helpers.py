@@ -114,31 +114,9 @@ def test_article_recommendations(external_ids, user_ids, durations, session_date
         }
     )
     params = {"epochs": 35, "embedding_dim": 16, "model": "IMF"}
+    _spotlight_transform(warehouse_df)
     model = Trainer(warehouse_df, datetime.now().date(), _spotlight_transform, params)
     model.fit()
     embeddings = model.model_embeddings
     distances, nearest_indices = _test_similarities(embeddings, n_recs, decays)
     _test_orders(n_recs, nearest_indices, distances, np.unique(article_ids))
-
-
-def test_article_recommendations_spotlight_batchsize(
-    external_ids, user_ids, durations, session_dates, publish_dates, article_ids, decays
-):
-    """
-    Makes sure that any fix for the Spotlight `squeeze()` bug (see https://github.com/maciejkula/spotlight/issues/107)
-    actually works, i.e., runs smoothly and doesn't return an IndexError.
-    """
-    warehouse_df = pd.DataFrame(
-        {
-            "client_id": user_ids,
-            "external_id": external_ids,
-            "article_id": article_ids,
-            "duration": durations,
-            "published_at": publish_dates,
-            "session_date": session_dates,
-        }
-    )
-    # Set batch_size such that length of dataset % batch_size == 1 to trigger error
-    params = {"model": "IMF", "loss": "adaptive_hinge", "batch_size": len(external_ids) - 1}
-    model = Trainer(warehouse_df, datetime.now().date(), _spotlight_transform, params)
-    model.fit()

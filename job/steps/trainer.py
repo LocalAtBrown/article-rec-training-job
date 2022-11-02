@@ -38,18 +38,16 @@ class Trainer:
             "hl": 10,
             "epochs": 2,
             "embedding_dim": 350,
-            "batch_size": 256,
             "model": "EMF",
             "tune": False,
-            "random_seed": 42,
+            "random_state": np.random.RandomState(42),
             "loss": "pointwise",
         }
-        self._update_params({"random_state": np.random.RandomState(self.params["random_seed"])})
         self._update_params(params)
         self.experiment_time = pd.to_datetime(experiment_time)
 
         if warehouse_transform:
-            warehouse_df = warehouse_transform(warehouse_df, **self.params)
+            warehouse_df = warehouse_transform(warehouse_df)
 
         self.spotlight_dataset = self._generate_interactions(warehouse_df)
         self.dates_df = self._generate_datedecays(warehouse_df)
@@ -85,7 +83,6 @@ class Trainer:
                 loss=self.params["loss"],
                 random_state=self.params["random_state"],
                 embedding_dim=self.params["embedding_dim"],
-                batch_size=self.params["batch_size"],
             )
         elif self.params["model"] == "EMF":
             self.model = ExplicitFactorizationModel(
@@ -93,7 +90,6 @@ class Trainer:
                 loss=self.params["loss"],
                 random_state=self.params["random_state"],
                 embedding_dim=self.params["embedding_dim"],
-                batch_size=self.params["batch_size"],
             )
 
     def _normalize_embeddings(self, embedding_matrix: np.ndarray) -> np.ndarray:
