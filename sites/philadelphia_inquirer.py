@@ -7,11 +7,10 @@ from requests.models import Response
 
 from lib.config import config
 from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers.google_tag_manager import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
-from sites.helpers.scrape_error import ArticleScrapingError, ScrapeFailure
-from sites.helpers.ms_timestamp import ms_timestamp
-from sites.helpers.safe_get import safe_get
-from sites.helpers.validate import validate_response, validate_status_code
+from sites.helpers.gtm import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
+from sites.helpers.requests import ArticleScrapingError, ScrapeFailure
+from sites.helpers.datetime import ms_timestamp
+from sites.helpers.requests import safe_get, validate_response, validate_status_code
 from sites.templates.site import Site
 from sites.config.strategy import Strategy
 

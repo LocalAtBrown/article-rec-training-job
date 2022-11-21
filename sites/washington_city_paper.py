@@ -9,9 +9,8 @@ from requests.models import Response
 
 from lib.events import Event
 from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers.scrape_error import ArticleScrapingError, ScrapeFailure
-from sites.helpers.safe_get import safe_get
-from sites.helpers.validate import validate_response, validate_status_code
+from sites.helpers.requests import ArticleScrapingError, ScrapeFailure
+from sites.helpers.requests import safe_get, validate_response, validate_status_code
 from sites.templates.site import Site
 from sites.config.strategy import Strategy
 
