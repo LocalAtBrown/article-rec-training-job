@@ -10,7 +10,8 @@ from requests.models import Response
 
 from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
 from sites.helpers.gtm import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
-from sites.helpers.requests import ArticleScrapingError, ScrapeFailure, ArticleBatchScrapingError
+from sites.helpers.requests import ArticleScrapingError, ScrapeFailure, ArticleBatchScrapingError,\
+    ArticleBulkScrapingError
 from sites.helpers.requests import safe_get, validate_response, validate_status_code
 from sites.templates.site import Site
 from sites.config.strategy import Strategy
@@ -141,7 +142,10 @@ class TexasTribune(Site):
             "end_date": end_date.strftime(date_format),
             "limit": BULK_FETCH_LIMIT,
         }
-        res = safe_get(api_url, params=params, scrape_config=self.config.collaborative_filtering.scrape_config)
+        try:
+            res = safe_get(api_url, params=params, scrape_config=self.config.collaborative_filtering.scrape_config)
+        except Exception as e:
+            raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e)) from e
         json_res = res.json()
 
         metadata = [self.parse_metadata(article) for article in json_res["results"]]

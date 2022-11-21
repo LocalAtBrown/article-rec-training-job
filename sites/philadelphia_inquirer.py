@@ -8,7 +8,7 @@ from requests.models import Response
 from lib.config import config
 from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
 from sites.helpers.gtm import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
-from sites.helpers.requests import ArticleScrapingError, ScrapeFailure
+from sites.helpers.requests import ArticleScrapingError, ScrapeFailure, ArticleBulkScrapingError
 from sites.helpers.datetime import ms_timestamp
 from sites.helpers.requests import safe_get, validate_response, validate_status_code
 from sites.templates.site import Site
@@ -168,9 +168,13 @@ class PhiladelphiaInquirer(Site):
             "website": API_SITE,
             "size": 100,  # inquirer publishes ~50 articles per day
         }
-        res = safe_get(
-            f"{API_URL}/search/published", API_HEADER, params, self.config.collaborative_filtering.scrape_config
-        )
+
+        try:
+            res = safe_get(
+                f"{API_URL}/search/published", API_HEADER, params, self.config.collaborative_filtering.scrape_config
+            )
+        except Exception as e:
+            raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e)) from e
         json_res = res.json()
         metadata = [self.scrape_article_metadata(a, a["_id"], a["canonical_url"]) for a in json_res["content_elements"]]
         return metadata
