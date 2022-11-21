@@ -1,4 +1,4 @@
-from sites.site import Site
+from sites.templates.site import Site
 from sites.sites import Sites
 
 

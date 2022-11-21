@@ -7,7 +7,7 @@ from db.mappings.article import Article
 from db.mappings.base import BaseMapping, db_proxy, tzaware_now
 from db.mappings.model import Model, ModelType, Status
 from db.mappings.recommendation import Rec
-from sites.site import Site
+from sites.templates.site import Site
 
 
 def refresh_db(func):

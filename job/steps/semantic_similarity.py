@@ -13,7 +13,7 @@ from db.mappings.recommendation import Rec
 from job.helpers.itertools import batch
 from job.helpers.knn import KNN, map_neighbors_to_recommendations
 from lib.config import config
-from sites.site import Site
+from sites.templates.site import Site
 
 # TODO: When adding functions to job.py in the future, maybe move these job.py and pass to respective functions as a parameter?
 PRETRAINED_MODEL_NAME = config.get("SS_ENCODER")

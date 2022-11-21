@@ -15,7 +15,7 @@ from job.helpers.datetime import chunk_name
 from job.steps.collaborative_filtering import warehouse
 from lib.events import Event
 from lib.metrics import Unit, write_metric
-from sites.site import Site
+from sites.templates.site import Site
 
 PATH = "/downloads"
 MEM_THRESHOLD = 100000

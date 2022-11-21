@@ -36,7 +36,7 @@ class TrainParamsCF(TypedDict):
 @dataclass
 class ConfigCF:
     """
-    Collborative-filtering site configs.
+    Collaborative-filtering site configs.
     """
 
     snowplow_fields: Set[str]

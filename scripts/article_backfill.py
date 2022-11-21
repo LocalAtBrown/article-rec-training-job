@@ -16,7 +16,7 @@ from db.helpers import create_article, db_proxy, update_article
 from db.mappings.article import Article
 from job.helpers.site import get_site
 from lib.config import config
-from sites.site import Site
+from sites.templates.site import Site
 
 DELTA = datetime.timedelta(days=1)
 
