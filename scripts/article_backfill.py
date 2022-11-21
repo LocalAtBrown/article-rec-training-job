@@ -17,6 +17,7 @@ from db.mappings.article import Article
 from job.helpers.site import get_site
 from lib.config import config
 from sites.templates.site import Site
+from sites.helpers.requests import ArticleBulkScrapingError
 
 DELTA = datetime.timedelta(days=1)
 
@@ -43,6 +44,13 @@ def backfill(site: Site, start_date: datetime.datetime.date, days: int) -> None:
         except NotImplementedError:
             logging.error(f"`bulk_fetch` not implemented for site: {site.name}")
             return
+        except ArticleBulkScrapingError as e:
+            logging.info(
+                f"Backfill failed for site {site.name}'s articles between {start_date} and {end_date}. Try again."
+            )
+            logging.exception(e)
+            # Proceed to other days
+            continue
 
         logging.info(f"Updating or creating {len(res)} articles...")
         for metadata in res:

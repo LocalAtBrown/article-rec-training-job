@@ -17,6 +17,10 @@ from job.steps.collaborative_filtering import warehouse
 from lib.metrics import Unit, write_metric
 from sites.helpers.requests import ArticleScrapingError, ScrapeFailure
 from sites.templates.site import Site
+from sites.sites import Sites
+from sites.washington_city_paper import (
+    ERROR_MSG_TAG_EXCLUDE as WCP_ERROR_MSG_TAG_EXCLUDE,
+)
 
 EXCLUDE_FAILURE_TYPES = {
     ScrapeFailure.NO_EXTERNAL_ID,
@@ -259,8 +263,9 @@ def scrape_and_update_articles(site: Site, external_ids: List[str]) -> Tuple[Lis
 
     results, errors = scrape_articles(site, articles)
 
-    # Delete any articles from the DB that had a scraping error
-    delete_articles([e.external_id for e in errors])
+    # WCP: Delete any sponsored (excluded) articles from the DB that had a tag-exclude scraping error
+    if site.name == Sites.WCP.name:
+        delete_articles([e.external_id for e in errors if e.msg == WCP_ERROR_MSG_TAG_EXCLUDE])
 
     # Filter for articles that have a published_at date
     to_update = []

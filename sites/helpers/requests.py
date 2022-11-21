@@ -27,8 +27,19 @@ def safe_get(
     if headers:
         default_headers.update(headers)
     page = req.get(url, timeout=timeout_seconds, params=params, headers=default_headers)
+
+    # Many times, the request hits a 4xx or 5xx, but no exception is raised
+    # This makes sure an exception is raised and allows the retry decorator to work.
+    #
+    # Some notes:
+    # - Since we already have exponential backoff, no need to treat 429 error any differently.
+    # - During the last retry attempt, if this still raises an exception, that exception's already handled
+    # by a try-except block in each site's fetch_article method.
+    page.raise_for_status()
+
     if scrape_config.get("requests_per_second"):
         time.sleep(1 / scrape_config["requests_per_second"])
+
     return page
 
 
@@ -80,3 +91,9 @@ class ArticleBatchScrapingError(Exception):
         self.external_ids = external_ids
 
     pass
+
+# TODO: Once merging SS, combine this with SS ArticleBatchScrapingError
+class ArticleBulkScrapingError(Exception):
+    def __init__(self, errorType: ScrapeFailure, msg: str):
+        self.errorType = errorType
+        self.msg = msg

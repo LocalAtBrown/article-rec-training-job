@@ -46,6 +46,9 @@ SCRAPE_CONFIG: ScrapeConfig = {
 PATH_PATTERN = rf"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
 
+# TODO: Once merged Site object PR, make this a WCP class attribute
+ERROR_MSG_TAG_EXCLUDE = "Article has exclude tag"
+
 
 class WashingtonCityPaper(Site):
     def extract_external_id(self, path: str) -> Optional[str]:
@@ -139,7 +142,7 @@ class WashingtonCityPaper(Site):
         if primary:
             classes = {value for element in primary.find_all(class_=True) for value in element["class"]}
             if "tag-exclude" in classes:
-                return "Article has exclude tag"
+                return ERROR_MSG_TAG_EXCLUDE
 
         return None
 
