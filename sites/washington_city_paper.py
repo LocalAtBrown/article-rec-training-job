@@ -8,16 +8,12 @@ from bs4 import BeautifulSoup
 from requests.models import Response
 
 from lib.events import Event
-from sites.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers import (
-    ArticleScrapingError,
-    ScrapeFailure,
-    safe_get,
-    validate_response,
-    validate_status_code,
-)
-from sites.site import Site
-from sites.strategy import Strategy
+from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
+from sites.helpers.scrape_error import ArticleScrapingError, ScrapeFailure
+from sites.helpers.safe_get import safe_get
+from sites.helpers.validate import validate_response, validate_status_code
+from sites.templates.site import Site
+from sites.config.strategy import Strategy
 
 POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
@@ -46,7 +42,7 @@ SCRAPE_CONFIG: ScrapeConfig = {
 }
 
 # supported url path formats:
-# '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steakumm/'
+# '/v/s/washingtoncitypaper.com/article/194506/10-things-you-didnt-know-about-steak/'
 # '/article/521676/jack-evans-will-pay-2000-a-month-in-latest-ethics-settlement/'
 PATH_PATTERN = rf"\/((v|c)\/s\/{DOMAIN}\/)?article\/(\d+)\/\S+"
 PATH_PROG = re.compile(PATH_PATTERN)
@@ -162,8 +158,8 @@ class WashingtonCityPaper(Site):
     @staticmethod
     def scrape_published_at(page: Response, soup: BeautifulSoup) -> str:
         # example published_at: '2021-04-13T19:00:45+00:00'
-        PROPERTY_TAG = "article:published_time"
-        tag = soup.find("meta", property=PROPERTY_TAG)
+        property_tag = "article:published_time"
+        tag = soup.find("meta", property=property_tag)
         return tag.get("content") if tag is not None else None
 
 

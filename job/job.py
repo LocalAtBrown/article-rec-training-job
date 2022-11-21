@@ -17,7 +17,7 @@ from job.steps.collaborative_filtering import (
 )
 from lib.config import config
 from lib.metrics import Unit, write_metric
-from sites.site import Site
+from sites.templates.site import Site
 
 
 def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):

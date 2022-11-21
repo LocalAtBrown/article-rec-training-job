@@ -8,19 +8,13 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from sites.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers import (
-    GOOGLE_TAG_MANAGER_RAW_FIELDS,
-    ArticleBatchScrapingError,
-    ArticleScrapingError,
-    ScrapeFailure,
-    safe_get,
-    transform_data_google_tag_manager,
-    validate_response,
-    validate_status_code,
-)
-from sites.site import Site
-from sites.strategy import Strategy
+from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
+from sites.helpers.google_tag_manager import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
+from sites.helpers.scrape_error import ArticleScrapingError, ScrapeFailure, ArticleBatchScrapingError
+from sites.helpers.safe_get import safe_get
+from sites.helpers.validate import validate_response, validate_status_code
+from sites.templates.site import Site
+from sites.config.strategy import Strategy
 
 """
 TT API documentation
@@ -114,7 +108,8 @@ class TexasTribune(Site):
         try:
             api_info = page.json()
         except Exception as e:
-            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, "Response JSON parse failed") from e
+            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id,
+                                       "Response JSON parse failed") from e
         metadata = self.parse_metadata(api_info, external_id, path)
         return metadata
 
@@ -139,15 +134,15 @@ class TexasTribune(Site):
     def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
         logging.info(f"Fetching articles from {start_date} to {end_date}")
 
-        API_URL = f"https://{DOMAIN}/api/v2/articles"
-        DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
+        api_url = f"https://{DOMAIN}/api/v2/articles"
+        date_format = "%Y-%m-%dT%H:%M:%S"
         # texas tribune publishes 5-10 articles per day
         params = {
-            "start_date": start_date.strftime(DATE_FORMAT),
-            "end_date": end_date.strftime(DATE_FORMAT),
+            "start_date": start_date.strftime(date_format),
+            "end_date": end_date.strftime(date_format),
             "limit": BULK_FETCH_LIMIT,
         }
-        res = safe_get(API_URL, params=params, scrape_config=self.config.collaborative_filtering.scrape_config)
+        res = safe_get(api_url, params=params, scrape_config=self.config.collaborative_filtering.scrape_config)
         json_res = res.json()
 
         metadata = [self.parse_metadata(article) for article in json_res["results"]]
@@ -185,7 +180,8 @@ class TexasTribune(Site):
         """
         Helper for bulk_fetch_by_external_id. Sends a request for a batch of IDs.
         """
-        # For instance: https://www.texastribune.org/api/v2/articles/?id=40916&id=40930 returns both of the articles with the corresponding IDs
+        # For instance: https://www.texastribune.org/api/v2/articles/?id=40916&id=40930
+        # returns both of the articles with the corresponding IDs
         query = "&".join([f"id={i}" for i in batch_external_ids])
         url = f"https://{DOMAIN}/api/v2/articles/?{query}"
         params = {"limit": BULK_FETCH_LIMIT}
@@ -209,13 +205,14 @@ class TexasTribune(Site):
 
         data = []
         for i in range(0, num_articles, BULK_FETCH_LIMIT):
-            batch_external_ids = external_ids[i : i + BULK_FETCH_LIMIT]
+            batch_external_ids = external_ids[i:i + BULK_FETCH_LIMIT]
 
             batch_data = []
             try:
                 batch_data = self.batch_fetch_by_external_id(batch_external_ids)
             except ArticleBatchScrapingError as e:
-                logging.warning(f"Failed to fetch {len(e.external_ids)} via the following URL: {e.url}. Message: {e.msg}")
+                logging.warning(f"Failed to fetch {len(e.external_ids)} "
+                                f"via the following URL: {e.url}. Message: {e.msg}")
 
             data.extend(batch_data)
             # Log every BULK_FETCH_LOG_INTERVAL articles fetched

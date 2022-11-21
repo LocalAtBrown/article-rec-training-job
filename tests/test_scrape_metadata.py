@@ -6,8 +6,8 @@ import pandas as pd
 from db.mappings.article import Article
 from db.mappings.path import Path
 from job.steps.collaborative_filtering.scrape_metadata import scrape_upload_metadata
-from sites.helpers import ArticleScrapingError, ScrapeFailure
-from sites.site import Site
+from sites.helpers.scrape_error import ArticleScrapingError, ScrapeFailure
+from sites.templates.site import Site
 from sites.sites import Sites
 from tests.base import BaseTest
 from tests.factories.article import ArticleFactory

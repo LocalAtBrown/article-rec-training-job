@@ -7,7 +7,7 @@ from db.mappings.model import ModelType
 from db.mappings.recommendation import Rec
 from job.helpers.itertools import batch
 from lib.metrics import Unit, write_metric
-from sites.site import Site
+from sites.templates.site import Site
 
 
 @refresh_db

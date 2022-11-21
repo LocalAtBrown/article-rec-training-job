@@ -15,8 +15,8 @@ from db.mappings.base import db_proxy
 from db.mappings.path import Path
 from job.steps.collaborative_filtering import warehouse
 from lib.metrics import Unit, write_metric
-from sites.helpers import ArticleScrapingError, ScrapeFailure
-from sites.site import Site
+from sites.helpers.scrape_error import ArticleScrapingError, ScrapeFailure
+from sites.templates.site import Site
 
 EXCLUDE_FAILURE_TYPES = {
     ScrapeFailure.NO_EXTERNAL_ID,

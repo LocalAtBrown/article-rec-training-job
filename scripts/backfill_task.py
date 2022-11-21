@@ -13,7 +13,7 @@ import logging
 from job.helpers.site import get_site
 from job.job import fetch_and_upload_data
 from lib.config import config
-from sites.site import Site
+from sites.templates.site import Site
 
 DELTA = datetime.timedelta(days=1)
 

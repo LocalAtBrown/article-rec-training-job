@@ -6,19 +6,14 @@ import pandas as pd
 from requests.models import Response
 
 from lib.config import config
-from sites.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers import (
-    GOOGLE_TAG_MANAGER_RAW_FIELDS,
-    ArticleScrapingError,
-    ScrapeFailure,
-    ms_timestamp,
-    safe_get,
-    transform_data_google_tag_manager,
-    validate_response,
-    validate_status_code,
-)
-from sites.site import Site
-from sites.strategy import Strategy
+from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
+from sites.helpers.google_tag_manager import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
+from sites.helpers.scrape_error import ArticleScrapingError, ScrapeFailure
+from sites.helpers.ms_timestamp import ms_timestamp
+from sites.helpers.safe_get import safe_get
+from sites.helpers.validate import validate_response, validate_status_code
+from sites.templates.site import Site
+from sites.config.strategy import Strategy
 
 """
 ARC API documentation
@@ -92,15 +87,15 @@ class PhiladelphiaInquirer(Site):
 
         external_id = res["_id"]
 
-        IN_HOUSE_PLATFORMS = {"composer", "ellipsis"}
-        if res.get("source", {}).get("system") not in IN_HOUSE_PLATFORMS:
+        in_house_platforms = {"composer", "ellipsis"}
+        if res.get("source", {}).get("system") not in in_house_platforms:
             raise ArticleScrapingError(
                 ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Not in-house article"
             )
 
-        TEST_SITE = "/zzz-systest"
+        test_site = "/zzz-systest"
         sites = res.get("taxonomy", {}).get("sites", [])
-        if sites and sites[0].get("_id") == TEST_SITE:
+        if sites and sites[0].get("_id") == test_site:
             raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Test article")
 
         return external_id
@@ -127,7 +122,6 @@ class PhiladelphiaInquirer(Site):
             res = page.json()
 
         for prop, func in parse_keys:
-            val = None
             try:
                 val = func(res)
             except Exception as e:
@@ -138,7 +132,6 @@ class PhiladelphiaInquirer(Site):
 
     def fetch_article(self, external_id: str, path: str) -> Response:
         """Fetch and validate article from the ARC API
-
         :external_id: Unique identifier for a URL
         :return: API response
         :throws: ArticleScrapingError
@@ -185,9 +178,8 @@ class PhiladelphiaInquirer(Site):
 
     def get_date(self, res_val: dict) -> str:
         """ARC response date parser. PI response includes timezone
-
         :res_val: JSON payload from ARC API
-        :return: Isoformat date string
+        :return: iso format date string
         """
         formats = [
             "%Y-%m-%dT%H:%M:%SZ",  # 2021-12-01T15:53:20Z
@@ -248,17 +240,15 @@ class PhiladelphiaInquirer(Site):
     @staticmethod
     def get_path(res_val: dict) -> str:
         """ARC response canonical path parser
-
         :res_val: JSON payload from ARC API
         :return: Canonical URL Path for external_ID
-        E.g.,: /news/philadelphia-mayor-jim-kenney-johnny-doc-bobby-henon-convicted-20211116.html
+        E.g.,: /news/philadelphia-mayor-jim-kenney-johnny-doc-bobby-hen-convicted-20211116.html
         """
         return res_val["canonical_url"]
 
     @staticmethod
     def get_headline(res_val: dict) -> str:
         """ARC response headline parser
-
         :res_val: JSON payload from ARC API
         :return: meta_title (if available) or basic title
         """

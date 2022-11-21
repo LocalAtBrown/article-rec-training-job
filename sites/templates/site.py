@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 from requests.models import Response
 
-from sites.config import SiteConfig
-from sites.singleton import SingletonABCMeta
-from sites.strategy import Strategy
+from sites.config.config import SiteConfig
+from sites.helpers.singleton import SingletonABCMeta
+from sites.config.strategy import Strategy
 
 
 @dataclass
