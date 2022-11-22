@@ -1,34 +1,16 @@
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from job.helpers.site import get_site
-from job.steps.collaborative_filtering import (
-    fetch_data,
-    save_defaults,
-    save_predictions,
-    scrape_metadata,
+from job.strategies.collaborative_filtering import (
     train_model,
-    warehouse,
 )
+from job.strategies import save_defaults, save_predictions
+from job.helpers import warehouse
 from lib.config import config
 from lib.metrics import Unit, write_metric
-from sites.templates.site import Site
-
-
-def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):
-    """
-    1. Upload transformed events data to Redshift
-    2. Update article metadata
-    3. Update dwell times table
-    """
-    dts = [dt - timedelta(hours=i) for i in range(hours)]
-
-    fetch_data.fetch_transform_upload_chunks(site, dts)
-    scrape_metadata.scrape_upload_metadata(site, dts)
-
-    for date in set([dt.date() for dt in dts]):
-        warehouse.update_dwell_times(site, date)
+from job.steps.fetch_and_upload import fetch_and_upload_data
 
 
 def run():
