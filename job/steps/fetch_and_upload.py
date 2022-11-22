@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
-from job.steps import fetch_data, scrape_metadata
+
 from job.helpers import warehouse
-from sites.templates.site import Site
+from job.steps import fetch_data, scrape_metadata
 from lib.config import config
+from sites.templates.site import Site
 
 
 def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):

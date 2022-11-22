@@ -7,8 +7,8 @@ import pandas as pd
 from requests.models import Response
 
 from sites.config.config import SiteConfig
-from sites.helpers.singleton import SingletonABCMeta
 from sites.config.strategy import Strategy
+from sites.helpers.singleton import SingletonABCMeta
 
 
 @dataclass

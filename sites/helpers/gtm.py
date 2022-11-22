@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 GOOGLE_TAG_MANAGER_RAW_FIELDS = {
     "collector_tstamp",
     "domain_userid",

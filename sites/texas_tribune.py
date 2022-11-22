@@ -8,13 +8,28 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers.gtm import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
-from sites.helpers.requests import ArticleScrapingError, ScrapeFailure, ArticleBatchScrapingError,\
-    ArticleBulkScrapingError
-from sites.helpers.requests import safe_get, validate_response, validate_status_code
-from sites.templates.site import Site
+from sites.config.config import (
+    ConfigCF,
+    ConfigPop,
+    ScrapeConfig,
+    SiteConfig,
+    TrainParamsCF,
+)
 from sites.config.strategy import Strategy
+from sites.helpers.gtm import (
+    GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    transform_data_google_tag_manager,
+)
+from sites.helpers.requests import (
+    ArticleBatchScrapingError,
+    ArticleBulkScrapingError,
+    ArticleScrapingError,
+    ScrapeFailure,
+    safe_get,
+    validate_response,
+    validate_status_code,
+)
+from sites.templates.site import Site
 
 """
 TT API documentation
@@ -108,8 +123,7 @@ class TexasTribune(Site):
         try:
             api_info = page.json()
         except Exception as e:
-            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id,
-                                       "Response JSON parse failed") from e
+            raise ArticleScrapingError(ScrapeFailure.FETCH_ERROR, path, external_id, "Response JSON parse failed") from e
         metadata = self.parse_metadata(api_info, external_id, path)
         return metadata
 
@@ -208,14 +222,15 @@ class TexasTribune(Site):
 
         data = []
         for i in range(0, num_articles, BULK_FETCH_LIMIT):
-            batch_external_ids = external_ids[i:i + BULK_FETCH_LIMIT]
+            batch_external_ids = external_ids[i : i + BULK_FETCH_LIMIT]
 
             batch_data = []
             try:
                 batch_data = self.batch_fetch_by_external_id(batch_external_ids)
             except ArticleBatchScrapingError as e:
-                logging.warning(f"Failed to fetch {len(e.external_ids)} "
-                                f"via the following URL: {e.url}. Message: {e.msg}")
+                logging.warning(
+                    f"Failed to fetch {len(e.external_ids)} " f"via the following URL: {e.url}. Message: {e.msg}"
+                )
 
             data.extend(batch_data)
             # Log every BULK_FETCH_LOG_INTERVAL articles fetched

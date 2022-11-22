@@ -7,8 +7,8 @@ from db.mappings.article import Article
 from db.mappings.path import Path
 from job.steps.scrape_metadata import scrape_upload_metadata
 from sites.helpers.requests import ArticleScrapingError, ScrapeFailure
-from sites.templates.site import Site
 from sites.sites import Sites
+from sites.templates.site import Site
 from sites.washington_city_paper import ERROR_MSG_TAG_EXCLUDE
 from tests.base import BaseTest
 from tests.factories.article import ArticleFactory

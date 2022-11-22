@@ -1,5 +1,5 @@
-from sites.templates.site import Site
 from sites.sites import Sites
+from sites.templates.site import Site
 
 
 def get_site(site_name) -> Site:

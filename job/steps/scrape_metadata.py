@@ -16,8 +16,8 @@ from db.mappings.path import Path
 from job.helpers import warehouse
 from lib.metrics import Unit, write_metric
 from sites.helpers.requests import ArticleScrapingError, ScrapeFailure
-from sites.templates.site import Site
 from sites.sites import Sites
+from sites.templates.site import Site
 from sites.washington_city_paper import (
     ERROR_MSG_TAG_EXCLUDE as WCP_ERROR_MSG_TAG_EXCLUDE,
 )
