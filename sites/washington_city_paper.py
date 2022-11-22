@@ -8,11 +8,22 @@ from bs4 import BeautifulSoup
 from requests.models import Response
 
 from lib.events import Event
-from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers.requests import ArticleScrapingError, ScrapeFailure
-from sites.helpers.requests import safe_get, validate_response, validate_status_code
-from sites.templates.site import Site
+from sites.config.config import (
+    ConfigCF,
+    ConfigPop,
+    ScrapeConfig,
+    SiteConfig,
+    TrainParamsCF,
+)
 from sites.config.strategy import Strategy
+from sites.helpers.requests import (
+    ArticleScrapingError,
+    ScrapeFailure,
+    safe_get,
+    validate_response,
+    validate_status_code,
+)
+from sites.templates.site import Site
 
 POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10

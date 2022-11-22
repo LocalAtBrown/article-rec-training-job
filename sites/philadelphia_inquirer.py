@@ -6,13 +6,28 @@ import pandas as pd
 from requests.models import Response
 
 from lib.config import config
-from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, SiteConfig, TrainParamsCF
-from sites.helpers.gtm import GOOGLE_TAG_MANAGER_RAW_FIELDS, transform_data_google_tag_manager
-from sites.helpers.requests import ArticleScrapingError, ScrapeFailure, ArticleBulkScrapingError
-from sites.helpers.datetime import ms_timestamp
-from sites.helpers.requests import safe_get, validate_response, validate_status_code
-from sites.templates.site import Site
+from sites.config.config import (
+    ConfigCF,
+    ConfigPop,
+    ScrapeConfig,
+    SiteConfig,
+    TrainParamsCF,
+)
 from sites.config.strategy import Strategy
+from sites.helpers.datetime import ms_timestamp
+from sites.helpers.gtm import (
+    GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    transform_data_google_tag_manager,
+)
+from sites.helpers.requests import (
+    ArticleBulkScrapingError,
+    ArticleScrapingError,
+    ScrapeFailure,
+    safe_get,
+    validate_response,
+    validate_status_code,
+)
+from sites.templates.site import Site
 
 """
 ARC API documentation

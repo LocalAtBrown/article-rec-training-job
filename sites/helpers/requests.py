@@ -1,13 +1,12 @@
+import logging
 import time
-from typing import Dict, Callable, Optional
+from enum import Enum
+from typing import Callable, Dict, List, Optional
 
 import requests as req
-from retrying import retry
 from requests.exceptions import HTTPError
-import logging
-from typing import List
 from requests.models import Response
-from enum import Enum
+from retrying import retry
 
 # Custom types
 ResponseValidator = Callable[[Response], Optional[str]]
@@ -91,6 +90,7 @@ class ArticleBatchScrapingError(Exception):
         self.external_ids = external_ids
 
     pass
+
 
 # TODO: Once merging SS, combine this with SS ArticleBatchScrapingError
 class ArticleBulkScrapingError(Exception):

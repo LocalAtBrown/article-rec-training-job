@@ -11,8 +11,8 @@ from typing import List, Set
 
 import pandas as pd
 
+from job.helpers import warehouse
 from job.helpers.datetime import chunk_name
-from job.steps.collaborative_filtering import warehouse
 from lib.events import Event
 from lib.metrics import Unit, write_metric
 from sites.templates.site import Site

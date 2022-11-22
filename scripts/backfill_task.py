@@ -11,7 +11,7 @@ import datetime
 import logging
 
 from job.helpers.site import get_site
-from job.job import fetch_and_upload_data
+from job.steps.fetch_and_upload import fetch_and_upload_data
 from lib.config import config
 from sites.templates.site import Site
 
