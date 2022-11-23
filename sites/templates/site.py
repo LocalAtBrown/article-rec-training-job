@@ -6,19 +6,14 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 from requests.models import Response
 
-from sites.config.config import SiteConfig
-from sites.config.strategy import Strategy
+from sites.config.config import StrategyConfig
 from sites.helpers.singleton import SingletonABCMeta
 
 
 @dataclass
 class Site(metaclass=SingletonABCMeta):
     name: str
-    # Main recs-generating approach, e.g., CF or SS
-    strategy: Strategy
-    # Backup/default recs-generating approach, e.g., popularity
-    strategy_fallback: Strategy
-    config: SiteConfig
+    strategies: List[StrategyConfig]
 
     def get_bucket_name(self):
         return f"lnl-snowplow-{self.name}"

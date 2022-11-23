@@ -128,7 +128,7 @@ def extract_external_ids(site: Site, landing_page_paths: List[str]) -> List[Unio
     futures_list = []
     results: List[Union[str, ArticleScrapingError]] = []
 
-    max_workers = site.config.collaborative_filtering.scrape_config["concurrent_requests"]
+    max_workers = site.strategies[0].scrape_config["concurrent_requests"]
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for path in landing_page_paths:
             future = executor.submit(extract_external_id, site, path=path)
@@ -179,7 +179,7 @@ def scrape_articles(site: Site, articles: List[Article]) -> Tuple[List[Article],
     results: List[Article] = []
     errors: List[ArticleScrapingError] = []
 
-    max_workers = site.config.collaborative_filtering.scrape_config["concurrent_requests"]
+    max_workers = site.strategies[0].scrape_config["concurrent_requests"]
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for article in articles:
             future = executor.submit(scrape_article, site, article=article)

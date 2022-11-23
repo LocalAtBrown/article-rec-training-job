@@ -21,7 +21,6 @@ def run():
     status = "success"
 
     try:
-
         EXPERIMENT_DT = datetime.now()
 
         # Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
@@ -33,9 +32,12 @@ def run():
 
         interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
+        # Temporary solution: The first position in the array of strategies is currently CFConfig.
+        # We will change this line when we implement iteration through different strategies.
+        strategy = site.strategies[0]
         recommendations = train_model.get_recommendations(
             interactions_data,
-            site.config.collaborative_filtering.training_params,
+            strategy.training_params,
             EXPERIMENT_DT,
         )
         logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")

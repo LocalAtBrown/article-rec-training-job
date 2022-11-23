@@ -8,14 +8,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from sites.config.config import (
-    ConfigCF,
-    ConfigPop,
-    ScrapeConfig,
-    SiteConfig,
-    TrainParamsCF,
-)
-from sites.config.strategy import Strategy
+from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, TrainParamsCF
 from sites.helpers.gtm import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
     transform_data_google_tag_manager,
@@ -281,15 +274,13 @@ class TexasTribune(Site):
 
 TT_SITE = TexasTribune(
     name=NAME,
-    strategy=Strategy.COLLABORATIVE_FILTERING,
-    strategy_fallback=Strategy.POPULARITY,
-    config=SiteConfig(
-        collaborative_filtering=ConfigCF(
+    strategies=[
+        ConfigCF(
             snowplow_fields=SNOWPLOW_FIELDS,
             scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
             max_article_age=MAX_ARTICLE_AGE,
         ),
-        popularity=ConfigPop(popularity_window=POPULARITY_WINDOW),
-    ),
+        ConfigPop(popularity_window=POPULARITY_WINDOW),
+    ],
 )

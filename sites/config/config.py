@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Set, TypedDict
+from typing import List, Set, TypedDict
 
 # Custom types
 # TypedDict (as opposed to dataclass) doesn't require changing existing CF code to work with it
@@ -33,8 +33,12 @@ class TrainParamsCF(TypedDict):
 # Config dataclasses
 
 
+class StrategyConfig:
+    pass
+
+
 @dataclass
-class ConfigCF:
+class ConfigCF(StrategyConfig):
     """
     Collaborative-filtering site configs.
     """
@@ -47,7 +51,7 @@ class ConfigCF:
 
 
 @dataclass
-class ConfigSS:
+class ConfigSS(StrategyConfig):
     """
     TODO: Semantic-similarity site configs.
     """
@@ -56,27 +60,10 @@ class ConfigSS:
 
 
 @dataclass
-class ConfigPop:
+class ConfigPop(StrategyConfig):
     """
     Default popularity-model site configs.
     """
 
     # this is a number of days; will only recommend articles within the past X days
     popularity_window: int
-
-
-@dataclass
-class SiteConfig:
-    """
-    Site config object for different model configs
-
-    In order to add a new model (not a new approach/strategy, which may or may not require adding a new model)
-    to the site:
-    1. Create a Config<ModelName> dataclass with appropriate config variables and variable types
-    2. Add created config dataclass to this class as a property
-    """
-
-    # Popularity model is fallback and therefore its config is not optional
-    popularity: ConfigPop
-    collaborative_filtering: Optional[ConfigCF] = None
-    semantic_similarity: Optional[ConfigSS] = None
