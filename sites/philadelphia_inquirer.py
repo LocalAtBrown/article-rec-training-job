@@ -6,14 +6,7 @@ import pandas as pd
 from requests.models import Response
 
 from lib.config import config
-from sites.config.config import (
-    ConfigCF,
-    ConfigPop,
-    ScrapeConfig,
-    SiteConfig,
-    TrainParamsCF,
-)
-from sites.config.strategy import Strategy
+from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, TrainParamsCF
 from sites.helpers.datetime import ms_timestamp
 from sites.helpers.gtm import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
@@ -282,15 +275,13 @@ class PhiladelphiaInquirer(Site):
 
 PI_SITE = PhiladelphiaInquirer(
     name=NAME,
-    strategy=Strategy.COLLABORATIVE_FILTERING,
-    strategy_fallback=Strategy.POPULARITY,
-    config=SiteConfig(
-        collaborative_filtering=ConfigCF(
+    strategies=[
+        ConfigCF(
             snowplow_fields=SNOWPLOW_FIELDS,
             scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
             max_article_age=MAX_ARTICLE_AGE,
         ),
-        popularity=ConfigPop(popularity_window=POPULARITY_WINDOW),
-    ),
+        ConfigPop(popularity_window=POPULARITY_WINDOW),
+    ],
 )
