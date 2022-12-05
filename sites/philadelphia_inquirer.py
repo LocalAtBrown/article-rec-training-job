@@ -18,7 +18,6 @@ from sites.helpers.requests import (
     ScrapeFailure,
     safe_get,
     validate_response,
-    validate_status_code,
 )
 from sites.templates.site import Site
 
@@ -157,7 +156,7 @@ class PhiladelphiaInquirer(Site):
                 ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
             ) from e
 
-        error_msg = validate_response(res, [validate_status_code, self.validate_attributes])
+        error_msg = validate_response(res, [self.validate_attributes])
         if error_msg:
             raise ArticleScrapingError(ScrapeFailure.MALFORMED_RESPONSE, path, external_id, error_msg)
 

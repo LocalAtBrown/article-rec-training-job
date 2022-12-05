@@ -14,13 +14,10 @@ from sites.helpers.gtm import (
     transform_data_google_tag_manager,
 )
 from sites.helpers.requests import (
-    ArticleBatchScrapingError,
     ArticleBulkScrapingError,
     ArticleScrapingError,
     ScrapeFailure,
     safe_get,
-    validate_response,
-    validate_status_code,
 )
 from sites.templates.site import Site
 
@@ -132,10 +129,6 @@ class TexasTribune(Site):
                 ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article url: {api_url}"
             ) from e
 
-        error_msg = validate_response(res, [validate_status_code])
-        if error_msg is not None:
-            raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), error_msg)
-
         return res
 
     def bulk_fetch(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
@@ -197,11 +190,12 @@ class TexasTribune(Site):
         params = {"limit": BULK_FETCH_LIMIT}
 
         # Request
-        res = safe_get(url, params=params, scrape_config=SCRAPE_CONFIG)
-        error_msg = validate_response(res, [validate_status_code])
-
-        if error_msg is not None:
-            raise ArticleBatchScrapingError(external_ids=batch_external_ids, url=url, msg=error_msg)
+        try:
+            res = safe_get(url, params=params, scrape_config=SCRAPE_CONFIG)
+        except Exception as e:
+            raise ArticleBulkScrapingError(
+                error_type=ScrapeFailure.FETCH_ERROR, external_ids=batch_external_ids, url=url, msg=str(e)
+            ) from e
 
         return [self.parse_metadata(article) for article in res.json()["results"]]
 
@@ -220,8 +214,8 @@ class TexasTribune(Site):
             batch_data = []
             try:
                 batch_data = self.batch_fetch_by_external_id(batch_external_ids)
-            except ArticleBatchScrapingError as e:
-                logging.warning(
+            except ArticleBulkScrapingError as e:
+                logging.exception(
                     f"Failed to fetch {len(e.external_ids)} " f"via the following URL: {e.url}. Message: {e.msg}"
                 )
 
