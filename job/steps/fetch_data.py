@@ -67,7 +67,7 @@ def transform_chunk(site: Site, dt: datetime.datetime) -> List[pd.DataFrame]:
 
     path = os.path.join(PATH, chunk_name(dt))
     filenames = gen_files(path)
-    fields = site.config.collaborative_filtering.snowplow_fields
+    fields = site.strategies[0].snowplow_fields
 
     dfs = []
 
