@@ -5,8 +5,13 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 from requests.models import Response
 
+from job.strategies.collaborative_filtering import (
+    CollaborativeFiltering,
+    ScrapeConfig,
+    TrainParamsCF,
+)
+from job.strategies.popularity import Popularity
 from lib.config import config
-from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, TrainParamsCF
 from sites.helpers.datetime import ms_timestamp
 from sites.helpers.gtm import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
@@ -80,7 +85,7 @@ class PhiladelphiaInquirer(Site):
                 )
 
         try:
-            res = safe_get(API_URL, API_HEADER, params, self.config.collaborative_filtering.scrape_config)
+            res = safe_get(API_URL, API_HEADER, params, self.strategies[0].scrape_config)
             res = res.json()
         except Exception as e:
             raise ArticleScrapingError(
@@ -151,7 +156,7 @@ class PhiladelphiaInquirer(Site):
         }
 
         try:
-            res = safe_get(API_URL, API_HEADER, params, self.config.collaborative_filtering.scrape_config)
+            res = safe_get(API_URL, API_HEADER, params, self.strategies[0].scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article URL: {API_URL}"
@@ -178,9 +183,7 @@ class PhiladelphiaInquirer(Site):
         }
 
         try:
-            res = safe_get(
-                f"{API_URL}/search/published", API_HEADER, params, self.config.collaborative_filtering.scrape_config
-            )
+            res = safe_get(f"{API_URL}/search/published", API_HEADER, params, self.strategies[0].scrape_config)
         except Exception as e:
             raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e)) from e
         json_res = res.json()
@@ -276,12 +279,12 @@ class PhiladelphiaInquirer(Site):
 PI_SITE = PhiladelphiaInquirer(
     name=NAME,
     strategies=[
-        ConfigCF(
+        CollaborativeFiltering(
             snowplow_fields=SNOWPLOW_FIELDS,
             scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
             max_article_age=MAX_ARTICLE_AGE,
         ),
-        ConfigPop(popularity_window=POPULARITY_WINDOW),
+        Popularity(popularity_window=POPULARITY_WINDOW),
     ],
 )

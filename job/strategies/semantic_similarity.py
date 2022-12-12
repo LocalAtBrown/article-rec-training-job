@@ -6,13 +6,13 @@ import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import normalize
-from templates.strategy import Strategy
 
 from db.helpers import create_model, refresh_db, set_current_model
 from db.mappings.model import ModelType
 from db.mappings.recommendation import Rec
 from job.helpers.itertools import batch
 from job.helpers.knn import KNN, map_neighbors_to_recommendations
+from job.strategies.templates.strategy import Strategy
 from lib.config import config
 from sites.templates.site import Site
 
@@ -41,7 +41,7 @@ class SemanticSimilarity(Strategy):
 
         return data
 
-    def preprocess_data(site: Site, article_data: List[Dict[str]], interactions_data: pd.DataFrame) -> pd.DataFrame:
+    def preprocess_data(site: Site, article_data: List[Dict[str, str]], interactions_data: pd.DataFrame) -> pd.DataFrame:
         """
         Preprocess fetched data into a DataFrame ready for training. Steps include:
         - Get a text representation for each article. The rule for creating such representations may differ between sites.
