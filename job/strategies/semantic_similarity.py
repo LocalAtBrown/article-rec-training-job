@@ -22,7 +22,7 @@ MAX_RECS = config.get("MAX_RECS")
 
 
 class SemanticSimilarity(Strategy):
-    def fetch_data(site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
+    def fetch_data(self, site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """
         Fetch data of all articles included in the interactions table.
         """
@@ -41,7 +41,9 @@ class SemanticSimilarity(Strategy):
 
         return data
 
-    def preprocess_data(site: Site, article_data: List[Dict[str, str]], interactions_data: pd.DataFrame) -> pd.DataFrame:
+    def preprocess_data(
+        self, site: Site, article_data: List[Dict[str, str]], interactions_data: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Preprocess fetched data into a DataFrame ready for training. Steps include:
         - Get a text representation for each article. The rule for creating such representations may differ between sites.
@@ -64,7 +66,7 @@ class SemanticSimilarity(Strategy):
 
         return df
 
-    def generate_embeddings(train_data: pd.DataFrame) -> np.ndarray:
+    def generate_embeddings(self, train_data: pd.DataFrame) -> np.ndarray:
         """
         Given article data DataFrame with a text column, create article-level text embeddings.
         """
@@ -73,7 +75,7 @@ class SemanticSimilarity(Strategy):
 
         return model.encode(texts, convert_to_numpy=True)
 
-    def generate_recommendations(train_embeddings: np.ndarray, train_data: pd.DataFrame) -> List[Rec]:
+    def generate_recommendations(self, train_embeddings: np.ndarray, train_data: pd.DataFrame) -> List[Rec]:
         """
         Run article-level embeddings through a KNN and create recs from resulting neighbors.
         """
@@ -99,7 +101,7 @@ class SemanticSimilarity(Strategy):
         )
 
     @refresh_db
-    def save_recommendations(site: Site, recs: List[Rec], model_type: ModelType) -> None:
+    def save_recommendations(self, site: Site, recs: List[Rec], model_type: ModelType) -> None:
         """
         Save generated recommendations to database.
         """

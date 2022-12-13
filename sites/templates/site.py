@@ -6,14 +6,14 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 from requests.models import Response
 
-# from job.strategies.templates.strategy import Strategy
+from job.strategies.templates.strategy import Strategy
 from sites.helpers.singleton import SingletonABCMeta
 
 
 @dataclass
 class Site(metaclass=SingletonABCMeta):
     name: str
-    strategies: List
+    strategies: List[Strategy]
 
     def get_bucket_name(self):
         return f"lnl-snowplow-{self.name}"
