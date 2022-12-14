@@ -22,6 +22,10 @@ MAX_RECS = config.get("MAX_RECS")
 
 
 class SemanticSimilarity(Strategy):
+    """
+    Semantic-Similarity site configs and methods.
+    """
+
     def fetch_data(self, site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """
         Fetch data of all articles included in the interactions table.

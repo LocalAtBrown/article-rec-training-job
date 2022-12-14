@@ -13,7 +13,7 @@ from sites.templates.site import Site
 @dataclass
 class Popularity(Strategy):
     """
-    Default popularity-model site configs.
+    Default popularity-model site configs and methods.
     """
 
     # this is a number of days; will only recommend articles within the past X days
