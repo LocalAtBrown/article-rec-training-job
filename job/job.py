@@ -6,7 +6,7 @@ from job.helpers import warehouse
 from job.helpers.site import get_site
 from job.steps.fetch_and_upload import fetch_and_upload_data
 from job.strategies import save_defaults, save_predictions
-from job.strategies.collaborative_filtering import train_model
+from job.strategies.collaborative_filter import train_model
 from lib.config import config
 from lib.metrics import Unit, write_metric
 

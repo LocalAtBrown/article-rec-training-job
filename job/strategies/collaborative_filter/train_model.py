@@ -8,7 +8,7 @@ import pandas as pd
 
 from db.mappings.recommendation import Rec
 from job.helpers.knn import KNN
-from job.strategies.collaborative_filtering.trainer import Trainer
+from job.strategies.collaborative_filter.trainer import Trainer
 from lib.config import config
 
 MAX_RECS = config.get("MAX_RECS")

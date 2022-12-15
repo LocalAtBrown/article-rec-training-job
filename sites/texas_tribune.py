@@ -8,7 +8,12 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, TrainParamsCF
+from job.strategies.collaborative_filtering import (
+    CollaborativeFiltering,
+    ScrapeConfig,
+    TrainParamsCF,
+)
+from job.strategies.popularity import Popularity
 from sites.helpers.gtm import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
     transform_data_google_tag_manager,
@@ -85,7 +90,7 @@ class TexasTribune(Site):
 
         article_url = f"https://{DOMAIN}{path}"
         try:
-            page = safe_get(article_url, scrape_config=self.config.collaborative_filtering.scrape_config)
+            page = safe_get(article_url, scrape_config=self.strategies[0].scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR,
@@ -123,7 +128,7 @@ class TexasTribune(Site):
         api_url = f"https://{DOMAIN}/api/v2/articles/{external_id}"
 
         try:
-            res = safe_get(api_url, scrape_config=self.config.collaborative_filtering.scrape_config)
+            res = safe_get(api_url, scrape_config=self.strategies[0].scrape_config)
         except Exception as e:
             raise ArticleScrapingError(
                 ScrapeFailure.FETCH_ERROR, path, external_id, f"Error fetching article url: {api_url}"
@@ -143,7 +148,7 @@ class TexasTribune(Site):
             "limit": BULK_FETCH_LIMIT,
         }
         try:
-            res = safe_get(api_url, params=params, scrape_config=self.config.collaborative_filtering.scrape_config)
+            res = safe_get(api_url, params=params, scrape_config=self.strategies[0].scrape_config)
         except Exception as e:
             raise ArticleBulkScrapingError(ScrapeFailure.FETCH_ERROR, msg=str(e)) from e
         json_res = res.json()
@@ -269,12 +274,12 @@ class TexasTribune(Site):
 TT_SITE = TexasTribune(
     name=NAME,
     strategies=[
-        ConfigCF(
+        CollaborativeFiltering(
             snowplow_fields=SNOWPLOW_FIELDS,
             scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
             max_article_age=MAX_ARTICLE_AGE,
         ),
-        ConfigPop(popularity_window=POPULARITY_WINDOW),
+        Popularity(popularity_window=POPULARITY_WINDOW),
     ],
 )

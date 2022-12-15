@@ -73,7 +73,7 @@ class KNN:
         return scores, indices
 
 
-# TODO: This is lifted right out of job/helpers/collaborative_filtering/train_model.py.
+# TODO: This is lifted right out of job/helpers/collaborative_filter/train_model.py.
 # When refactoring CF, have it uses this one instead.
 def map_neighbors_to_recommendations(
     model_item_ids: np.ndarray,

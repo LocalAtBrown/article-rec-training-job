@@ -7,8 +7,13 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
+from job.strategies.collaborative_filtering import (
+    CollaborativeFiltering,
+    ScrapeConfig,
+    TrainParamsCF,
+)
+from job.strategies.popularity import Popularity
 from lib.events import Event
-from sites.config.config import ConfigCF, ConfigPop, ScrapeConfig, TrainParamsCF
 from sites.helpers.requests import (
     ArticleScrapingError,
     ScrapeFailure,
@@ -171,12 +176,12 @@ class WashingtonCityPaper(Site):
 WCP_SITE = WashingtonCityPaper(
     name=NAME,
     strategies=[
-        ConfigCF(
+        CollaborativeFiltering(
             snowplow_fields=SNOWPLOW_FIELDS,
             scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
             max_article_age=MAX_ARTICLE_AGE,
         ),
-        ConfigPop(popularity_window=POPULARITY_WINDOW),
+        Popularity(popularity_window=POPULARITY_WINDOW),
     ],
 )
