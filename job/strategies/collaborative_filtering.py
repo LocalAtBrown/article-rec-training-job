@@ -1,11 +1,11 @@
-from dataclasses import dataclass
-from typing import Any, Dict, List, Set, TypedDict
+from datetime import datetime
+from typing import List, Set, TypedDict
 
-import numpy as np
 import pandas as pd
 
 from db.mappings.model import ModelType
-from db.mappings.recommendation import Rec
+from job.strategies.collaborative_filter.train_model import _spotlight_transform
+from job.strategies.collaborative_filter.trainer import Trainer
 from job.strategies.templates.strategy import Strategy
 from sites.templates.site import Site
 
@@ -34,31 +34,38 @@ class TrainParamsCF(TypedDict):
     loss: str
 
 
-@dataclass
 class CollaborativeFiltering(Strategy):
     """
     Collaborative-filtering site configs and methods.
     """
 
+    interactions_data: pd.DataFrame
+    experiment_time: datetime
     snowplow_fields: Set[str]
     scrape_config: ScrapeConfig
     training_params: TrainParamsCF
+    model_type: ModelType = ModelType.ARTICLE
     # this is a number of years; will grab dwell time data for any article within the past X years
     max_article_age: int
 
-    def fetch_data(self, site: Site, interactions_data: pd.DataFrame) -> List[Dict[str, Any]]:
+    def __init__(
+        self, snowplow_fields: Set[str], scrape_config: ScrapeConfig, training_params: TrainParamsCF, max_article_age
+    ):
+        self.snowplow_fields = snowplow_fields
+        self.scrape_config = scrape_config
+        self.training_params = training_params
+        self.max_article_age = max_article_age
+
+    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None, experiment_time=None):
+        self.interactions_data = interactions_data
+        self.experiment_time = experiment_time
         pass
 
-    def preprocess_data(
-        self, site: Site, article_data: List[Dict[str, str]], interactions_data: pd.DataFrame
-    ) -> pd.DataFrame:
+    def preprocess_data(self, site: Site):
         pass
 
-    def generate_embeddings(self, train_data: pd.DataFrame) -> np.ndarray:
-        pass
-
-    def generate_recommendations(self, train_embeddings: np.ndarray, train_data: pd.DataFrame) -> List[Rec]:
-        pass
-
-    def save_recommendations(self, site: Site, recs: List[Rec], model_type: ModelType) -> None:
-        pass
+    def generate_embeddings(self):
+        model = Trainer(self.interactions_data, self.experiment_time, _spotlight_transform, self.training_params)
+        model.fit()
+        self.train_embeddings = model.model_embeddings
+        self.decays = model.model_dates_df["date_decays"].values
