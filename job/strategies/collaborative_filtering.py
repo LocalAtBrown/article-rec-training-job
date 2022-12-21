@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Set, TypedDict
 
 import pandas as pd
@@ -39,33 +38,28 @@ class CollaborativeFiltering(Strategy):
     Collaborative-filtering site configs and methods.
     """
 
-    interactions_data: pd.DataFrame
-    experiment_time: datetime
-    snowplow_fields: Set[str]
-    scrape_config: ScrapeConfig
-    training_params: TrainParamsCF
-    model_type: ModelType = ModelType.ARTICLE
-    # this is a number of years; will grab dwell time data for any article within the past X years
-    max_article_age: int
-
     def __init__(
         self, snowplow_fields: Set[str], scrape_config: ScrapeConfig, training_params: TrainParamsCF, max_article_age
     ):
-        self.snowplow_fields = snowplow_fields
-        self.scrape_config = scrape_config
-        self.training_params = training_params
-        self.max_article_age = max_article_age
+        super().__init__(model_type=ModelType.ARTICLE)
 
-    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None, experiment_time=None):
-        self.interactions_data = interactions_data
-        self.experiment_time = experiment_time
+        # Parameters
+        self.snowplow_fields: Set[str] = snowplow_fields
+        self.scrape_config: ScrapeConfig = scrape_config
+        self.training_params: TrainParamsCF = training_params
+        # this is a number of years; will grab dwell time data for any article within the past X years
+        self.max_article_age: int = max_article_age
+
+    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None):
+        self.train_data = interactions_data
+        self.site = site
         pass
 
-    def preprocess_data(self, site: Site):
+    def preprocess_data(self):
         pass
 
     def generate_embeddings(self):
-        model = Trainer(self.interactions_data, self.experiment_time, _spotlight_transform, self.training_params)
+        model = Trainer(self.train_data, self.experiment_time, _spotlight_transform, self.training_params)
         model.fit()
         self.train_embeddings = model.model_embeddings
         self.decays = model.model_dates_df["date_decays"].values

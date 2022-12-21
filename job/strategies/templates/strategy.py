@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, List
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -18,8 +19,6 @@ from lib.config import config
 if TYPE_CHECKING:
     from sites.templates.site import Site
 
-MAX_RECS = config.get("MAX_RECS")
-
 
 class Strategy(metaclass=ABCMeta):
     """
@@ -27,21 +26,32 @@ class Strategy(metaclass=ABCMeta):
     popularity, semantic similarity).
     """
 
-    decays: np.ndarray
-    train_embeddings: np.ndarray
-    recommendations: List[Rec]
-    model_type: ModelType = None
-    train_data: pd.DataFrame = None
+    MAX_RECS = config.get("MAX_RECS")
 
     @abstractmethod
-    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None, experiment_time=None) -> None:
+    def __init__(self, model_type: ModelType) -> None:
+        """
+        Constructor that needs to be defined by subclasses
+        """
+        self.model_type = model_type
+        self.experiment_time: datetime = datetime.now()
+
+        # Attributes to be defined in subclasses; listing them here to keep track
+        self.decays: Optional[np.ndarray] = None
+        self.train_embeddings: Optional[np.ndarray] = None
+        self.train_data: Optional[pd.DataFrame] = None
+        self.recommendations: Optional[List[Rec]] = None
+        self.site: Optional[Site] = None
+
+    @abstractmethod
+    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None) -> None:
         """
         Fetch data from the data warehouse
         """
         pass
 
     @abstractmethod
-    def preprocess_data(self, site: Site) -> None:
+    def preprocess_data(self) -> None:
         """
         Preprocess fetched data into a DataFrame ready for training.
         """
@@ -64,7 +74,7 @@ class Strategy(metaclass=ABCMeta):
         start_ts = time.time()
 
         # MAX_RECS + 1 because an article's top match is always itself
-        similarities, nearest_indices = searcher.get_similar_indices(MAX_RECS + 1)
+        similarities, nearest_indices = searcher.get_similar_indices(self.MAX_RECS + 1)
 
         logging.info(f"Total latency to find K-Nearest Neighbors: {time.time() - start_ts}")
 
@@ -77,13 +87,13 @@ class Strategy(metaclass=ABCMeta):
         )
 
     @refresh_db
-    def save_recommendations(self, site: Site) -> None:
+    def save_recommendations(self) -> None:
         """
         Save generated recommendations to database.
         """
         start_ts = time.time()
         # Create new model object in DB
-        model_id = create_model(type=self.model_type.value, site=site.name)
+        model_id = create_model(type=self.model_type.value, site=self.site.name)
         logging.info(f"Created model with id {model_id}")
         for rec in self.recommendations:
             rec.model_id = model_id
@@ -95,7 +105,7 @@ class Strategy(metaclass=ABCMeta):
             time.sleep(0.05)
 
         logging.info(f"Updating model objects in DB")
-        set_current_model(model_id, self.model_type, site.name)
+        set_current_model(model_id, self.model_type, self.site.name)
 
         latency = time.time() - start_ts
         # TODO: Unlike save_predictions in CF, not writing metrics to CloudWatch for now
