@@ -9,7 +9,6 @@ from sklearn.preprocessing import normalize
 from db.mappings.model import ModelType
 from job.strategies.templates.strategy import Strategy
 from lib.config import config
-from sites.templates.site import Site
 
 # TODO: When adding functions to job.py in the future, maybe move these job.py and pass to respective functions as a
 #  parameter?
@@ -28,11 +27,10 @@ class SemanticSimilarity(Strategy):
         self.interactions_data: Optional[pd.DataFrame] = None
         self.PRETRAINED_MODEL_NAME = config.get("SS_ENCODER")
 
-    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None):
+    def fetch_data(self, interactions_data: pd.DataFrame = None):
         """
         Fetch data of all articles included in the interactions table.
         """
-        self.site = site
         self.interactions_data = interactions_data
         # Grab unique external IDs from Interactions table
         # https://stackoverflow.com/questions/46839277/series-unique-vs-list-of-set-performance

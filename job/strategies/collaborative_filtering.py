@@ -6,7 +6,6 @@ from db.mappings.model import ModelType
 from job.strategies.collaborative_filter.train_model import _spotlight_transform
 from job.strategies.collaborative_filter.trainer import Trainer
 from job.strategies.templates.strategy import Strategy
-from sites.templates.site import Site
 
 
 class ScrapeConfig(TypedDict):
@@ -50,10 +49,8 @@ class CollaborativeFiltering(Strategy):
         # this is a number of years; will grab dwell time data for any article within the past X years
         self.max_article_age: int = max_article_age
 
-    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None):
+    def fetch_data(self, interactions_data: pd.DataFrame = None):
         self.train_data = interactions_data
-        self.site = site
-        pass
 
     def preprocess_data(self):
         pass

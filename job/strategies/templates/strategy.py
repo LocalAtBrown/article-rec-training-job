@@ -34,17 +34,36 @@ class Strategy(metaclass=ABCMeta):
         Constructor that needs to be defined by subclasses
         """
         self.model_type = model_type
-        self.experiment_time: datetime = datetime.now()
+        self.site: Optional[Site] = None
+        self.experiment_time: datetime = None
 
         # Attributes to be defined in subclasses; listing them here to keep track
         self.decays: Optional[np.ndarray] = None
         self.train_embeddings: Optional[np.ndarray] = None
         self.train_data: Optional[pd.DataFrame] = None
         self.recommendations: Optional[List[Rec]] = None
-        self.site: Optional[Site] = None
+
+    def set_experiment_time(self, experiment_time: datetime) -> None:
+        """
+        Set experiment time post-init but pre-fetch_data and other methods
+        """
+        self.experiment_time = experiment_time
+
+    def set_site(self, site: Site) -> None:
+        """
+        Set site post-init but pre-fetch_data and other methods
+        """
+        self.site = site
+
+    def prepare(self, site: Site, experiment_time: datetime) -> None:
+        """
+        Prepare instance post-init but pre-fetch_data and other methods
+        """
+        self.set_site(site)
+        self.set_experiment_time(experiment_time)
 
     @abstractmethod
-    def fetch_data(self, site: Site, interactions_data: pd.DataFrame = None) -> None:
+    def fetch_data(self, interactions_data: pd.DataFrame = None) -> None:
         """
         Fetch data from the data warehouse
         """
