@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Iterable, List, Type
+from typing import TYPE_CHECKING, Iterable, List, Type
 
 from peewee import Expression
 
@@ -7,7 +9,9 @@ from db.mappings.article import Article
 from db.mappings.base import BaseMapping, db_proxy, tzaware_now
 from db.mappings.model import Model, ModelType, Status
 from db.mappings.recommendation import Rec
-from sites.templates.site import Site
+
+if TYPE_CHECKING:
+    from sites.templates.site import Site
 
 
 def refresh_db(func):

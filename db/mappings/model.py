@@ -9,6 +9,7 @@ class ModelType(enum.Enum):
     ARTICLE = "article"
     USER = "user"
     POPULARITY = "popularity"
+    SEMANTIC_SIMILARITY = "semantic-similarity"
 
 
 class Status(enum.Enum):
