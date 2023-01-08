@@ -109,7 +109,7 @@ def map_neighbors_to_recommendations(
         item_neighbor_scores = similarities[i][1:]
 
         item_recs = [
-            Rec(source_entity_id=item_source_external_id, recommend_article_id=recommended_item_id, score=similarity)
+            Rec(source_entity_id=item_source_external_id, recommended_article_id=recommended_item_id, score=similarity)
             for (recommended_item_id, similarity) in zip(item_neighbors, item_neighbor_scores)
         ]
         recs.extend(item_recs)
