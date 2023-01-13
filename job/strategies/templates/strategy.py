@@ -104,6 +104,7 @@ class Strategy(metaclass=ABCMeta):
             model_item_neighbor_indices=nearest_indices,
             similarities=similarities,
         )
+        logging.info(f"Number of recommendations in generate_recommendations: {len(self.recommendations)}")
 
     @refresh_db
     def save_recommendations(self) -> None:
@@ -114,6 +115,7 @@ class Strategy(metaclass=ABCMeta):
         # Create new model object in DB
         model_id = create_model(type=self.model_type.value, site=self.site.name)
         logging.info(f"Created model with id {model_id}")
+        logging.info(f"Number of recommendations: {len(self.recommendations)}")
         for rec in self.recommendations:
             rec.model_id = model_id
 

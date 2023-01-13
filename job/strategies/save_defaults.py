@@ -28,6 +28,7 @@ def save_defaults(top_articles: pd.DataFrame, site: Site, experiment_date: datet
     top_articles = top_articles.nlargest(n=MAX_RECS, columns="score")
 
     model_id = create_model(type=ModelType.POPULARITY.value, site=site.name)
+    logging.info(f"Model ID: {model_id}")
 
     to_create = []
     for _, row in decayed_df.iterrows():
