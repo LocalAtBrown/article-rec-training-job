@@ -7,7 +7,6 @@ from db.mappings.model import ModelType
 from job.helpers import warehouse
 from job.strategies.save_defaults import save_defaults
 from job.strategies.templates.strategy import Strategy
-from sites.templates.site import Site
 
 
 class Popularity(Strategy):
@@ -35,5 +34,5 @@ class Popularity(Strategy):
         pass
 
     @refresh_db
-    def save_recommendations(self, site: Site) -> None:
-        save_defaults(self.top_articles, site, self.experiment_time)
+    def save_recommendations(self) -> None:
+        save_defaults(self.top_articles, self.site, self.experiment_time)
