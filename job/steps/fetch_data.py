@@ -15,6 +15,7 @@ from job.helpers import warehouse
 from job.helpers.datetime import chunk_name
 from lib.events import Event
 from lib.metrics import Unit, write_metric
+from sites.helpers.gtm import GOOGLE_TAG_MANAGER_RAW_FIELDS
 from sites.templates.site import Site
 
 PATH = "/downloads"
@@ -67,7 +68,7 @@ def transform_chunk(site: Site, dt: datetime.datetime) -> List[pd.DataFrame]:
 
     path = os.path.join(PATH, chunk_name(dt))
     filenames = gen_files(path)
-    fields = site.strategies[0].snowplow_fields
+    fields = GOOGLE_TAG_MANAGER_RAW_FIELDS
 
     dfs = []
 
