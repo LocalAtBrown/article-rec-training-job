@@ -59,4 +59,4 @@ class CollaborativeFiltering(Strategy):
         model = Trainer(self.train_data, self.experiment_time, _spotlight_transform, self.training_params)
         model.fit()
         self.train_embeddings = model.model_embeddings
-        self.decays = model.model_dates_df["date_decays"].values
+        self.article_data = model.model_dates_df
