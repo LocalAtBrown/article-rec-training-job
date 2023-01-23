@@ -29,7 +29,7 @@ class TestSaveDefaults(BaseTest):
         ]
 
         df = pd.DataFrame(data)
-        model_id = save_defaults(df, site, exp_date)
+        model_id = save_defaults(df, site, pd.to_datetime(exp_date))
 
         default_recs = Rec.select().where(Rec.model == model_id)
         assert len(default_recs) == 2
