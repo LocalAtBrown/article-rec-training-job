@@ -24,19 +24,26 @@ def run():
         interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
         logging.info(f"Number of strategies: {len(site.strategies)}")
+
         for strategy in site.strategies:
             logging.info(f"Strategy: {strategy.model_type}")
             strategy.prepare(site=site, experiment_time=EXPERIMENT_DT)
+
             logging.info("Fetching data...")
             strategy.fetch_data(interactions_data=interactions_data)
+
             logging.info("Preprocessing data...")
             strategy.preprocess_data()
+
             logging.info("Generating embeddings...")
             strategy.generate_embeddings()
+
             logging.info("Generating recommendations...")
             strategy.generate_recommendations()
+
             logging.info("Saving recommendations...")
             strategy.save_recommendations()
+
             logging.info("Job succeeded.")
     except Exception:
         logging.exception("Job failed")
