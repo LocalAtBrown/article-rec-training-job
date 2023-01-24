@@ -27,6 +27,7 @@ class Popularity(Strategy):
         # this is a number of days; will only recommend articles within the past X days
         self.popularity_window: Optional[int] = popularity_window
         self.top_articles: Optional[pd.DataFrame] = None
+        self.model_id: int = 0
 
     def fetch_data(self, interactions_data: pd.DataFrame = None) -> None:
         self.top_articles = warehouse.get_default_recs(site=self.site)
@@ -52,15 +53,15 @@ class Popularity(Strategy):
         self.top_articles["score"] /= np.max(self.top_articles["score"])
         self.top_articles = self.top_articles.nlargest(n=MAX_RECS, columns="score")
 
-        model_id = create_model(type=ModelType.POPULARITY.value, site=self.site.name)
-        logging.info(f"Model ID: {model_id}")
+        self.model_id = create_model(type=ModelType.POPULARITY.value, site=self.site.name)
+        logging.info(f"Model ID: {self.model_id}")
 
         to_create = []
         for _, row in decayed_df.iterrows():
             to_create.append(
                 Rec(
                     source_entity_id="default",
-                    model_id=model_id,
+                    model_id=self.model_id,
                     recommended_article_id=row.article_id,
                     score=row.score,
                 )
@@ -70,4 +71,4 @@ class Popularity(Strategy):
         with db_proxy.atomic():
             Rec.bulk_create(to_create, batch_size=50)
 
-        set_current_model(model_id, ModelType.POPULARITY, model_site=self.site.name)
+        set_current_model(self.model_id, ModelType.POPULARITY, model_site=self.site.name)
