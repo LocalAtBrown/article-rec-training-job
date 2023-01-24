@@ -13,6 +13,7 @@ from sites.helpers.singleton import SingletonABCMeta
 @dataclass
 class Site(metaclass=SingletonABCMeta):
     name: str
+    fields: List[str]
     strategies: List[Strategy]
 
     def get_bucket_name(self):

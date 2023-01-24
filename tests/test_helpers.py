@@ -5,11 +5,11 @@ import pandas as pd
 import pytest
 
 from job.helpers.knn import KNN
-from job.strategies.collaborative_filter.train_model import (
+from job.strategies.collaborative_filtering import (
+    Trainer,
     _spotlight_transform,
     map_nearest,
 )
-from job.strategies.collaborative_filter.trainer import Trainer
 
 
 @pytest.fixture(scope="module")

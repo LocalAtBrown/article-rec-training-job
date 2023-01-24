@@ -25,7 +25,7 @@ def time_decay(
     Applies basic exponential decay based on the difference between the "date" column
     and the current date argument to the dwell time
     """
-    decay_factor = decay_fn(experiment_date, data_df[date_col], half_life)
+    decay_factor = decay_fn(experiment_date, pd.to_datetime(data_df[date_col]), half_life)
     data_df[duration_col] *= decay_factor
     return data_df
 

@@ -273,6 +273,7 @@ class TexasTribune(Site):
 
 TT_SITE = TexasTribune(
     name=NAME,
+    fields=SNOWPLOW_FIELDS,
     strategies=[
         CollaborativeFiltering(
             snowplow_fields=SNOWPLOW_FIELDS,

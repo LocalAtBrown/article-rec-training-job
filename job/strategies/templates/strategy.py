@@ -38,7 +38,7 @@ class Strategy(metaclass=ABCMeta):
         self.experiment_time: datetime = None
 
         # Attributes to be defined in subclasses; listing them here to keep track
-        self.decays: Optional[np.ndarray] = None
+        self.article_data: Optional[np.ndarray] = None
         self.train_embeddings: Optional[np.ndarray] = None
         self.train_data: Optional[pd.DataFrame] = None
         self.recommendations: Optional[List[Rec]] = None
@@ -87,7 +87,7 @@ class Strategy(metaclass=ABCMeta):
         """
         Run article-level embeddings through a KNN and create recs from resulting neighbors.
         """
-        searcher = KNN(self.train_embeddings, self.decays)
+        searcher = KNN(self.train_embeddings, self.article_data["date_decays"].values)
 
         logging.info("Calculating KNN...")
         start_ts = time.time()
@@ -98,12 +98,13 @@ class Strategy(metaclass=ABCMeta):
         logging.info(f"Total latency to find K-Nearest Neighbors: {time.time() - start_ts}")
 
         self.recommendations = map_neighbors_to_recommendations(
-            model_item_ids=self.train_data["external_id"].factorize()[0],
-            external_ids=self.train_data["external_id"].values,
-            article_ids=self.train_data["article_id"].values,
+            model_item_ids=self.article_data["item_id"].values,
+            external_ids=self.article_data["external_id"].values,
+            article_ids=self.article_data["article_id"].values,
             model_item_neighbor_indices=nearest_indices,
             similarities=similarities,
         )
+        logging.info(f"Number of recommendations in generate_recommendations: {len(self.recommendations)}")
 
     @refresh_db
     def save_recommendations(self) -> None:
@@ -114,6 +115,7 @@ class Strategy(metaclass=ABCMeta):
         # Create new model object in DB
         model_id = create_model(type=self.model_type.value, site=self.site.name)
         logging.info(f"Created model with id {model_id}")
+        logging.info(f"Number of recommendations: {len(self.recommendations)}")
         for rec in self.recommendations:
             rec.model_id = model_id
 

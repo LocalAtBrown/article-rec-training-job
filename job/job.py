@@ -5,8 +5,6 @@ from datetime import datetime
 from job.helpers import warehouse
 from job.helpers.site import get_site
 from job.steps.fetch_and_upload import fetch_and_upload_data
-from job.strategies import save_defaults, save_predictions
-from job.strategies.collaborative_filter import train_model
 from lib.config import config
 from lib.metrics import Unit, write_metric
 
@@ -22,28 +20,31 @@ def run():
 
     try:
         EXPERIMENT_DT = datetime.now()
-
-        # Step 1: Fetch fresh data, hydrate it, and upload it to the warehouse
         fetch_and_upload_data(site, EXPERIMENT_DT)
-
-        # Step 2: Train models by pulling data from the warehouse and uploading new recommendation objects
-        top_articles = warehouse.get_default_recs(site=site)
-        save_defaults.save_defaults(top_articles, site, EXPERIMENT_DT.date())
-
         interactions_data = warehouse.get_dwell_times(site, days=config.get("DAYS_OF_DATA"))
 
-        # Temporary solution: The first position in the array of strategies is currently CFConfig.
-        # We will change this line when we implement iteration through different strategies.
-        strategy = site.strategies[0]
-        recommendations = train_model.get_recommendations(
-            interactions_data,
-            strategy.training_params,
-            EXPERIMENT_DT,
-        )
-        logging.info(f"Successfully trained model on {len(interactions_data)} inputs.")
+        logging.info(f"Number of strategies: {len(site.strategies)}")
 
-        save_predictions.save_predictions(site, recommendations)
+        for strategy in site.strategies:
+            logging.info(f"Strategy: {strategy.model_type}")
+            strategy.prepare(site=site, experiment_time=EXPERIMENT_DT)
 
+            logging.info("Fetching data...")
+            strategy.fetch_data(interactions_data=interactions_data)
+
+            logging.info("Preprocessing data...")
+            strategy.preprocess_data()
+
+            logging.info("Generating embeddings...")
+            strategy.generate_embeddings()
+
+            logging.info("Generating recommendations...")
+            strategy.generate_recommendations()
+
+            logging.info("Saving recommendations...")
+            strategy.save_recommendations()
+
+            logging.info("Job succeeded.")
     except Exception:
         logging.exception("Job failed")
         status = "failure"
