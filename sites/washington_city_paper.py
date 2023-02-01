@@ -7,11 +7,8 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from job.strategies.collaborative_filtering import (
-    CollaborativeFiltering,
-    ScrapeConfig,
-    TrainParamsCF,
-)
+from job.helpers.requests import ScrapeConfig
+from job.strategies.collaborative_filtering import CollaborativeFiltering, TrainParamsCF
 from job.strategies.popularity import Popularity
 from lib.events import Event
 from sites.helpers.requests import (
@@ -176,12 +173,12 @@ class WashingtonCityPaper(Site):
 WCP_SITE = WashingtonCityPaper(
     name=NAME,
     fields=SNOWPLOW_FIELDS,
+    scrape_config=SCRAPE_CONFIG,
+    max_article_age=MAX_ARTICLE_AGE,
     strategies=[
         CollaborativeFiltering(
             snowplow_fields=SNOWPLOW_FIELDS,
-            scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
-            max_article_age=MAX_ARTICLE_AGE,
         ),
         Popularity(popularity_window=POPULARITY_WINDOW),
     ],

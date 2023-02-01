@@ -8,12 +8,10 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from job.strategies.collaborative_filtering import (
-    CollaborativeFiltering,
-    ScrapeConfig,
-    TrainParamsCF,
-)
+from job.helpers.requests import ScrapeConfig
+from job.strategies.collaborative_filtering import CollaborativeFiltering, TrainParamsCF
 from job.strategies.popularity import Popularity
+from job.strategies.semantic_similarity import SemanticSimilarity
 from sites.helpers.gtm import (
     GOOGLE_TAG_MANAGER_RAW_FIELDS,
     transform_data_google_tag_manager,
@@ -268,18 +266,19 @@ class TexasTribune(Site):
         """
         Get text representation of any article.
         """
-        return metadata["headline"] + ". " + metadata["summary"]
+        return metadata["title"] + ". " + metadata["summary"]
 
 
 TT_SITE = TexasTribune(
     name=NAME,
     fields=SNOWPLOW_FIELDS,
+    scrape_config=SCRAPE_CONFIG,
+    max_article_age=MAX_ARTICLE_AGE,
     strategies=[
+        SemanticSimilarity(),
         CollaborativeFiltering(
             snowplow_fields=SNOWPLOW_FIELDS,
-            scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
-            max_article_age=MAX_ARTICLE_AGE,
         ),
         Popularity(popularity_window=POPULARITY_WINDOW),
     ],
