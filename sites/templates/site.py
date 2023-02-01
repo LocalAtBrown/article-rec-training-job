@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Set, Union
 import pandas as pd
 from requests.models import Response
 
-from job.helpers.scrape_config import ScrapeConfig
+from job.helpers.requests import ScrapeConfig
 from job.strategies.templates.strategy import Strategy
 from sites.helpers.singleton import SingletonABCMeta
 

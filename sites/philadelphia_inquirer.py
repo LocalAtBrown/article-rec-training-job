@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 from requests.models import Response
 
-from job.helpers.scrape_config import ScrapeConfig
+from job.helpers.requests import ScrapeConfig
 from job.strategies.collaborative_filtering import CollaborativeFiltering, TrainParamsCF
 from job.strategies.popularity import Popularity
 from lib.config import config

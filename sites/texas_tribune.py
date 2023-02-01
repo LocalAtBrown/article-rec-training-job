@@ -8,7 +8,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from job.helpers.scrape_config import ScrapeConfig
+from job.helpers.requests import ScrapeConfig
 from job.strategies.collaborative_filtering import CollaborativeFiltering, TrainParamsCF
 from job.strategies.popularity import Popularity
 from job.strategies.semantic_similarity import SemanticSimilarity
@@ -266,7 +266,7 @@ class TexasTribune(Site):
         """
         Get text representation of any article.
         """
-        return metadata["headline"] + ". " + metadata["summary"]
+        return metadata["title"] + ". " + metadata["summary"]
 
 
 TT_SITE = TexasTribune(
