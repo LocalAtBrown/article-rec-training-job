@@ -5,11 +5,8 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 from requests.models import Response
 
-from job.strategies.collaborative_filtering import (
-    CollaborativeFiltering,
-    ScrapeConfig,
-    TrainParamsCF,
-)
+from job.helpers.scrape_config import ScrapeConfig
+from job.strategies.collaborative_filtering import CollaborativeFiltering, TrainParamsCF
 from job.strategies.popularity import Popularity
 from lib.config import config
 from sites.helpers.datetime import ms_timestamp
@@ -278,12 +275,12 @@ class PhiladelphiaInquirer(Site):
 PI_SITE = PhiladelphiaInquirer(
     name=NAME,
     fields=SNOWPLOW_FIELDS,
+    max_article_age=MAX_ARTICLE_AGE,
+    scrape_config=SCRAPE_CONFIG,
     strategies=[
         CollaborativeFiltering(
             snowplow_fields=SNOWPLOW_FIELDS,
-            scrape_config=SCRAPE_CONFIG,
             training_params=TRAINING_PARAMS,
-            max_article_age=MAX_ARTICLE_AGE,
         ),
         Popularity(popularity_window=POPULARITY_WINDOW),
     ],

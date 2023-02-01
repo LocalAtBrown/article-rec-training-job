@@ -1,11 +1,12 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import pandas as pd
 from requests.models import Response
 
+from job.helpers.scrape_config import ScrapeConfig
 from job.strategies.templates.strategy import Strategy
 from sites.helpers.singleton import SingletonABCMeta
 
@@ -13,8 +14,11 @@ from sites.helpers.singleton import SingletonABCMeta
 @dataclass
 class Site(metaclass=SingletonABCMeta):
     name: str
-    fields: List[str]
+    fields: Set[str]
+    scrape_config: Optional[ScrapeConfig]
     strategies: List[Strategy]
+    # this is a number of years; will grab dwell time data for any article within the past X years
+    max_article_age: Optional[int]
 
     def get_bucket_name(self):
         return f"lnl-snowplow-{self.name}"
