@@ -82,6 +82,12 @@ def extract_external_id(path: str) -> Optional[str]:
     :path:an Inquirer url
     :return contentID: Unique ID of url
     """
+    # Some perfectly fine URLs, like https://www.inquirer.com/college-sports/penn-state/adam-taliaferro-penn-state-spinal-cord-injury-paralyzed-honorary-captain-white-out-20210917.html&cid=Daily+News+Twitter+Account,
+    # are rejected by the ARC API because they have some social media params appended at the end ("&cid=Daily+News+Twitter+Account").
+    # Need to pull these params out
+    path = path.split("&")[0]
+
+    # API request params
     params = {
         "website_url": path,
         "published": "true",
