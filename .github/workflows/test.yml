@@ -15,7 +15,7 @@ jobs:
 
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
+        uses: Homebrew/actions/setup-homebrew@master  # Homebrew doesn't use version pinning on this action! Bad!
 
       - name: Install dependencies
         run: brew tap "aljohri/-" && brew install "AlJohri/-/kar"
