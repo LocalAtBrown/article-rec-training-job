@@ -17,6 +17,8 @@ jobs:
       with:
         # change this python version if the python version is changed in pyproject.toml and the Dockerfile
         python-version: '3.8'
+    - name: Pin urllib3 version
+      run: pip install urllib3==1.26.9
     - name: Set up Poetry
       uses: abatilo/actions-poetry@v2.0.0
       with:
