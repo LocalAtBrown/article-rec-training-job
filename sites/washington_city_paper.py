@@ -3,15 +3,15 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
-import pandas as pd
 from bs4 import BeautifulSoup
 from requests.models import Response
 
-from lib.events import Event
 from sites.helpers import (
+    GOOGLE_TAG_MANAGER_RAW_FIELDS,
     ArticleScrapingError,
     ScrapeFailure,
     safe_get,
+    transform_data_google_tag_manager,
     validate_response,
 )
 from sites.site import Site
@@ -20,12 +20,7 @@ POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
-FIELDS = {
-    "collector_tstamp",
-    "page_urlpath",
-    "contexts_dev_amp_snowplow_amp_id_1",
-    "event_name",
-}
+FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 TRAINING_PARAMS = {
     "hl": 30,
     "embedding_dim": 144,
@@ -54,33 +49,6 @@ ERROR_MSG_TAG_EXCLUDE = "Article has exclude tag"
 
 def bulk_fetch(start_date: date, end_date: date) -> List[Dict[str, Any]]:
     raise NotImplementedError
-
-
-def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    requires a dataframe with the following fields:
-    - contexts_dev_amp_snowplow_amp_id_1
-    - collector_tstamp
-    - page_urlpath
-    returns a dataframe with the following fields:
-    - client_id
-    - session_date
-    - activity_time
-    - landing_page_path
-    - event_category (conversions, newsletter sign-ups TK)
-    - event_action (conversions, newsletter sign-ups TK)
-    """
-    df = df.dropna(subset=["contexts_dev_amp_snowplow_amp_id_1"])
-    transformed_df = pd.DataFrame()
-    transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(lambda x: x[0]["ampClientId"])
-    transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp).dt.round("1s")
-    transformed_df["session_date"] = pd.to_datetime(transformed_df.activity_time.dt.date)
-    transformed_df["landing_page_path"] = df.page_urlpath
-    transformed_df["event_name"] = df.event_name
-    transformed_df.replace({"event_name": "amp_page_ping"}, Event.PAGE_PING.value, inplace=True)
-    transformed_df["event_name"] = transformed_df["event_name"].astype("category")
-
-    return transformed_df
 
 
 def extract_external_id(path: str) -> str:
@@ -164,7 +132,7 @@ WCP_SITE = Site(
     FIELDS,
     TRAINING_PARAMS,
     SCRAPE_CONFIG,
-    transform_raw_data,
+    transform_data_google_tag_manager,
     extract_external_id,
     scrape_article_metadata,
     fetch_article,

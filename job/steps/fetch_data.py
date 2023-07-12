@@ -55,7 +55,7 @@ def fast_read(path: str, fields: Set[str]) -> pd.DataFrame:
             # TODO this appeases pep8 for no bare exception, but we should be far more specific with the type here
             except Exception:
                 # believe it or not, this happens sometimes
-                logging.warning(f"Could not parse row! Filename {path}, path {record.get('page_path_url')}")
+                logging.warning(f"Could not parse row! Filename {path}, URL {record.get('page_url')}")
     return pd.DataFrame.from_records(records)
 
 
