@@ -84,3 +84,18 @@ class SemanticSimilarity(Strategy):
         self.train_embeddings = normalize(model.encode(texts, convert_to_numpy=True), axis=1, norm="l2")
         # TODO: Not doing time decay on SS for time being
         self.decays = np.ones(self.train_embeddings.shape[0])
+
+    def generate_recommendations(self) -> None:
+        """
+        Given article embeddings, generate recommendations for each article.
+        """
+        # TODO in collaborative filtering, we already have a KNN to compare embeddings against one another,
+        # but it currently has date decay built in. Need to separate date decay so as to inspect
+        raise NotImplementedError
+
+    def save_recommendations(self) -> None:
+        """
+        Save recommendations to DB.
+        """
+        # TODO. Don't save to DB for now
+        raise NotImplementedError
