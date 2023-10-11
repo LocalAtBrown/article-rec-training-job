@@ -8,3 +8,5 @@ Brewfile.lock.json
 data.gz
 tmp/*
 .vscode
+# Scratch dir
+scratch/
