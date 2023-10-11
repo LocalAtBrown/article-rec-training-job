@@ -7,7 +7,7 @@ authors = ["LocalNewsLab <mh3287@columbia.edu>"]
 [tool.poetry.dependencies]
 # if this python version changes, the python base image in the Dockerfile needs to change too
 python = "3.8.*"
-aiobotocore = {version = "2.0.1", extras = ["awscli", "boto3"]}
+aiobotocore = { version = "2.0.1", extras = ["awscli", "boto3"] }
 beautifulsoup4 = "4.10.0"
 h5py = "3.6.0"
 matplotlib = "3.5.0"
@@ -23,10 +23,12 @@ s3fs = "2021.11.1"
 scikit-learn = "1.0.1"
 scipy = "1.7.3"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+aws-mfa = "^0.0.12"
 mypy = "0.961"
 pre-commit = "2.19.0"
 types-requests = "2.26.0"
+
 
 [tool.black]
 line-length = 122
