@@ -198,6 +198,9 @@ class Trainer:
 
     def _generate_interactions(self, warehouse_df: pd.DataFrame) -> Interactions:
         """Generate an Interactions object"""
+        import pdb
+
+        pdb.set_trace()
         return Interactions(
             user_ids=warehouse_df["user_id"].values,
             item_ids=warehouse_df["item_id"].values,
@@ -310,20 +313,20 @@ class CollaborativeFiltering(Strategy):
     Collaborative-filtering site configs and methods.
     """
 
-    def __init__(self, snowplow_fields: Set[str], training_params: TrainParamsCF):
+    def __init__(self, snowplow_fields: Set[str], training_params: TrainParamsCF) -> None:
         super().__init__(model_type=ModelType.ARTICLE)
 
         # Parameters
         self.snowplow_fields: Set[str] = snowplow_fields
         self.training_params: TrainParamsCF = training_params
 
-    def fetch_data(self, interactions_data: pd.DataFrame = None):
+    def fetch_data(self, interactions_data: pd.DataFrame = None) -> None:
         self.train_data = interactions_data
 
-    def preprocess_data(self):
+    def preprocess_data(self) -> None:
         pass
 
-    def generate_embeddings(self):
+    def generate_embeddings(self) -> None:
         model = Trainer(self.train_data, self.experiment_time, _spotlight_transform, self.training_params)
         model.fit()
         self.train_embeddings = model.model_embeddings
