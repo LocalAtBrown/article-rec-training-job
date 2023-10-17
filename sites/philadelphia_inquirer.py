@@ -117,7 +117,7 @@ def extract_external_id(path: str) -> Optional[str]:
 
     external_id = res["_id"]
 
-    IN_HOUSE_PLATFORMS = {"composer", "ellipsis"}
+    IN_HOUSE_PLATFORMS = {"composer", "ellipsis", "airtable"}
     if res.get("source", {}).get("system") not in IN_HOUSE_PLATFORMS:
         raise ArticleScrapingError(ScrapeFailure.FAILED_SITE_VALIDATION, path, str(external_id), "Not in-house article")
 
