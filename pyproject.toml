@@ -25,6 +25,7 @@ scipy = "1.7.3"
 google-cloud-bigquery = "^3.12.0"
 sqlalchemy = "^1.4.49"
 sqlalchemy-bigquery = "^1.8.0"
+db-dtypes = "^1.1.1"
 
 [tool.poetry.group.dev.dependencies]
 aws-mfa = "^0.0.12"
