@@ -41,8 +41,8 @@ def run():
             logging.info("Generating recommendations...")
             strategy.generate_recommendations()
 
-            logging.info("Saving recommendations...")
-            strategy.save_recommendations()
+            # logging.info("Saving recommendations...")
+            # strategy.save_recommendations()
 
             logging.info("Job succeeded.")
     except Exception:

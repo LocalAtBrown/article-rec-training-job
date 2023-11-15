@@ -51,11 +51,11 @@ To manually run isort, black, and flake8 all in one go, simply run `pre-commit r
 
 To manually run mypy, simply run `mypy` from the root directory of the project. It will use the default configuration
 specified in the mypy.ini file.
-
+<!--  -->
 ### Update Dependencies
 
 To update dependencies in your local environment, make changes to the `pyproject.toml` file then run `poetry update`.
-To update `requirements.txt` for the container, run `poetry export -o requirements.txt --without-hashes`.
+<!-- To update `requirements.txt` for the container, run `poetry export -o requirements.txt --without-hashes` -->
 
 
 ## Local Usage
@@ -64,13 +64,9 @@ To update `requirements.txt` for the container, run `poetry export -o requiremen
 
 ```
 kar build
-```
+```     
 
-2. Run the job
 
-```
-kar run
-```
 
 3. Or, run bash in the container
 
@@ -86,11 +82,9 @@ kar run bash
 kar build
 ```
 
-2. Run unit tests
-
-```
-kar test
-```
+bash
+Copy code
+docker run -it --rm your-app-name kar test
 
 ## Running Backfills
 
