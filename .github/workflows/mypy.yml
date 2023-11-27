@@ -16,7 +16,7 @@ jobs:
       uses: actions/setup-python@v4
       with:
         # change this python version if the python version is changed in pyproject.toml and the Dockerfile
-        python-version: '3.8'
+        python-version: '3.11.6'
     - name: Pin urllib3 version
       run: pip install urllib3==1.26.9
     - name: Set up Poetry
