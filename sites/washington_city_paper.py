@@ -10,7 +10,10 @@ from requests.models import Response
 from job.helpers.requests import ScrapeConfig
 from job.strategies.collaborative_filtering import CollaborativeFiltering, TrainParamsCF
 from job.strategies.popularity import Popularity
-from lib.events import Event
+from sites.helpers.gtm import (
+    GOOGLE_TAG_MANAGER_RAW_FIELDS,
+    transform_data_google_tag_manager,
+)
 from sites.helpers.requests import (
     ArticleScrapingError,
     ScrapeFailure,
@@ -23,12 +26,7 @@ POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
-SNOWPLOW_FIELDS = {
-    "collector_tstamp",
-    "page_urlpath",
-    "contexts_dev_amp_snowplow_amp_id_1",
-    "event_name",
-}
+SNOWPLOW_FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
 TRAINING_PARAMS: TrainParamsCF = {
     "hl": 30,
     "embedding_dim": 144,
@@ -107,30 +105,7 @@ class WashingtonCityPaper(Site):
 
     @staticmethod
     def transform_raw_data(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        requires a dataframe with the following fields:
-        - contexts_dev_amp_snowplow_amp_id_1
-        - collector_tstamp
-        - page_urlpath
-        returns a dataframe with the following fields:
-        - client_id
-        - session_date
-        - activity_time
-        - landing_page_path
-        - event_category (conversions, newsletter sign-ups TK)
-        - event_action (conversions, newsletter sign-ups TK)
-        """
-        df = df.dropna(subset=["contexts_dev_amp_snowplow_amp_id_1"])
-        transformed_df = pd.DataFrame()
-        transformed_df["client_id"] = df.contexts_dev_amp_snowplow_amp_id_1.apply(lambda x: x[0]["ampClientId"])
-        transformed_df["activity_time"] = pd.to_datetime(df.collector_tstamp).dt.round("1s")
-        transformed_df["session_date"] = pd.to_datetime(transformed_df.activity_time.dt.date)
-        transformed_df["landing_page_path"] = df.page_urlpath
-        transformed_df["event_name"] = df.event_name
-        transformed_df.replace({"event_name": "amp_page_ping"}, Event.PAGE_PING.value, inplace=True)
-        transformed_df["event_name"] = transformed_df["event_name"].astype("category")
-
-        return transformed_df
+        return transform_data_google_tag_manager(df)
 
     @staticmethod
     def get_article_text(metadata: Dict[str, Any]) -> None:

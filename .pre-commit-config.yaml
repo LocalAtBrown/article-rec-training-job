@@ -1,21 +1,28 @@
 # pre-commit, once installed, runs these specified tools to format/lint/check our code for a consistent standard.
 # see https://pre-commit.com/ for more
 repos:
-# isort re-formats import orders to a standard, see https://pycqa.github.io/isort/index.html for more
--   repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+  # isort re-formats import orders to a standard, see https://pycqa.github.io/isort/index.html for more
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
     hooks:
-    - id: isort
-      name: isort (python)
-# black re-formats code to an opinionated standard, see https://black.readthedocs.io/en/stable/index.html for more
--   repo: https://github.com/psf/black
+      - id: isort
+        name: isort (python)
+  # black re-formats code to an opinionated standard, see https://black.readthedocs.io/en/stable/index.html for more
+  - repo: https://github.com/psf/black
     rev: 22.3.0
     hooks:
-    - id: black
-      language_version: python3.9
-# flake8 checks code to make sure it conforms to pep8 (we specify things to ignore in tox.ini)
-# see https://flake8.pycqa.org/en/latest/ for more
--   repo: https://github.com/pycqa/flake8
+      - id: black
+        language_version: python3.9
+  # flake8 checks code to make sure it conforms to pep8 (we specify things to ignore in tox.ini)
+  # see https://flake8.pycqa.org/en/latest/ for more
+  - repo: https://github.com/pycqa/flake8
     rev: 3.7.9
     hooks:
-    - id: flake8
+      - id: flake8
+  # poetry hooks
+  - repo: https://github.com/python-poetry/poetry-plugin-export
+    rev: 1.6.0
+    hooks:
+      # poetry-export exports the poetry requirements to a requirements.txt file
+      - id: poetry-export
+        args: ["-f", "requirements.txt", "-o", "requirements.txt", "--without-hashes"]
