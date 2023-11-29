@@ -70,7 +70,8 @@ class GA4EventFetcher:
         """
         Fetches data from BigQuery.
         """
-
+        # We're using asyncio to concurrently fetch data from multiple tables:
+        # https://github.com/googleapis/python-bigquery/issues/453
         async def fetch_async(self, queries) -> list[pd.DataFrame]:
             return await asyncio.gather(*[self.fetch_single_table_async(query) for query in queries])
 
@@ -89,10 +90,12 @@ class GA4EventFetcher:
         job = self.bigquery_client.query(query.statement, job_config=self.bigquery_job_config)
         df = job.to_dataframe()
 
+        # Update query object with job metadata in-place
         query.executed = True
         query.execution_uses_cache = job.cache_hit
         query.total_bytes_processed = job.total_bytes_processed
         query.total_bytes_billed = job.total_bytes_billed
+
         return df
 
     def construct_single_table_query(self, date: datetime) -> GA4EventQuery:
