@@ -10,6 +10,7 @@ from loguru import logger
 
 from article_rec_training_job.helpers.enum import Column
 from article_rec_training_job.helpers.math import convert_bytes_to_human_readable
+from article_rec_training_job.helpers.time import get_elapsed_time
 
 
 @dataclass(frozen=True)
@@ -50,7 +51,9 @@ class BaseGA4EventFetcher:
     site_ga4_property_id: str
     date_start: date
     date_end: date
-    queries: list[GA4EventQuery] = field(init=False)
+    queries: list[GA4EventQuery] = field(init=False, repr=False)
+    time_taken_to_construct_table_objects: float = field(init=False, repr=False)
+    time_taken_to_fetch_events: float = field(init=False, repr=False)
 
     @cached_property
     def dates(self) -> list[date]:
@@ -176,15 +179,26 @@ class BaseGA4EventFetcher:
 
         # We're using asyncio to concurrently fetch data from multiple tables:
         # https://github.com/googleapis/python-bigquery/issues/453
-        async def fetch_async(tables: list[GA4EventTable]) -> list[tuple[pd.DataFrame, GA4EventQuery]]:
+        @get_elapsed_time
+        def construct_all_table_objects() -> list[GA4EventTable]:
+            return self.tables
+
+        @get_elapsed_time
+        def fetch_all_tables(tables: list[GA4EventTable]) -> list[tuple[pd.DataFrame, GA4EventQuery]]:
+            return asyncio.run(fetch_all_tables_async(tables))
+
+        async def fetch_all_tables_async(tables: list[GA4EventTable]) -> list[tuple[pd.DataFrame, GA4EventQuery]]:
             return await asyncio.gather(*[fetch_single_table_async(table) for table in tables])
 
         async def fetch_single_table_async(table: GA4EventTable) -> tuple[pd.DataFrame, GA4EventQuery]:
             loop = asyncio.get_running_loop()
             return await loop.run_in_executor(None, self.fetch_single_table, table)
 
+        # Calling self.tables will trigger construction of table objects
+        self.time_taken_to_construct_table_objects, tables = construct_all_table_objects()
+
         # Fetch data from all tables
-        results = asyncio.run(fetch_async(self.tables))
+        self.time_taken_to_fetch_events, results = fetch_all_tables(tables)
         dfs, self.queries = zip(*results)
         # dfs = [df for df, _ in results]
         # self.queries = [query for _, query in results]
@@ -208,8 +222,10 @@ class GA4EventFetcher(BaseGA4EventFetcher):
         total_bytes_processed = sum([query.total_bytes_processed for query in self.queries])
         total_bytes_billed = sum([query.total_bytes_billed for query in self.queries])
 
+        logger.info(f"Table object construction took {self.time_taken_to_construct_table_objects:.3f} seconds")
+        logger.info(f"Event fetch took {self.time_taken_to_fetch_events:.3f} seconds")
         logger.info(f"{num_tables_exist} tables out of {len(self.tables)} exist")
-        logger.info(f"{num_queries_executed} queries out of {len(self.queries)} executed")
+        logger.info(f"{num_queries_executed} queries out of {len(self.queries)} were executed")
         logger.info(f"{num_queries_use_cache} queries out of {len(self.queries)} used cache")
         logger.info(f"Total bytes processed: {convert_bytes_to_human_readable(total_bytes_processed)}")
         logger.info(f"Total bytes billed: {convert_bytes_to_human_readable(total_bytes_billed)}")
