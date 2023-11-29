@@ -39,7 +39,6 @@ class GA4EventFetcher:
     site: Site
     date_start: datetime
     date_end: datetime
-    num_threads: int
     queries: list[GA4EventQuery] = field(init=False)
 
     @cached_property
