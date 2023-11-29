@@ -1,29 +1,14 @@
 import asyncio
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-from enum import StrEnum
 from functools import cached_property
-from typing import Protocol
 
 import pandas as pd
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from loguru import logger
 
-
-class Column(StrEnum):
-    # BigQuery columns
-    EVENT_TIMESTAMP = "event_timestamp"
-    EVENT_NAME = "event_name"
-    EVENT_PARAMS = "event_params"
-    USER_PSEUDO_ID = "user_pseudo_id"
-    # Custom columns
-    EVENT_PAGE_LOCATION = "event_page_location"
-    EVENT_ENGAGEMENT_TIME_MSEC = "event_engagement_time_msec"
-
-
-class Site(Protocol):
-    ga4_property_id: str
+from article_rec_training_job.helpers.enum import Column
 
 
 @dataclass(frozen=True)
@@ -57,7 +42,7 @@ def check_bigquery_table_exists(client: bigquery.Client, table_id: str) -> bool:
 @dataclass
 class GA4EventFetcher:
     gcp_project_id: str
-    site: Site
+    site_ga4_property_id: str
     date_start: date
     date_end: date
     queries: list[GA4EventQuery] = field(init=False)
@@ -87,11 +72,11 @@ class GA4EventFetcher:
         )
 
     @cached_property
-    def bigquery_dataset_name(self) -> str:
+    def bigquery_dataset_id(self) -> str:
         """
         Name of BigQuery dataset representing site.
         """
-        return f"{self.gcp_project_id}.{self.site.ga4_property_id}"
+        return f"{self.gcp_project_id}.analytics_{self.site_ga4_property_id}"
 
     @cached_property
     def tables(self) -> list[GA4EventTable]:
@@ -109,17 +94,17 @@ class GA4EventFetcher:
         # If date is today, use the intraday table
         today = datetime.utcnow().date()
         if dt == today:
-            table_id = f"{self.bigquery_dataset_name}.events_intraday_{date_str}"
+            table_id = f"{self.bigquery_dataset_id}.events_intraday_{date_str}"
             table_exists = check_bigquery_table_exists(self.bigquery_client, table_id)
             return GA4EventTable(table_id=table_id, exists=table_exists)
 
         # Else, use the historical table
-        table_id = f"{self.bigquery_dataset_name}.events_{date_str}"
+        table_id = f"{self.bigquery_dataset_id}.events_{date_str}"
         if check_bigquery_table_exists(self.bigquery_client, table_id):
             return GA4EventTable(table_id=table_id, exists=True)
 
         # If that table doesn't exist, try the intraday table as a last resort.
-        table_id = f"{self.bigquery_dataset_name}.events_intraday_{date_str}"
+        table_id = f"{self.bigquery_dataset_id}.events_intraday_{date_str}"
         table_exists = check_bigquery_table_exists(self.bigquery_client, table_id)
         return GA4EventTable(table_id=table_id, exists=table_exists)
 
@@ -131,7 +116,7 @@ class GA4EventFetcher:
             SELECT
                 {Column.EVENT_TIMESTAMP},
                 {Column.EVENT_NAME},
-                {Column.USER_PSEUDO_ID}
+                {Column.USER_PSEUDO_ID},
                 (
                     SELECT
                         value.int_value
@@ -156,7 +141,7 @@ class GA4EventFetcher:
                 {Column.USER_PSEUDO_ID},
                 {Column.EVENT_TIMESTAMP}
         """
-        return GA4EventQuery(statement=statement)
+        return GA4EventQuery(table=table, statement=statement)
 
     def fetch_single_table(self, table: GA4EventTable) -> tuple[pd.DataFrame, GA4EventQuery]:
         """
@@ -167,6 +152,7 @@ class GA4EventFetcher:
             return pd.DataFrame(), GA4EventQuery(table=table, statement="")
 
         query = self.construct_single_table_query(table)
+        logger.info(f"Executing query for table {table.table_id}...")
         job = self.bigquery_client.query(query.statement, job_config=self.bigquery_job_config)
         df = job.to_dataframe()
 
@@ -182,10 +168,11 @@ class GA4EventFetcher:
         """
         Fetches data from BigQuery.
         """
+
         # We're using asyncio to concurrently fetch data from multiple tables:
         # https://github.com/googleapis/python-bigquery/issues/453
         async def fetch_async(tables: list[GA4EventTable]) -> list[tuple[pd.DataFrame, GA4EventQuery]]:
-            return await asyncio.gather(*[self.fetch_single_table_async(table) for table in tables])
+            return await asyncio.gather(*[fetch_single_table_async(table) for table in tables])
 
         async def fetch_single_table_async(table: GA4EventTable) -> tuple[pd.DataFrame, GA4EventQuery]:
             loop = asyncio.get_running_loop()
@@ -194,5 +181,7 @@ class GA4EventFetcher:
         # Fetch data from all tables
         results = asyncio.run(fetch_async(self.tables))
         dfs, self.queries = zip(*results)
+        # dfs = [df for df, _ in results]
+        # self.queries = [query for _, query in results]
 
         return pd.concat([pd.DataFrame(), *dfs])
