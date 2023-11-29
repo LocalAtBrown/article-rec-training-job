@@ -8,6 +8,7 @@ authors = ["LocalNewsLab <mh3287@columbia.edu>"]
 # if this python version changes, the python base image in the Dockerfile needs to change too
 python = "3.11.*"
 google-cloud-bigquery = "^3.13.0"
+loguru = "^0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.1"
