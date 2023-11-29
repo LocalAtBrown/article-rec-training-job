@@ -9,6 +9,7 @@ from google.cloud.exceptions import NotFound
 from loguru import logger
 
 from article_rec_training_job.helpers.enum import Column
+from article_rec_training_job.helpers.math import convert_bytes_to_human_readable
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,11 @@ def check_bigquery_table_exists(client: bigquery.Client, table_id: str) -> bool:
 
 
 @dataclass
-class GA4EventFetcher:
+class BaseGA4EventFetcher:
+    """
+    Base, self-contained, GA4 event fetcher component.
+    """
+
     gcp_project_id: str
     site_ga4_property_id: str
     date_start: date
@@ -185,3 +190,26 @@ class GA4EventFetcher:
         # self.queries = [query for _, query in results]
 
         return pd.concat([pd.DataFrame(), *dfs])
+
+
+class GA4EventFetcher(BaseGA4EventFetcher):
+    """
+    GA4 event fetcher with post-fetch reporting capabilities. In the future,
+    CloudWatch metrics could be emitted here.
+    """
+
+    def fetch(self) -> pd.DataFrame:
+        return super().fetch()
+
+    def post_fetch(self) -> None:
+        num_tables_exist = sum([table.exists for table in self.tables])
+        num_queries_executed = sum([query.executed for query in self.queries])
+        num_queries_use_cache = sum([query.execution_uses_cache for query in self.queries])
+        total_bytes_processed = sum([query.total_bytes_processed for query in self.queries])
+        total_bytes_billed = sum([query.total_bytes_billed for query in self.queries])
+
+        logger.info(f"{num_tables_exist} tables out of {len(self.tables)} exist")
+        logger.info(f"{num_queries_executed} queries out of {len(self.queries)} executed")
+        logger.info(f"{num_queries_use_cache} queries out of {len(self.queries)} used cache")
+        logger.info(f"Total bytes processed: {convert_bytes_to_human_readable(total_bytes_processed)}")
+        logger.info(f"Total bytes billed: {convert_bytes_to_human_readable(total_bytes_billed)}")
