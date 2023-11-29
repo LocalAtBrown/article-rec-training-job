@@ -33,6 +33,7 @@ def check_bigquery_table_exists(client: bigquery.Client, table_id: str) -> bool:
     """
     Checks if a BigQuery table exists.
     """
+    # Could turn this into async, but compared to actual query execution, this is not gonna be a bottleneck.
     try:
         client.get_table(table_id)
     except NotFound:
@@ -177,12 +178,12 @@ class BaseGA4EventFetcher:
         Fetches data from BigQuery.
         """
 
-        # We're using asyncio to concurrently fetch data from multiple tables:
-        # https://github.com/googleapis/python-bigquery/issues/453
         @get_elapsed_time
         def construct_all_table_objects() -> list[GA4EventTable]:
             return self.tables
 
+        # We're using asyncio to concurrently fetch data from multiple tables:
+        # https://github.com/googleapis/python-bigquery/issues/453
         @get_elapsed_time
         def fetch_all_tables(tables: list[GA4EventTable]) -> list[tuple[pd.DataFrame, GA4EventQuery]]:
             return asyncio.run(fetch_all_tables_async(tables))
@@ -199,9 +200,7 @@ class BaseGA4EventFetcher:
 
         # Fetch data from all tables
         self.time_taken_to_fetch_events, results = fetch_all_tables(tables)
-        dfs, self.queries = zip(*results)
-        # dfs = [df for df, _ in results]
-        # self.queries = [query for _, query in results]
+        dfs, self.queries = zip(*results)  # type: ignore
 
         return pd.concat([pd.DataFrame(), *dfs])
 
