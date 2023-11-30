@@ -54,11 +54,15 @@ def execute_job(stage: Stage) -> None:
     )
 
     # Set timestamp of job execution
-    timestamp_job_execution = datetime.utcnow()
+    execution_timestamp = (
+        datetime.strptime(os.environ["JOB_EXECUTION_TIMESTAMP_UTC"], "%Y-%m-%d %H:%M:%S.%f")
+        if os.getenv("JOB_EXECUTION_TIMESTAMP_UTC") is not None
+        else datetime.utcnow()
+    )
 
     # ----- 1. FETCH EVENTS -----
     days_to_fetch_events = int(os.environ["NUM_DAYS_TO_FETCH_EVENTS"])
-    date_end_fetch_events = timestamp_job_execution.date()
+    date_end_fetch_events = execution_timestamp.date()
     date_start_fetch_events = date_end_fetch_events - timedelta(days=days_to_fetch_events - 1)
 
     event_fetcher = get_event_fetcher(site, date_start_fetch_events, date_end_fetch_events)
