@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Protocol
 
+import pandera as pa
 from loguru import logger
 
 from article_rec_training_job.shared.types.event_fetchers import (
@@ -26,23 +27,28 @@ class EventFetcher(Protocol):
 
 
 class PageFetcher(Protocol):
-    pass
+    raise NotImplementedError
 
 
-# ----- TASKS -----
+# ----- TASKS BASE CLASSES -----
 class Task(ABC):
-    # @property
-    # @abstractmethod
-    # def execution_timestamp(self) -> datetime:
-    #     ...
-
     @abstractmethod
     def execute(self) -> None:
         ...
 
 
+class FetchesEvents:
+    @staticmethod
+    @pa.check_types
+    def fetch_events(event_fetcher: EventFetcher) -> FetchedEventsDataFrame:
+        df = event_fetcher.fetch()
+        event_fetcher.post_fetch()
+        return df
+
+
+# ----- TASKS -----
 @dataclass
-class UpdatePages(Task):
+class UpdatePages(Task, FetchesEvents):
     execution_timestamp: datetime
     event_fetcher: EventFetcher
     # page_fetcher: PageFetcher
@@ -52,14 +58,13 @@ class UpdatePages(Task):
             f"Fetching events from {self.event_fetcher.date_start} to {self.event_fetcher.date_end}",
             "to find pages to update",
         )
-        df = self.event_fetcher.fetch()
-        self.event_fetcher.post_fetch()
+        df = self.fetch_events(self.event_fetcher)
         page_urls = set(df[FetchEventsSchema.page_url])
         logger.info(f"Fetched {len(df)} events and found {len(page_urls)} unique page URLs")
 
 
 @dataclass
-class CreateRecommendations(Task):
+class CreateRecommendations(Task, FetchesEvents):
     execution_timestamp: datetime
     event_fetcher: EventFetcher
 
