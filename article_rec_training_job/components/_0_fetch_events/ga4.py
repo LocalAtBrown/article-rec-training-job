@@ -2,13 +2,15 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from functools import cached_property
+from typing import Final
 
 import pandas as pd
+import pandera as pa
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from loguru import logger
+from pandera.typing import DataFrame
 
-from article_rec_training_job.helpers.enum import Column
 from article_rec_training_job.helpers.math import convert_bytes_to_human_readable
 from article_rec_training_job.helpers.time import get_elapsed_time
 
@@ -42,16 +44,31 @@ def check_bigquery_table_exists(client: bigquery.Client, table_id: str) -> bool:
         return True
 
 
+class OutputSchema(pa.DataFrameModel):
+    """
+    Pandera schema for GA4 event fetcher output.
+    Callng .column_name returns the name of the column as a string (e.g. `OutputSchema.event_name = "event_name"`),
+    which is useful for pandas DataFrame operations involving columns.
+    """
+
+    event_timestamp: int
+    event_name: str
+    user_pseudo_id: str
+    event_engagement_time_msec: int = pa.Field(nullable=True)
+    event_page_location: str
+
+
 @dataclass
-class BaseGA4EventFetcher:
+class BaseFetcher:
     """
     Base, self-contained, GA4 event fetcher component.
     """
 
-    gcp_project_id: str
-    site_ga4_property_id: str
-    date_start: date
-    date_end: date
+    gcp_project_id: Final[str]
+    site_ga4_property_id: Final[str]
+    date_start: Final[date]
+    date_end: Final[date]
+
     queries: list[GA4EventQuery] = field(init=False, repr=False)
     time_taken_to_construct_table_objects: float = field(init=False, repr=False)
     time_taken_to_fetch_events: float = field(init=False, repr=False)
@@ -123,32 +140,32 @@ class BaseGA4EventFetcher:
         """
         statement = f"""
             SELECT
-                {Column.EVENT_TIMESTAMP},
-                {Column.EVENT_NAME},
-                {Column.USER_PSEUDO_ID},
+                event_timestamp,
+                event_name,
+                user_pseudo_id,
                 (
                     SELECT
                         value.int_value
                     FROM
-                        UNNEST({Column.EVENT_PARAMS})
+                        UNNEST(event_params)
                     WHERE
                         key = 'engagement_time_msec'
                 )
-                AS {Column.EVENT_ENGAGEMENT_TIME_MSEC},
+                AS event_engagement_time_msec,
                 (
                     SELECT
                         value.string_value
                     FROM
-                        UNNEST({Column.EVENT_PARAMS})
+                        UNNEST(event_params)
                     WHERE
                         key = 'page_location'
                 )
-                AS {Column.EVENT_PAGE_LOCATION}
+                AS event_page_location
             FROM
                 `{table.table_id}`
             ORDER BY
-                {Column.USER_PSEUDO_ID},
-                {Column.EVENT_TIMESTAMP}
+                user_pseudo_id,
+                event_timestamp
         """
         return GA4EventQuery(table=table, statement=statement)
 
@@ -173,7 +190,8 @@ class BaseGA4EventFetcher:
 
         return df, query
 
-    def fetch(self) -> pd.DataFrame:
+    @pa.check_types
+    def fetch(self) -> DataFrame[OutputSchema]:
         """
         Fetches data from BigQuery.
         """
@@ -204,17 +222,10 @@ class BaseGA4EventFetcher:
 
         return pd.concat([pd.DataFrame(), *dfs])
 
-
-class GA4EventFetcher(BaseGA4EventFetcher):
-    """
-    GA4 event fetcher with post-fetch reporting capabilities. In the future,
-    CloudWatch metrics could be emitted here.
-    """
-
-    def fetch(self) -> pd.DataFrame:
-        return super().fetch()
-
     def post_fetch(self) -> None:
+        """
+        Post-fetch actions. Base fetcher only logs metrics to stdout.
+        """
         num_tables_exist = sum([table.exists for table in self.tables])
         num_queries_executed = sum([query.executed for query in self.queries])
         num_queries_use_cache = sum([query.execution_uses_cache for query in self.queries])
@@ -228,3 +239,19 @@ class GA4EventFetcher(BaseGA4EventFetcher):
         logger.info(f"{num_queries_use_cache} queries out of {len(self.queries)} used cache")
         logger.info(f"Total bytes processed: {convert_bytes_to_human_readable(total_bytes_processed)}")
         logger.info(f"Total bytes billed: {convert_bytes_to_human_readable(total_bytes_billed)}")
+
+
+class FetcherWithCloudWatchReporting(BaseFetcher):
+    """
+    Base fetcher with CloudWatch reporting.
+    """
+
+    def post_fetch(self) -> None:
+        super().post_fetch()
+        self.log_metrics()
+
+    def log_metrics(self) -> None:
+        """
+        Logs metrics to CloudWatch.
+        """
+        raise NotImplementedError
