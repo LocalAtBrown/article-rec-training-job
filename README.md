@@ -18,7 +18,7 @@ TODO: This diagram still holds for the most part, but should update it.
     ├── shared/                     # contains shared code between tasks and components
 ```
 
-## A Word on Tasks and Components
+### A Word on Tasks and Components
 
 One job run executes one or more tasks. One task consists of one or more components, each representing some logical step within the task's execution logic.
 
@@ -30,7 +30,7 @@ Tasks and components are designed to be very loosely coupled to one another for 
 
 The `article_rec_training_job.shared` module houses stuff that is shared between tasks and components, such as type definitions, data schemas, and `helper` utilities.
 
-Finally, this tasks-components design is a formalization of how the training job was originally conceived. It works for now, but as soon as things become more complicated, it might be worth considering breaking the job into multiple standalone functions and/or use pipeline orchestration tools like Apache Airflow. Since tasks are loosely coupled from one another and from components, this shouldn't make you want to pull your hair out :)
+Finally, this tasks-components design is a formalization of how the training job was originally conceived. It works for now, but as soon as things become more complicated, it might be worth considering breaking the job into multiple standalone functions and transition to workflow orchestration tools like Apache Airflow. That tasks are loosely coupled from one another and from components means breaking them up should be easy :)
 
 ## Development Tools
 
@@ -92,12 +92,14 @@ kar deploy
 
 Each pull request to main will trigger a new prod deployment when merged.
 
-## Monitoring (for LNL)
+## For LNL
 
-### Logs
+### Monitoring
+
+#### Logs
 
 TODO
 
-### System Dashboards
+#### System Dashboards
 
 TODO
