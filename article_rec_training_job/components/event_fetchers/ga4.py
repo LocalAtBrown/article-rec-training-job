@@ -5,14 +5,16 @@ from functools import cached_property
 from typing import Final
 
 import pandas as pd
-import pandera as pa
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from loguru import logger
-from pandera.typing import DataFrame
 
-from article_rec_training_job.helpers.math import convert_bytes_to_human_readable
-from article_rec_training_job.helpers.time import get_elapsed_time
+from article_rec_training_job.shared.helpers.math import convert_bytes_to_human_readable
+from article_rec_training_job.shared.helpers.time import get_elapsed_time
+from article_rec_training_job.shared.types.event_fetchers import (
+    OutputDataFrame,
+    OutputSchema,
+)
 
 
 @dataclass(frozen=True)
@@ -42,20 +44,6 @@ def check_bigquery_table_exists(client: bigquery.Client, table_id: str) -> bool:
         return False
     else:
         return True
-
-
-class OutputSchema(pa.DataFrameModel):
-    """
-    Pandera schema for GA4 event fetcher output.
-    Callng .column_name returns the name of the column as a string (e.g. `OutputSchema.event_name = "event_name"`),
-    which is useful for pandas DataFrame operations involving columns.
-    """
-
-    event_timestamp: int
-    event_name: str
-    user_pseudo_id: str
-    event_engagement_time_msec: int = pa.Field(nullable=True)
-    event_page_location: str
 
 
 @dataclass
@@ -140,9 +128,9 @@ class BaseFetcher:
         """
         statement = f"""
             SELECT
-                event_timestamp,
-                event_name,
-                user_pseudo_id,
+                {OutputSchema.event_timestamp},
+                {OutputSchema.event_name},
+                user_pseudo_id AS {OutputSchema.user_id},
                 (
                     SELECT
                         value.int_value
@@ -151,7 +139,7 @@ class BaseFetcher:
                     WHERE
                         key = 'engagement_time_msec'
                 )
-                AS event_engagement_time_msec,
+                AS {OutputSchema.engagement_time_msec},
                 (
                     SELECT
                         value.string_value
@@ -160,12 +148,12 @@ class BaseFetcher:
                     WHERE
                         key = 'page_location'
                 )
-                AS event_page_location
+                AS {OutputSchema.page_url}
             FROM
                 `{table.table_id}`
             ORDER BY
-                user_pseudo_id,
-                event_timestamp
+                {OutputSchema.user_id},
+                {OutputSchema.event_timestamp}
         """
         return GA4EventQuery(table=table, statement=statement)
 
@@ -190,8 +178,17 @@ class BaseFetcher:
 
         return df, query
 
-    @pa.check_types
-    def fetch(self) -> DataFrame[OutputSchema]:
+    @staticmethod
+    def transform_df_to_required_schema(df: pd.DataFrame) -> OutputDataFrame:
+        """
+        Transforms DataFrame of queried events to required schema.
+        """
+        # Convert event_timestamp int to pandas datetime
+        df[OutputSchema.event_timestamp] = pd.to_datetime(df[OutputSchema.event_timestamp], unit="ns", utc=True)
+
+        return df
+
+    def fetch(self) -> OutputDataFrame:
         """
         Fetches data from BigQuery.
         """
@@ -220,7 +217,13 @@ class BaseFetcher:
         self.time_taken_to_fetch_events, results = fetch_all_tables(tables)
         dfs, self.queries = zip(*results)  # type: ignore
 
-        return pd.concat([pd.DataFrame(), *dfs])
+        # Concatenate all dataframes (to an empty DataFrame to prevent error if no data were fetched)
+        df = pd.concat([pd.DataFrame(), *dfs])
+
+        # Convert DataFrame to required schema
+        df = self.transform_df_to_required_schema(df)
+
+        return df
 
     def post_fetch(self) -> None:
         """
