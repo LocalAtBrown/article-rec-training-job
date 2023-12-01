@@ -13,7 +13,7 @@ from article_rec_training_job.shared.types.event_fetchers import (
 )
 
 
-# ----- PROTOCOLS -----
+# ----- COMPONENT PROTOCOLS -----
 class EventFetcher(Protocol):
     date_start: date
     date_end: date

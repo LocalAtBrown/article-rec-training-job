@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from functools import cached_property
-from typing import Final
+from typing import final
 
 import pandas as pd
 from google.cloud import bigquery
@@ -52,10 +52,10 @@ class BaseFetcher:
     Base, self-contained, GA4 event fetcher component.
     """
 
-    gcp_project_id: Final[str]
-    site_ga4_property_id: Final[str]
-    date_start: Final[date]
-    date_end: Final[date]
+    gcp_project_id: str
+    site_ga4_property_id: str
+    date_start: date
+    date_end: date
 
     queries: list[GA4EventQuery] = field(init=False, repr=False)
     time_taken_to_construct_table_objects: float = field(init=False, repr=False)
@@ -188,6 +188,7 @@ class BaseFetcher:
 
         return df
 
+    @final
     def fetch(self) -> OutputDataFrame:
         """
         Fetches data from BigQuery.

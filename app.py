@@ -1,12 +1,15 @@
-import os
-from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from enum import StrEnum
 
 from loguru import logger
 
-from article_rec_training_job._0_fetch_events import EventFetcher, fetch_events
-from article_rec_training_job.components._0_fetch_events import GA4EventFetcher
+from article_rec_training_job.components import GA4BaseEventFetcher
+from article_rec_training_job.config import (
+    Config,
+    EventFetcherType,
+    create_config_object,
+)
+from article_rec_training_job.tasks import Task, UpdatePages
 
 
 class Stage(StrEnum):
@@ -15,65 +18,56 @@ class Stage(StrEnum):
     PROD = "prod"
 
 
-class EventFetcherType(StrEnum):
-    GA4 = "ga4"
+def load_config(stage: Stage) -> Config:
+    if stage == Stage.LOCAL:
+        import yaml
+
+        with open("config.yaml", "r") as f:
+            config_dict = yaml.safe_load(f)
+    else:
+        return NotImplementedError(f"Stage {stage} not implemented")
+
+    return create_config_object(config_dict)
 
 
-@dataclass(frozen=True)
-class Site:
-    name: str
-    ga4_property_id: str
-    event_fetcher_type: EventFetcherType
+def create_update_pages_task(config: Config) -> UpdatePages:
+    task_config = config.tasks.update_pages
 
-
-def get_event_fetcher(site: Site, date_start: date, date_end: date) -> EventFetcher:
-    match site.event_fetcher_type:
-        case EventFetcherType.GA4:
-            return GA4EventFetcher(
-                gcp_project_id=os.environ["GCP_PROJECT_ID"],
-                site_ga4_property_id=site.ga4_property_id,
-                date_start=date_start,
-                date_end=date_end,
+    execution_timestamp = task_config.execution_timestamp_utc or datetime.utcnow()
+    match task_config.event_fetcher.type:
+        case EventFetcherType.GA4_BASE:
+            event_fetcher = GA4BaseEventFetcher(
+                gcp_project_id=task_config.event_fetcher.params["gcp_project_id"],
+                site_ga4_property_id=task_config.event_fetcher.params["site_ga4_property_id"],
+                date_start=execution_timestamp - timedelta(days=task_config.event_fetcher["num_days_to_fetch"] - 1),
+                date_end=execution_timestamp.date(),
             )
-        case _:
-            raise NotImplementedError(f"Event fetcher type {site.event_fetcher_type} not implemented")
+
+    return UpdatePages(
+        execution_timestamp=execution_timestamp,
+        event_fetcher=event_fetcher,
+    )
 
 
 def execute_job(stage: Stage) -> None:
-    # If stage is local, load configuration as environment variables via .env
-    if stage == Stage.LOCAL:
-        from dotenv import load_dotenv
+    config = load_config(stage=stage)
+    tasks: list[Task] = []
 
-        load_dotenv()
+    # ----- 1. UPDATE PAGES -----
+    if config.tasks.update_pages is not None:
+        tasks.append(create_update_pages_task(config))
 
-    # Instantiate site
-    site = Site(
-        name=os.environ["SITE_NAME"],
-        ga4_property_id=os.environ["SITE_GA4_PROPERTY_ID"],
-        event_fetcher_type=EventFetcherType(os.environ["SITE_EVENT_FETCHER_TYPE"]),
-    )
+    # ----- 2. CREATE RECOMMENDATIONS -----
+    # TODO: Create recommendations task
 
-    # Set timestamp of job execution
-    execution_timestamp = (
-        datetime.strptime(os.environ["JOB_EXECUTION_TIMESTAMP_UTC"], "%Y-%m-%d %H:%M:%S.%f")
-        if os.getenv("JOB_EXECUTION_TIMESTAMP_UTC") is not None
-        else datetime.utcnow()
-    )
-
-    # ----- 1. FETCH EVENTS -----
-    days_to_fetch_events = int(os.environ["NUM_DAYS_TO_FETCH_EVENTS"])
-    date_end_fetch_events = execution_timestamp.date()
-    date_start_fetch_events = date_end_fetch_events - timedelta(days=days_to_fetch_events - 1)
-
-    event_fetcher = get_event_fetcher(site, date_start_fetch_events, date_end_fetch_events)
-
-    logger.info(f"Fetching events for {site.name} from {date_start_fetch_events} to {date_end_fetch_events}...")
-    df_events = fetch_events(event_fetcher)
-    logger.info(f"Fetched events DataFrame shape: {df_events.shape}")
-
-    # TODO: Next steps
-
-    return df_events
+    for task in tasks:
+        # Wrap task execution in try/except block to ensure all tasks are executed
+        try:
+            logger.info(f"Executing task {task.__class__.__name__}...")
+            task.execute()
+            logger.info(f"Task {task.__class__.__name__} completed successfully")
+        except Exception as e:
+            logger.exception(f"Task {task.__class__.__name__} failed with exception: {e}")
 
 
 if __name__ == "__main__":
