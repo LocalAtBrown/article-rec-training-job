@@ -11,3 +11,4 @@ tmp/*
 # Scratch dir
 scratch/
 .env
+config.yaml
