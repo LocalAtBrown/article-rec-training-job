@@ -25,7 +25,7 @@ def load_config(stage: Stage) -> Config:
         with open("config.yaml", "r") as f:
             config_dict = yaml.safe_load(f)
     else:
-        return NotImplementedError(f"Stage {stage} not implemented")
+        raise NotImplementedError(f"Stage {stage} not implemented")
 
     return create_config_object(config_dict)
 
@@ -33,14 +33,20 @@ def load_config(stage: Stage) -> Config:
 def create_update_pages_task(config: Config) -> UpdatePages:
     task_config = config.tasks.update_pages
 
+    if task_config is None:
+        raise ValueError("Task update_pages is not configured")
+
     execution_timestamp = task_config.execution_timestamp_utc or datetime.utcnow()
+    date_end = execution_timestamp.date()
+    date_start = date_end - timedelta(days=task_config.event_fetcher.params["num_days_to_fetch"] - 1)
+
     match task_config.event_fetcher.type:
         case EventFetcherType.GA4_BASE:
             event_fetcher = GA4BaseEventFetcher(
                 gcp_project_id=task_config.event_fetcher.params["gcp_project_id"],
                 site_ga4_property_id=task_config.event_fetcher.params["site_ga4_property_id"],
-                date_start=execution_timestamp - timedelta(days=task_config.event_fetcher["num_days_to_fetch"] - 1),
-                date_end=execution_timestamp.date(),
+                date_start=date_start,
+                date_end=date_end,
             )
 
     return UpdatePages(
@@ -51,6 +57,9 @@ def create_update_pages_task(config: Config) -> UpdatePages:
 
 def execute_job(stage: Stage) -> None:
     config = load_config(stage=stage)
+
+    logger.info(f"Executing job for site: {config.site}...")
+
     tasks: list[Task] = []
 
     # ----- 1. UPDATE PAGES -----

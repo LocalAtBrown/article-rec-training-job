@@ -31,10 +31,10 @@ class PageFetcher(Protocol):
 
 # ----- TASKS -----
 class Task(ABC):
-    @property
-    @abstractmethod
-    def execution_timestamp(self) -> datetime:
-        ...
+    # @property
+    # @abstractmethod
+    # def execution_timestamp(self) -> datetime:
+    #     ...
 
     @abstractmethod
     def execute(self) -> None:
@@ -43,12 +43,11 @@ class Task(ABC):
 
 @dataclass
 class UpdatePages(Task):
-    execution_timestamp: datetime = datetime.utcnow()
+    execution_timestamp: datetime
     event_fetcher: EventFetcher
-    page_fetcher: PageFetcher
+    # page_fetcher: PageFetcher
 
     def execute(self) -> None:
-        logger.info("Task update pages started")
         logger.info(
             f"Fetching events from {self.event_fetcher.date_start} to {self.event_fetcher.date_end}",
             "to find pages to update",
@@ -61,7 +60,7 @@ class UpdatePages(Task):
 
 @dataclass
 class CreateRecommendations(Task):
-    execution_timestamp: datetime = datetime.utcnow()
+    execution_timestamp: datetime
     event_fetcher: EventFetcher
 
     def execute(self) -> None:
