@@ -37,6 +37,7 @@ export function getResourceName(stage: STAGE, resource: RESOURCE): string {
  * @param {number} cpu vCPUs for the training job
  * @param {number} memoryLimitMiB max memory for the training job
  * @param {boolean} enabled is the job enabled?
+ * @param {number[]} cronHours hours to run the job
  */
 export interface Organization {
   orgName: string,
@@ -44,6 +45,7 @@ export interface Organization {
   cpu: number,
   memoryLimitMiB: number,
   enabled: boolean,
+  cronHours: number[],
 }
 
 

@@ -16,7 +16,7 @@ export interface AppStackProps extends cdk.StackProps {
   logGroup: ILogGroup;
 }
 
-function getCron(stage: helpers.STAGE, index: number) {
+function getCron(stage: helpers.STAGE, site: helpers.Organization, index: number) {
   let n = partners.filter(f => f.enabled).length
   // Offset the jobs evenly across 1 hour.
   // Cron makes it really hard to do more complicated scheduling than that
@@ -24,7 +24,7 @@ function getCron(stage: helpers.STAGE, index: number) {
 
   return {
     minute: `${offset}`,
-    hour: '0,2,4,6,8,10,12,14,16,18,20,22',
+    hour: `${site.cronHours.join(",")}`,
   }
 }
 
@@ -113,7 +113,7 @@ export class AppStack extends cdk.Stack {
     new ScheduledFargateTask(this, `${id}ScheduledFargateTask`, {
       // find more cron scheduling options here:
       // https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-events.CronOptions.html
-      schedule: Schedule.cron(getCron(props.stage, props.index)),
+      schedule: Schedule.cron(getCron(props.stage, props.site, props.index)),
       desiredTaskCount: 1,
       cluster,
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
