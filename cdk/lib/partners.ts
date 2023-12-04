@@ -4,6 +4,7 @@ import { Organization } from "./helpers"
 // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
 const DEFAULT_CPU = 2048;
 const DEFAULT_MEM = 8192;
+const DEFAULT_CRON_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 
 export const partners: Array<Organization> = [
   {
@@ -12,6 +13,7 @@ export const partners: Array<Organization> = [
     cpu: DEFAULT_CPU,
     memoryLimitMiB: DEFAULT_MEM,
     enabled: true,
+    cronHours: [6], // 6 AM UTC = 2 AM EST, run once a day, during the night, until WCP is ready to run more often
   },
   {
     orgName: "texas-tribune",
@@ -19,6 +21,7 @@ export const partners: Array<Organization> = [
     cpu: DEFAULT_CPU,
     memoryLimitMiB: DEFAULT_MEM,
     enabled: true,
+    cronHours: DEFAULT_CRON_HOURS,
   },
   {
     orgName: "philadelphia-inquirer",
@@ -26,5 +29,6 @@ export const partners: Array<Organization> = [
     cpu: DEFAULT_CPU,
     memoryLimitMiB: 16384,
     enabled: true,
+    cronHours: DEFAULT_CRON_HOURS,
   },
 ]
