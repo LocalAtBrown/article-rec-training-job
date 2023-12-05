@@ -18,6 +18,7 @@ from sites.site import Site
 
 POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
+HOURS_OF_DATA = 24
 DOMAIN = "washingtoncitypaper.com"
 NAME = "washington-city-paper"
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
@@ -130,6 +131,7 @@ def fetch_article(external_id: str, path: str) -> Response:
 WCP_SITE = Site(
     NAME,
     FIELDS,
+    HOURS_OF_DATA,
     TRAINING_PARAMS,
     SCRAPE_CONFIG,
     transform_data_google_tag_manager,

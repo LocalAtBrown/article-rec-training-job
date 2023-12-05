@@ -24,6 +24,7 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 
 POPULARITY_WINDOW = 7
 MAX_ARTICLE_AGE = 10
+HOURS_OF_DATA = 2
 DOMAIN = "www.texastribune.org"
 NAME = "texas-tribune"
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
@@ -200,6 +201,7 @@ def fetch_article(
 TT_SITE = Site(
     NAME,
     FIELDS,
+    HOURS_OF_DATA,
     TRAINING_PARAMS,
     SCRAPE_CONFIG,
     transform_data_google_tag_manager,
