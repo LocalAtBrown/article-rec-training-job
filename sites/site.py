@@ -5,6 +5,7 @@ Site = namedtuple(
     [
         "name",
         "fields",
+        "hours_of_data",
         "training_params",
         "scrape_config",
         "transform_raw_data",

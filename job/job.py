@@ -16,13 +16,13 @@ from lib.metrics import Unit, write_metric
 from sites.site import Site
 
 
-def fetch_and_upload_data(site: Site, dt: datetime, hours=config.get("HOURS_OF_DATA")):
+def fetch_and_upload_data(site: Site, dt: datetime):
     """
     1. Upload transformed events data to Redshift
     2. Update article metadata
     3. Update dwell times table
     """
-    dts = [dt - timedelta(hours=i) for i in range(hours)]
+    dts = [dt - timedelta(hours=i) for i in range(site.hours_of_data)]
 
     fetch_data.fetch_transform_upload_chunks(site, dts)
     scrape_metadata.scrape_upload_metadata(site, dts)

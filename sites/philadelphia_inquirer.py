@@ -24,6 +24,7 @@ https://www.notion.so/a8698dd6527140aaba8acfc29be40aa8?v=d30e06f348e94063ab4f451
 
 POPULARITY_WINDOW = 2
 MAX_ARTICLE_AGE = 2
+HOURS_OF_DATA = 2
 DOMAIN = "www.inquirer.com"
 NAME = "philadelphia-inquirer"
 FIELDS = GOOGLE_TAG_MANAGER_RAW_FIELDS
@@ -269,6 +270,7 @@ def fetch_article(external_id: str, path: str) -> Response:
 PI_SITE = Site(
     NAME,
     FIELDS,
+    HOURS_OF_DATA,
     TRAINING_PARAMS,
     SCRAPE_CONFIG,
     transform_data_google_tag_manager,
