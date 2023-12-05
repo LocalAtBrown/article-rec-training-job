@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Protocol
+from typing import Protocol, Type
 
 import pandera as pa
 from article_rec_db.models import Page
 from loguru import logger
-from pydantic import HttpUrl
-from sqlalchemy.engine import Engine
+from pydantic import HttpUrl, validate_call
 from sqlmodel import Session
 
 from article_rec_training_job.shared.types.event_fetchers import (
@@ -56,6 +55,7 @@ class FetchesEvents:
 
 class FetchesPages:
     @staticmethod
+    @validate_call
     def fetch_pages(fetcher: PageFetcher, urls: list[HttpUrl]) -> list[Page]:
         pages = fetcher.fetch(urls)
         fetcher.post_fetch()
@@ -68,7 +68,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
     execution_timestamp: datetime
     event_fetcher: EventFetcher
     page_fetcher: PageFetcher
-    sa_engine: Engine
+    sa_session_factory: Type[Session]
 
     def execute(self) -> None:
         # First, fetch events
@@ -87,7 +87,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
         pages = self.fetch_pages(self.page_fetcher, page_urls)
 
         # Finally, update pages
-        with Session(self.sa_engine) as session:
+        with self.sa_session_factory() as session:
             # If a page has an article, that article is updated/created as well
             session.add_all(pages)
             session.commit()
