@@ -28,7 +28,7 @@ EXCLUDE_FAILURE_TYPES = {
 }
 
 
-@refresh_db
+# @refresh_db
 def scrape_upload_metadata(site: Site, dts: List[datetime]) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Update article metadata for any URLs that were visited during the given dts.
@@ -107,8 +107,12 @@ def update_path_cache(site: Site, create_results: List[Article], errors: List[Ar
             )
         )
 
-    with db_proxy.atomic():
-        Path.bulk_create(to_create, batch_size=50)
+    @refresh_db
+    def bulk_create(to_create: List[Path], batch_size: int) -> None:
+        with db_proxy.atomic():
+            Path.bulk_create(to_create, batch_size=batch_size)
+
+    bulk_create(to_create, batch_size=50)
 
     write_metric("article_scraping_errors", num_unhandled_errors)
     write_metric("article_scraping_paths_written", len(to_create))
@@ -240,8 +244,13 @@ def scrape_and_create_articles(site: Site, paths: List[str]) -> Tuple[List[Artic
             errors.append(ArticleScrapingError(ScrapeFailure.NO_PUBLISH_DATE, a.path, a.external_id))
 
     logging.info(f"Bulk inserting {len(to_create)} records")
-    with db_proxy.atomic():
-        Article.bulk_create(to_create, batch_size=50)
+
+    @refresh_db
+    def bulk_create(to_create: List[Article], batch_size: int) -> None:
+        with db_proxy.atomic():
+            Article.bulk_create(to_create, batch_size=batch_size)
+
+    bulk_create(to_create, batch_size=50)
 
     return results, errors
 
@@ -278,7 +287,12 @@ def scrape_and_update_articles(site: Site, external_ids: List[str]) -> Tuple[Lis
     fields = list(Article._meta.fields.keys() - RESERVED_FIELDS)
 
     logging.info(f"Bulk updating {len(to_update)} records")
-    with db_proxy.atomic():
-        Article.bulk_update(to_update, fields, batch_size=50)
+
+    @refresh_db
+    def bulk_update(to_update: List[Article], fields: List[str], batch_size: int) -> None:
+        with db_proxy.atomic():
+            Article.bulk_update(to_update, fields, batch_size=batch_size)
+
+    bulk_update(to_update, fields, batch_size=50)
 
     return results, errors
