@@ -28,7 +28,6 @@ EXCLUDE_FAILURE_TYPES = {
 }
 
 
-# @refresh_db
 def scrape_upload_metadata(site: Site, dts: List[datetime]) -> Tuple[List[Article], List[ArticleScrapingError]]:
     """
     Update article metadata for any URLs that were visited during the given dts.
