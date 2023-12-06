@@ -3,7 +3,7 @@ from collections.abc import Callable
 from dataclasses import asdict as dataclass_asdict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Any
+from typing import Any, Self
 from urllib.parse import urlencode, urlparse, urlunparse
 
 from article_rec_db.models import Page
@@ -11,9 +11,16 @@ from article_rec_db.models.article import Language
 from loguru import logger
 from pydantic import HttpUrl
 
+from article_rec_training_job.shared.types.page_fetchers import Output
+
 
 @dataclass(frozen=True)
-class QueryParams:
+class APIQueryParams:
+    """
+    Dataclass wrapper for WordPress REST API v2 query parameters.
+    """
+
+    # Add more query parameters as needed
     slug: str | None = None
     lang: Language | None = None
     _fields: list[str] | None = None
@@ -37,17 +44,38 @@ class QueryParams:
         return urlencode(params_dict)
 
 
-@dataclass(frozen=True)
-class Endpoint:
+@dataclass(eq=True, frozen=True)
+class URL:
+    """
+    Dataclass wrapper for URL strings, use for both page URLs and API endpoints.
+    Hashable, so can be used as dict keys or set entries.
+    """
+
     scheme: str
     netloc: str
     path: str = "/"
     params: str = ""
-    query: QueryParams = QueryParams()
+    query: str = ""
     fragment: str = ""
 
+    @classmethod
+    def create_from_string(cls, url: str) -> Self:
+        scheme, netloc, path, params, query, fragment = urlparse(url)
+        return cls(scheme, netloc, path, params, query, fragment)
+
+    @classmethod
+    def create_cleaned_from_string(cls, url: str) -> Self:
+        scheme, netloc, path, _, _, _ = urlparse(url)
+        return cls(scheme, netloc, path)
+
+    def convert_to_string(self) -> str:
+        return urlunparse((self.scheme, self.netloc, self.path, self.params, self.query, self.fragment))
+
+    def convert_to_clean_string(self) -> str:
+        return urlunparse((self.scheme, self.netloc, self.path, "", "", ""))
+
     def __str__(self) -> str:
-        return urlunparse((self.scheme, self.netloc, self.path, self.params, str(self.query), self.fragment))
+        return self.convert_to_string()
 
 
 @dataclass
@@ -67,15 +95,16 @@ class BaseFetcher:
     slug_from_path_regex: str | None
     slug_from_path_extractor: Callable[[str], str | None] | None = None
 
-    endpoints = field(init=False, repr=False)
+    urls_to_update: set[URL] = field(init=False, repr=False)
+    slugs: dict[URL, str] = field(init=False, repr=False)
 
     @cached_property
-    def endpoint_posts(self) -> Endpoint:
+    def endpoint_posts(self) -> URL:
         """
         API posts endpoint.
         """
         scheme, netloc, _, _, _, _ = urlparse(self.prefix)
-        return Endpoint(
+        return URL(
             scheme=scheme,
             netloc=netloc,
             path="wp-json/wp/v2/posts",
@@ -95,26 +124,18 @@ class BaseFetcher:
         """
         return re.compile(rf"{self.slug_from_path_regex}") if self.slug_from_path_regex else None
 
-    def remove_urls_invalid_prefix(self, urls: list[str]) -> list[str]:
-        """
-        Removes URLs with invalid prefix.
-        """
-        urls_valid = [url for url in urls if self.prefix_pattern.match(url) is not None]
-        logger.info(f"Ignored {len(urls) - len(urls_valid)} URLs with invalid prefix")
-        return urls_valid
-
-    def infer_language(self, url: str) -> Language:
+    def infer_language(self, url: URL) -> Language:
         """
         Infer content language from a given URL.
         Returns English as default; override this method in subclasses to implement custom site logic.
         """
         return Language.ENGLISH
 
-    def extract_slug(self, url: str) -> str | None:
+    def extract_slug(self, url: URL) -> str | None:
         """
         Constructs a single API endpoint from a given URL.
         """
-        path = urlparse(url).path
+        path = url.path
 
         # Extract slug from URL path
         if self.slug_from_path_regex is not None:
@@ -137,14 +158,34 @@ class BaseFetcher:
 
         return slug
 
-    def fetch(self, urls: list[HttpUrl]) -> list[Page]:
+    def preprocess_urls(self, urls: set[str]) -> set[URL]:
+        """
+        Preprocesses a given set of URLs.
+        """
+        # Remove URLs with invalid prefix
+        urls = {url for url in urls if self.prefix_pattern.match(url) is not None}
+
+        # Remove params, query, and fragment from each URL; remove duplicates afterward
+        url_objects = {URL.create_cleaned_from_string(url) for url in urls}
+
+        return url_objects
+
+    def fetch(self, urls: set[HttpUrl]) -> Output:
         """
         Fetches pages from a given list of URLs.
         """
-        # Remove URLs with invalid prefix
-        urls = self.remove_urls_invalid_prefix(urls)
+        # Preprocess URLs
+        self.urls_to_update = self.preprocess_urls(urls)
 
-        pass
+        # Each URL corresponds to a page
+        pages = [Page(url=url.convert_to_string()) for url in self.urls_to_update]
+
+        # Extract slugs from URLs
+        self.slugs = {url: self.extract_slug(url) for url in self.urls_to_update}
+
+        # TODO: Fetch articles where slugs are not None
+
+        return Output(pages=pages)
 
     def post_fetch(self) -> None:
         """

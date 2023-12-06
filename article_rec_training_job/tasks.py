@@ -30,7 +30,7 @@ class EventFetcher(Protocol):
 
 
 class PageFetcher(Protocol):
-    def fetch(self, urls: list[HttpUrl]) -> list[Page]:
+    def fetch(self, urls: set[HttpUrl]) -> list[Page]:
         ...
 
     def post_fetch(self) -> None:
@@ -56,7 +56,7 @@ class FetchesEvents:
 class FetchesPages:
     @staticmethod
     @validate_call
-    def fetch_pages(fetcher: PageFetcher, urls: list[HttpUrl]) -> list[Page]:
+    def fetch_pages(fetcher: PageFetcher, urls: set[HttpUrl]) -> list[Page]:
         pages = fetcher.fetch(urls)
         fetcher.post_fetch()
         return pages
@@ -82,7 +82,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
         # Then, fetch pages.
         # The fetcher is responsible for identifying which pages to fetch anew/create and which to update,
         # as well as including an Article object in a Page object that corresponds to the page's article.
-        page_urls = [*set(df[FetchEventsSchema.page_url])]
+        page_urls = set(df[FetchEventsSchema.page_url])
         logger.info(f"Found {len(page_urls)} URLs from events")
         pages = self.fetch_pages(self.page_fetcher, page_urls)
 
