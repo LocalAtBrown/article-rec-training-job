@@ -3,6 +3,11 @@ from enum import Enum
 from typing import Self
 from urllib.parse import urlparse, urlunparse
 
+import nh3
+from aiohttp import ClientResponse, ClientSession
+from loguru import logger
+from tenacity import AsyncRetrying, stop_after_attempt, wait_random_exponential
+
 
 class HTMLAllowedEntities(Enum):
     TAGS = {"a", "img", "video", "h1", "h2", "h3", "strong", "em", "p", "ul", "ol", "li", "br", "sub", "sup", "hr"}
@@ -45,3 +50,27 @@ class URL:
 
     def __str__(self) -> str:
         return self.convert_to_string()
+
+
+def clean_html(html: str) -> str:
+    """
+    Cleans HTML by removing all tags and attributes that are not explicitly allowed.
+    """
+    return nh3.clean(html, tags=HTMLAllowedEntities.TAGS.value, attributes=HTMLAllowedEntities.ATTRIBUTES.value)
+
+
+async def request(url: URL, maximum_attempts: int, maximum_backoff: int) -> ClientResponse:
+    """
+    Performs an HTTP GET request to the given URL with random-exponential
+    sleep before retrying.
+    """
+    async with ClientSession() as session:
+        async for attempt in AsyncRetrying(
+            reraise=True,
+            wait=wait_random_exponential(max=maximum_backoff),
+            stop=stop_after_attempt(maximum_attempts),
+            before=lambda state: logger.info(f"Attempt {state.attempt_number} of {maximum_attempts} at requesting {url}"),
+        ):
+            with attempt:
+                async with session.get(url.convert_to_string(), raise_for_status=True) as response:
+                    return response

@@ -17,6 +17,7 @@ article-rec-db = "0.0.8"
 pydantic = "^2.5.2"
 aiohttp = "^3.9.1"
 nh3 = "^0.2.14"
+tenacity = "^8.2.3"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.1"

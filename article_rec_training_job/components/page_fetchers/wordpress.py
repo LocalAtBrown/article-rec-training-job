@@ -1,24 +1,22 @@
 import asyncio
 import re
-from collections.abc import Callable
 from dataclasses import asdict as dataclass_asdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
-from typing import Any, Self
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
-import nh3
-from aiohttp import ClientResponseError, ClientSession
+from aiohttp import ClientResponseError
 from article_rec_db.models import Article, Page
 from article_rec_db.models.article import Language
 from loguru import logger
-from pydantic import HttpUrl, model_validator
-from pydantic.dataclasses import dataclass as pydantic_dataclass
+from pydantic import HttpUrl
 
 from article_rec_training_job.components.page_fetchers.helpers import (
     URL,
-    HTMLAllowedEntities,
+    clean_html,
+    request,
 )
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
 
@@ -53,7 +51,7 @@ class APIQueryParams:
         return urlencode(params_dict)
 
 
-@pydantic_dataclass
+@dataclass
 class BaseFetcher:
     """
     Base WordPress fetcher. Tries to fetch articles from the a given partner site
@@ -66,28 +64,20 @@ class BaseFetcher:
     site_name: str
     # Required page URL prefix that includes protocol and domain name, like https://dallasfreepress.com
     url_prefix: str
+    # Regex pattern to match slug from a path. Need to include a named group called "slug".
+    slug_from_path_regex: str
     # WordPress ID of tag to signify in-house content
     tag_id_in_house_content: int | None = None
-    # Regex pattern to match slug from a path. Make sure to include a named group called "slug".
-    # Otherwise, if you want to exert more fine-grained control over how the slug is extracted,
-    # you can pass a custom extractor function to the slug_from_path_extractor argument.
-    slug_from_path_regex: str | None = None
-    slug_from_path_extractor: Callable[[str], str | None] | None = None
+    # Maximum number of retries for a request
+    request_maximum_attempts: int = 10
+    # Maximum backoff before retrying a request, in seconds
+    request_maximum_backoff: int = 60
 
     urls_to_update: set[URL] = field(init=False, repr=False)
     slugs: dict[URL, str] = field(init=False, repr=False)
     time_taken_to_fetch_pages: float = field(init=False, repr=False)
     num_pages_fetched: int = field(init=False, repr=False)
     num_articles_fetched: int = field(init=False, repr=False)
-
-    @model_validator(mode="after")
-    def check_at_least_one_slug_extractor(self) -> Self:
-        """
-        Checks that at least one way of slug extraction is specified.
-        """
-        if self.slug_from_path_regex is None and self.slug_from_path_extractor is None:
-            raise ValueError("Either slug_from_path_regex or slug_from_path_extractor must be specified.")
-        return self
 
     @cached_property
     def endpoint_posts(self) -> URL:
@@ -102,18 +92,18 @@ class BaseFetcher:
         )
 
     @cached_property
-    def prefix_pattern(self) -> re.Pattern[str]:
+    def pattern_prefix(self) -> re.Pattern[str]:
         """
         Regex pattern to match the prefix.
         """
         return re.compile(rf"{self.url_prefix}")
 
     @cached_property
-    def slug_pattern(self) -> re.Pattern[str] | None:
+    def pattern_slug(self) -> re.Pattern[str]:
         """
         Regex pattern to match the slug.
         """
-        return re.compile(rf"{self.slug_from_path_regex}") if self.slug_from_path_regex else None
+        return re.compile(rf"{self.slug_from_path_regex}")
 
     def infer_language(self, url: URL) -> Language:
         """
@@ -129,20 +119,16 @@ class BaseFetcher:
         path = url.path
 
         # Extract slug from URL path
-        if self.slug_from_path_regex is not None:
-            match (slug_match := self.slug_pattern.search(path)):
-                case None:
-                    slug = None
-                case re.Match:
-                    slug = slug_match.group("slug")
-        elif self.slug_from_path_extractor is not None:
-            slug = self.slug_from_path_extractor(path)
+        match (slug_match := self.pattern_slug.search(path)):
+            case None:
+                slug = None
+            case re.Match:
+                slug = slug_match.group("slug")
 
         # If slug is None, warn
         if slug is None:
-            logger.warning(
-                f"Could not extract slug from path {path}",
-                "Make sure your slug_from_path_regex or slug_from_path_extractor works as expected.",
+            logger.info(
+                f"Could not extract slug from path {path}. It will be considered a non-article page.",
             )
 
         return slug
@@ -152,14 +138,14 @@ class BaseFetcher:
         Preprocesses a given set of URLs.
         """
         # Remove URLs with invalid prefix
-        urls = {url for url in urls if self.url_prefix_pattern.match(url) is not None}
+        urls = {url for url in urls if self.url_pattern_prefix.match(url) is not None}
 
         # Remove params, query, and fragment from each URL; remove duplicates afterward
         url_objects = {URL.create_cleaned_from_string(url) for url in urls}
 
         return url_objects
 
-    async def fetch_article(self, url: URL) -> Page:
+    async def fetch_page(self, url: URL) -> Page:
         """
         Fetches a single article from a given URL. Returns a Page object
         containing an Article object if the article is successfully fetched,
@@ -177,6 +163,7 @@ class BaseFetcher:
         language = self.infer_language(url)
 
         # Construct API endpoint
+        fields = ["id", "date_gmt", "modified_gmt", "slug", "status", "type", "title", "content", "excerpt", "tags"]
         endpoint = URL(
             scheme=self.endpoint_posts.scheme,
             netloc=self.endpoint_posts.netloc,
@@ -185,32 +172,27 @@ class BaseFetcher:
                 APIQueryParams(
                     slug=slug,
                     lang=language,
-                    _fields=[
-                        "id",
-                        "date_gmt",
-                        "modified_gmt",
-                        "slug",
-                        "status",
-                        "type",
-                        "title",
-                        "content",
-                        "excerpt",
-                        "tags",
-                    ],
+                    _fields=fields,
                 )
             ),
         )
 
         # Fetch article
-        async with ClientSession() as session:
-            async with session.get(endpoint.convert_to_string()) as response:
-                try:
-                    response.raise_for_status()
-                except ClientResponseError:
-                    logger.exception(f"Request to WordPress API failed for slug {slug}")
-                    return page_without_article
-
-                data = await response.json()
+        logger.info(f"Requesting WordPress API for {slug}")
+        try:
+            response = await request(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
+        except ClientResponseError as e:
+            logger.warning(
+                f"Request to WordPress API for slug {slug} failed because response code indicated an error: {e}"
+            )
+            return page_without_article
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Request to WordPress API for slug {slug} failed because of an unknown error. Traceback:"
+            )
+            return page_without_article
+        else:
+            data = await response.json()
 
         # Check that response is actually what we want.
         # If so, build Article object and return it inside the Page object.
@@ -222,16 +204,8 @@ class BaseFetcher:
                     site=self.site_name,
                     id_in_site=str(datum["id"]),
                     title=datum["title"]["rendered"],
-                    description=nh3.clean(
-                        datum["excerpt"]["rendered"],
-                        tags=HTMLAllowedEntities.TAGS.value,
-                        attributes=HTMLAllowedEntities.ATTRIBUTES.value,
-                    ),
-                    content=nh3.clean(
-                        datum["content"]["rendered"],
-                        tags=HTMLAllowedEntities.TAGS.value,
-                        attributes=HTMLAllowedEntities.ATTRIBUTES.value,
-                    ),
+                    description=clean_html(datum["excerpt"]["rendered"]),
+                    content=clean_html(datum["content"]["rendered"]),
                     site_published_at=datetime.fromisoformat(datum["date_gmt"]),
                     site_updated_at=datetime.fromisoformat(datum["modified_gmt"]),
                     language=language,
@@ -251,20 +225,17 @@ class BaseFetcher:
 
         @get_elapsed_time
         def fetch_pages() -> list[Page]:
-            return asyncio.run(asyncio.gather(*(self.fetch_article(url) for url in self.urls_to_update)))
+            return asyncio.run(asyncio.gather(*(self.fetch_page(url) for url in self.urls_to_update)))
 
         # Preprocess URLs
         self.urls_to_update = self.preprocess_urls(urls)
-
-        # # Each URL corresponds to a page
-        # pages = {url: Page(url=url.convert_to_string()) for url in self.urls_to_update}
 
         # Extract slugs from URLs
         self.slugs = {url: self.extract_slug(url) for url in self.urls_to_update}
 
         # Fetch articles where slugs are not None
         self.time_taken_to_fetch_pages, pages = asyncio.run(
-            asyncio.gather(*(self.fetch_article(url) for url in self.urls_to_update))
+            asyncio.gather(*(self.fetch_page(url) for url in self.urls_to_update))
         )
 
         return pages

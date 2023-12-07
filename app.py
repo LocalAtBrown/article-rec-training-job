@@ -75,8 +75,8 @@ def execute_job(stage: Stage) -> None:
             logger.info(f"Executing task {task.__class__.__name__}...")
             task.execute()
             logger.info(f"Task {task.__class__.__name__} completed successfully")
-        except Exception as e:
-            logger.exception(f"Task {task.__class__.__name__} failed with exception: {e}")
+        except Exception:
+            logger.exception(f"Task {task.__class__.__name__} failed")
 
 
 if __name__ == "__main__":
