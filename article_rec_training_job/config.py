@@ -10,6 +10,10 @@ class EventFetcherType(StrEnum):
     GA4_BASE = "ga4_base"
 
 
+class PageFetcherType(StrEnum):
+    WP_BASE = "wp_base"
+
+
 @dataclass
 class EventFetcher:
     type: EventFetcherType
@@ -17,9 +21,16 @@ class EventFetcher:
 
 
 @dataclass
+class PageFetcher:
+    type: PageFetcherType
+    params: dict
+
+
+@dataclass
 class TaskUpdatePages:
     execution_timestamp_utc: datetime | None
     event_fetcher: EventFetcher
+    page_fetcher: PageFetcher
 
 
 @dataclass

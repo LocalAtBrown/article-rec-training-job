@@ -23,6 +23,11 @@ class URL:
     """
     Dataclass wrapper for URL strings, use for both page URLs and API endpoints.
     Hashable, so can be used as dict keys or set entries.
+
+    We use this instead of Pydantic's HttpUrl because in addition to validation
+    and building URLs from strings, we want to be able to build a URL by specifying
+    the parts separately, clean URLs by removing query parameters and fragments,
+    and make them hashable.
     """
 
     scheme: str

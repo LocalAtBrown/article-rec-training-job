@@ -11,7 +11,9 @@ from aiohttp import ClientResponseError
 from article_rec_db.models import Article, Page
 from article_rec_db.models.article import Language
 from loguru import logger
-from pydantic import HttpUrl
+from pydantic import Field as PydanticField
+from pydantic import HttpUrl, field_validator
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from article_rec_training_job.components.page_fetchers.helpers import (
     URL,
@@ -51,7 +53,7 @@ class APIQueryParams:
         return urlencode(params_dict)
 
 
-@dataclass
+@pydantic_dataclass
 class BaseFetcher:
     """
     Base WordPress fetcher. Tries to fetch articles from the a given partner site
@@ -63,21 +65,55 @@ class BaseFetcher:
 
     # Required site name
     site_name: str
-    # Required page URL prefix that includes protocol and domain name, like https://dallasfreepress.com
-    url_prefix: str
     # Regex pattern to match slug from a path. Need to include a named group called "slug".
     slug_from_path_regex: str
     # WordPress ID of tag to signify in-house content
-    tag_id_in_house_content: int | None = None
+    tag_id_in_house_content: int | None
     # Maximum number of retries for a request
-    request_maximum_attempts: int = 10
+    request_maximum_attempts: int
     # Maximum backoff before retrying a request, in seconds
-    request_maximum_backoff: int = 60
+    request_maximum_backoff: int
+    # Required page URL prefix that includes protocol and domain name, like https://dallasfreepress.com
+    url_prefix: str = PydanticField(pattern=r"^https?://[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+    # Regex patterns to identify content language from a path.
+    language_from_path_regex: dict[Language, str] = field(default_factory=dict)
 
     urls_to_update: set[URL] = field(init=False, repr=False)
     slugs: dict[URL, str] = field(init=False, repr=False)
     time_taken_to_fetch_pages: float = field(init=False, repr=False)
     num_articles_fetched: int = field(init=False, repr=False)
+
+    @field_validator("slug_from_path_regex", mode="after")
+    def slug_regex_must_have_slug_group(cls, value: str) -> str:
+        """
+        Validates that the slug regex has a named group called "slug".
+        """
+        if "slug" not in re.compile(value).groupindex:
+            raise ValueError("Slug regex must have a named group called 'slug'")
+        return value
+
+    @field_validator("slug_from_path_regex", mode="after")
+    def slug_regex_must_cover_entire_path(cls, value: str) -> str:
+        """
+        Validates that the slug regex is meant to work on the entire path
+        using re.Pattern.fullmatch().
+        """
+        if value[0] != "^" or value[-1] != "$":
+            raise ValueError("Slug regex must start with ^ and end with $, i.e., it must cover the entire path")
+        return value
+
+    @field_validator("language_from_path_regex", mode="after")
+    def language_regexes_must_cover_entire_path(cls, value: dict[Language, str]) -> dict[Language, str]:
+        """
+        Validates that the language regexes are meant to work on the entire path
+        using re.Pattern.fullmatch().
+        """
+        for language, pattern in value.items():
+            if pattern[0] != "^" or pattern[-1] != "$":
+                raise ValueError(
+                    f"Language regex for {language.value} must start with ^ and end with $, i.e., it must cover the entire path"
+                )
+        return value
 
     @cached_property
     def endpoint_posts(self) -> URL:
@@ -105,11 +141,22 @@ class BaseFetcher:
         """
         return re.compile(rf"{self.slug_from_path_regex}")
 
+    @cached_property
+    def patterns_language(self) -> dict[Language, re.Pattern[str]]:
+        """
+        Regex patterns to match the language.
+        """
+        return {language: re.compile(rf"{pattern}") for language, pattern in self.language_from_path_regex.items()}
+
     def infer_language(self, url: URL) -> Language:
         """
         Infer content language from a given URL.
-        Returns English as default; override this method in subclasses to implement custom site logic.
+        Returns English as a fallback.
         """
+        path = url.path
+        for language, pattern in self.patterns_language.items():
+            if pattern.fullmatch(path) is not None:
+                return language
         return Language.ENGLISH
 
     def extract_slug(self, url: URL) -> str | None:
@@ -119,7 +166,7 @@ class BaseFetcher:
         path = url.path
 
         # Extract slug from URL path
-        match (slug_match := self.pattern_slug.search(path)):
+        match (slug_match := self.pattern_slug.fullmatch(path)):
             case None:
                 slug = None
             case re.Match:
@@ -138,7 +185,7 @@ class BaseFetcher:
         Preprocesses a given set of URLs.
         """
         # Remove URLs with invalid prefix
-        urls = {url for url in urls if self.url_pattern_prefix.match(url) is not None}
+        urls = {url for url in urls if self.pattern_prefix.match(url) is not None}
 
         # Remove params, query, and fragment from each URL; remove duplicates afterward
         url_objects = {URL.create_cleaned_from_string(url) for url in urls}
