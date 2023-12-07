@@ -57,7 +57,8 @@ class BaseFetcher:
     Base WordPress fetcher. Tries to fetch articles from the a given partner site
     using the WordPress REST API v2. If a page is succesfully fetched, creates an
     Article object with relevant metadata to accompany its Page object. If a page
-    is not succesfully fetched, merely creates and returns a Page object wrapper.
+    is not succesfully fetched, merely creates Page object without an Article object
+    inside it. Returns a list of Page objects.
     """
 
     # Required site name
@@ -76,7 +77,6 @@ class BaseFetcher:
     urls_to_update: set[URL] = field(init=False, repr=False)
     slugs: dict[URL, str] = field(init=False, repr=False)
     time_taken_to_fetch_pages: float = field(init=False, repr=False)
-    num_pages_fetched: int = field(init=False, repr=False)
     num_articles_fetched: int = field(init=False, repr=False)
 
     @cached_property
@@ -233,10 +233,13 @@ class BaseFetcher:
         # Extract slugs from URLs
         self.slugs = {url: self.extract_slug(url) for url in self.urls_to_update}
 
-        # Fetch articles where slugs are not None
+        # Fetch articles
         self.time_taken_to_fetch_pages, pages = asyncio.run(
             asyncio.gather(*(self.fetch_page(url) for url in self.urls_to_update))
         )
+
+        # Count articles
+        self.num_articles_fetched = sum([len(page.article) == 1 for page in pages])
 
         return pages
 
@@ -244,4 +247,12 @@ class BaseFetcher:
         """
         Post-fetch actions.
         """
-        pass
+        num_articles = len(self.urls_to_update)
+        num_slugs = len([slug for slug in self.slugs.values() if slug is not None])
+        average_article_latency = self.time_taken_to_fetch_pages / self.num_articles_fetched
+
+        logger.info(f"{num_articles} URLs passed preprocessing, corresponding to {num_articles} pages")
+        logger.info(f"{num_slugs} slugs were successfully extracted from URLs")
+        logger.info(f"{self.num_articles_fetched} articles out of {num_articles} were successfully fetched")
+        logger.info(f"Fetching took {self.time_taken_to_fetch_pages:.3f} seconds")
+        logger.info(f"Fetching an article took on average {average_article_latency:.3f} seconds")
