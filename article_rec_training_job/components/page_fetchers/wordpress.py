@@ -132,7 +132,7 @@ class BaseFetcher:
         """
         return build_url(
             scheme=self.url_prefix.scheme,
-            host=self.url_prefix.host,
+            host=self.url_prefix.host,  # type: ignore
             path="/wp-json/wp/v2/posts/",
         )
 
@@ -157,7 +157,7 @@ class BaseFetcher:
         """
         path = url.path
         for language, pattern in self.patterns_language.items():
-            if pattern.fullmatch(path) is not None:
+            if pattern.fullmatch(path) is not None:  # type: ignore
                 return language
         return Language.ENGLISH
 
@@ -167,7 +167,7 @@ class BaseFetcher:
         """
         path = url.path
 
-        slug_match = self.pattern_slug.fullmatch(path)
+        slug_match = self.pattern_slug.fullmatch(path)  # type: ignore
         if slug_match is None:
             logger.info(
                 f"Could not extract slug from path {path}. It will be considered a non-article page.",
@@ -210,8 +210,8 @@ class BaseFetcher:
         query = APIQueryParams(slug=slug, lang=language, _fields=fields)
         endpoint = build_url(
             scheme=self.endpoint_posts.scheme,
-            host=self.endpoint_posts.host,
-            path=self.endpoint_posts.path,
+            host=self.endpoint_posts.host,  # type: ignore
+            path=self.endpoint_posts.path,  # type: ignore
             query=str(query),
         )
 

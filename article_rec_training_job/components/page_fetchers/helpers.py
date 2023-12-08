@@ -31,7 +31,7 @@ def clean_url(url: HttpUrl) -> HttpUrl:
     """
     Cleans URL by removing all query parameters and fragments.
     """
-    url_new = build_url(scheme=url.scheme, host=url.host, path=url.path)
+    url_new = build_url(scheme=url.scheme, host=url.host, path=url.path)  # type: ignore
     return url_new
 
 
