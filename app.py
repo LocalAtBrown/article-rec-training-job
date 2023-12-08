@@ -3,10 +3,11 @@ from enum import StrEnum
 
 from loguru import logger
 
-from article_rec_training_job.components import GA4BaseEventFetcher
+from article_rec_training_job.components import GA4BaseEventFetcher, WPBasePageFetcher
 from article_rec_training_job.config import (
     Config,
     EventFetcherType,
+    PageFetcherType,
     create_config_object,
 )
 from article_rec_training_job.tasks import Task, UpdatePages
@@ -49,9 +50,22 @@ def create_update_pages_task(config: Config) -> UpdatePages:
                 date_end=date_end,
             )
 
+    match task_config.page_fetcher.type:
+        case PageFetcherType.WP_BASE:
+            page_fetcher = WPBasePageFetcher(
+                site_name=config.site,
+                url_prefix_str=task_config.page_fetcher.params["url_prefix"],
+                slug_from_path_regex=task_config.page_fetcher.params["slug_from_path_regex"],
+                language_from_path_regex=task_config.page_fetcher.params["language_from_path_regex"],
+                tag_id_in_house_content=task_config.page_fetcher.params.get("tag_id_in_house_content"),
+                request_maximum_attempts=task_config.page_fetcher.params.get("request_maximum_attempts", 10),
+                request_maximum_backoff=task_config.page_fetcher.params.get("request_maximum_backoff", 60),
+            )
+
     return UpdatePages(
         execution_timestamp=execution_timestamp,
         event_fetcher=event_fetcher,
+        page_fetcher=page_fetcher,
     )
 
 

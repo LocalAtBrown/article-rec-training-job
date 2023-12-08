@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
 from typing import Any
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 
 from aiohttp import ClientResponseError
 from article_rec_db.models import Article, Page
@@ -16,8 +16,9 @@ from pydantic import HttpUrl, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from article_rec_training_job.components.page_fetchers.helpers import (
-    URL,
+    build_url,
     clean_html,
+    clean_url,
     request,
 )
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
@@ -38,13 +39,14 @@ class APIQueryParams:
     def dict_factory(items: list[tuple[str, Any]]) -> dict[str, Any]:
         output = dict()
         for key, value in items:
-            # Remove items where value is None
             if value is None:
+                # Remove items where value is None
                 continue
-
-            # Convert list values to comma-separated strings
-            if isinstance(value, list):
+            elif isinstance(value, list):
+                # Convert list values to comma-separated strings
                 output[key] = ",".join(value)
+            else:
+                output[key] = value
 
         return output
 
@@ -74,12 +76,12 @@ class BaseFetcher:
     # Maximum backoff before retrying a request, in seconds
     request_maximum_backoff: int
     # Required page URL prefix that includes protocol and domain name, like https://dallasfreepress.com
-    url_prefix: str = PydanticField(pattern=r"^https?://[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+    url_prefix_str: str = PydanticField(pattern=r"^https?://[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
     # Regex patterns to identify content language from a path.
     language_from_path_regex: dict[Language, str] = field(default_factory=dict)
 
-    urls_to_update: set[URL] = field(init=False, repr=False)
-    slugs: dict[URL, str] = field(init=False, repr=False)
+    urls_to_update: set[HttpUrl] = field(init=False, repr=False)
+    slugs: dict[HttpUrl, str] = field(init=False, repr=False)
     time_taken_to_fetch_pages: float = field(init=False, repr=False)
     num_articles_fetched: int = field(init=False, repr=False)
 
@@ -116,23 +118,23 @@ class BaseFetcher:
         return value
 
     @cached_property
-    def endpoint_posts(self) -> URL:
-        """
-        API posts endpoint.
-        """
-        scheme, netloc, _, _, _, _ = urlparse(self.url_prefix)
-        return URL(
-            scheme=scheme,
-            netloc=netloc,
-            path="wp-json/wp/v2/posts",
-        )
-
-    @cached_property
-    def pattern_prefix(self) -> re.Pattern[str]:
+    def url_prefix(self) -> HttpUrl:
         """
         Regex pattern to match the prefix.
         """
-        return re.compile(rf"{self.url_prefix}")
+        # Validation step ensures self.url_prefix_str only has scheme and host
+        return HttpUrl(self.url_prefix_str)
+
+    @cached_property
+    def endpoint_posts(self) -> HttpUrl:
+        """
+        API posts endpoint.
+        """
+        return build_url(
+            scheme=self.url_prefix.scheme,
+            host=self.url_prefix.host,
+            path="/wp-json/wp/v2/posts/",
+        )
 
     @cached_property
     def pattern_slug(self) -> re.Pattern[str]:
@@ -148,7 +150,7 @@ class BaseFetcher:
         """
         return {language: re.compile(rf"{pattern}") for language, pattern in self.language_from_path_regex.items()}
 
-    def infer_language(self, url: URL) -> Language:
+    def infer_language(self, url: HttpUrl) -> Language:
         """
         Infer content language from a given URL.
         Returns English as a fallback.
@@ -159,40 +161,34 @@ class BaseFetcher:
                 return language
         return Language.ENGLISH
 
-    def extract_slug(self, url: URL) -> str | None:
+    def extract_slug(self, url: HttpUrl) -> str | None:
         """
-        Constructs a single API endpoint from a given URL.
+        Grabs the slug from a given URL.
         """
         path = url.path
 
-        # Extract slug from URL path
-        match (slug_match := self.pattern_slug.fullmatch(path)):
-            case None:
-                slug = None
-            case re.Match:
-                slug = slug_match.group("slug")
-
-        # If slug is None, warn
-        if slug is None:
+        slug_match = self.pattern_slug.fullmatch(path)
+        if slug_match is None:
             logger.info(
                 f"Could not extract slug from path {path}. It will be considered a non-article page.",
             )
+            return
 
-        return slug
+        return slug_match.group("slug")
 
-    def preprocess_urls(self, urls: set[str]) -> set[URL]:
+    def preprocess_urls(self, urls: set[HttpUrl]) -> set[HttpUrl]:
         """
         Preprocesses a given set of URLs.
         """
         # Remove URLs with invalid prefix
-        urls = {url for url in urls if self.pattern_prefix.match(url) is not None}
+        urls = {url for url in urls if url.scheme == self.url_prefix.scheme and url.host == self.url_prefix.host}
 
         # Remove params, query, and fragment from each URL; remove duplicates afterward
-        url_objects = {URL.create_cleaned_from_string(url) for url in urls}
+        url_objects = {clean_url(url) for url in urls}
 
         return url_objects
 
-    async def fetch_page(self, url: URL) -> Page:
+    async def fetch_page(self, url: HttpUrl) -> Page:
         """
         Fetches a single article from a given URL. Returns a Page object
         containing an Article object if the article is successfully fetched,
@@ -200,7 +196,7 @@ class BaseFetcher:
         or if it doesn't have a slug.
         """
         slug = self.slugs[url]
-        page_without_article = Page(url=url.convert_to_string())
+        page_without_article = Page(url=str(url))
 
         # Don't go any further if slug is None, i.e., page is not an article
         if slug is None:
@@ -211,17 +207,12 @@ class BaseFetcher:
 
         # Construct API endpoint
         fields = ["id", "date_gmt", "modified_gmt", "slug", "status", "type", "title", "content", "excerpt", "tags"]
-        endpoint = URL(
+        query = APIQueryParams(slug=slug, lang=language, _fields=fields)
+        endpoint = build_url(
             scheme=self.endpoint_posts.scheme,
-            netloc=self.endpoint_posts.netloc,
+            host=self.endpoint_posts.host,
             path=self.endpoint_posts.path,
-            query=str(
-                APIQueryParams(
-                    slug=slug,
-                    lang=language,
-                    _fields=fields,
-                )
-            ),
+            query=str(query),
         )
 
         # Fetch article
@@ -270,9 +261,12 @@ class BaseFetcher:
         Fetches pages from a given list of URLs.
         """
 
+        async def fetch_pages_async(urls: set[HttpUrl]) -> list[Page]:
+            return await asyncio.gather(*[self.fetch_page(url) for url in urls])
+
         @get_elapsed_time
-        def fetch_pages() -> list[Page]:
-            return asyncio.run(asyncio.gather(*(self.fetch_page(url) for url in self.urls_to_update)))
+        def fetch_pages(urls: set[HttpUrl]) -> list[Page]:
+            return asyncio.run(fetch_pages_async(urls))
 
         # Preprocess URLs
         self.urls_to_update = self.preprocess_urls(urls)
@@ -281,9 +275,7 @@ class BaseFetcher:
         self.slugs = {url: self.extract_slug(url) for url in self.urls_to_update}
 
         # Fetch articles
-        self.time_taken_to_fetch_pages, pages = asyncio.run(
-            asyncio.gather(*(self.fetch_page(url) for url in self.urls_to_update))
-        )
+        self.time_taken_to_fetch_pages, pages = fetch_pages(self.urls_to_update)
 
         # Count articles
         self.num_articles_fetched = sum([len(page.article) == 1 for page in pages])
