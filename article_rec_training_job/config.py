@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from dacite import Config as DataclassFromDictConfig
 from dacite import from_dict as dataclass_from_dict
@@ -10,16 +11,27 @@ class EventFetcherType(StrEnum):
     GA4_BASE = "ga4_base"
 
 
+class PageFetcherType(StrEnum):
+    WP_BASE = "wp_base"
+
+
 @dataclass
 class EventFetcher:
     type: EventFetcherType
-    params: dict
+    params: dict[str, Any]
+
+
+@dataclass
+class PageFetcher:
+    type: PageFetcherType
+    params: dict[str, Any]
 
 
 @dataclass
 class TaskUpdatePages:
     execution_timestamp_utc: datetime | None
     event_fetcher: EventFetcher
+    page_fetcher: PageFetcher
 
 
 @dataclass
@@ -40,5 +52,5 @@ class Config:
     tasks: Tasks
 
 
-def create_config_object(config_dict: dict) -> Config:
+def create_config_object(config_dict: dict[str, Any]) -> Config:
     return dataclass_from_dict(data_class=Config, data=config_dict, config=DataclassFromDictConfig(cast=[StrEnum]))

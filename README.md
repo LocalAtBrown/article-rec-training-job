@@ -66,7 +66,8 @@ specified in the mypy.ini file.
 ### Update Dependencies
 
 To update dependencies in your local environment, make changes to the `pyproject.toml` file then run `poetry update`.
-To update `requirements.txt` for the container, run `poetry export -o requirements.txt --without-hashes`.
+To update `requirements.txt` for the container, run `poetry export -o requirements.txt --without-hashes`. The pre-commit
+hook also automatically re-creates the `requirements.txt` file if it detects changes in `pyproject.toml`.
 
 ## Local Usage
 

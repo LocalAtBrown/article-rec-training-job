@@ -1,0 +1,29 @@
+name: run checks
+on:
+  pull_request:
+    branches:
+      - dev
+      - prod
+    paths:
+      - "**.py"
+
+jobs:
+  run-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          # change this python version if the python version is changed in pyproject.toml and the Dockerfile
+          python-version: "3.11.6"
+      - name: Set up Poetry
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: 1.7.1
+      - name: Install dependencies
+        run: poetry config virtualenvs.create false && poetry install --no-interaction
+      - name: Run mypy
+        run: mypy
+      # - name: Run model tests on SQLModel-created mock DB
+        # run: pytest tests
