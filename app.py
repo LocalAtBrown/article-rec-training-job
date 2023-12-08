@@ -56,8 +56,8 @@ def create_update_pages_task(config: Config) -> UpdatePages:
                 site_name=config.site,
                 url_prefix_str=task_config.page_fetcher.params["url_prefix"],
                 slug_from_path_regex=task_config.page_fetcher.params["slug_from_path_regex"],
-                language_from_path_regex=task_config.page_fetcher.params["language_from_path_regex"],
-                tag_id_in_house_content=task_config.page_fetcher.params.get("tag_id_in_house_content"),
+                language_from_path_regex=task_config.page_fetcher.params.get("language_from_path_regex", dict()),
+                tag_id_republished_content=task_config.page_fetcher.params.get("tag_id_republished_content"),
                 request_maximum_attempts=task_config.page_fetcher.params.get("request_maximum_attempts", 10),
                 request_maximum_backoff=task_config.page_fetcher.params.get("request_maximum_backoff", 60),
             )

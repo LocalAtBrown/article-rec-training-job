@@ -2,7 +2,7 @@ from enum import Enum
 from urllib.parse import urlunparse
 
 import nh3
-from aiohttp import ClientResponse, ClientSession
+from aiohttp import ClientSession
 from loguru import logger
 from pydantic import HttpUrl
 from tenacity import AsyncRetrying, stop_after_attempt, wait_random_exponential
@@ -41,7 +41,7 @@ def clean_html(html: str) -> str:
     return nh3.clean(html, tags=HTMLAllowedEntities.TAGS.value, attributes=HTMLAllowedEntities.ATTRIBUTES.value)
 
 
-async def request(url: HttpUrl, maximum_attempts: int, maximum_backoff: int) -> ClientResponse:
+async def request_from_api(url: HttpUrl, maximum_attempts: int, maximum_backoff: int) -> dict:
     """
     Performs an HTTP GET request to the given URL with random-exponential
     sleep before retrying.
@@ -55,4 +55,4 @@ async def request(url: HttpUrl, maximum_attempts: int, maximum_backoff: int) -> 
         ):
             with attempt:
                 async with session.get(str(url), raise_for_status=True) as response:
-                    return response
+                    return await response.json()

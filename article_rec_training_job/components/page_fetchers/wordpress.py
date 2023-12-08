@@ -19,7 +19,7 @@ from article_rec_training_job.components.page_fetchers.helpers import (
     build_url,
     clean_html,
     clean_url,
-    request,
+    request_from_api,
 )
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
 
@@ -70,7 +70,7 @@ class BaseFetcher:
     # Regex pattern to match slug from a path. Need to include a named group called "slug".
     slug_from_path_regex: str
     # WordPress ID of tag to signify in-house content
-    tag_id_in_house_content: int | None
+    tag_id_republished_content: int | None
     # Maximum number of retries for a request
     request_maximum_attempts: int
     # Maximum backoff before retrying a request, in seconds
@@ -218,7 +218,7 @@ class BaseFetcher:
         # Fetch article
         logger.info(f"Requesting WordPress API for {slug}")
         try:
-            response = await request(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
+            data = await request_from_api(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
         except ClientResponseError as e:
             logger.warning(
                 f"Request to WordPress API for slug {slug} failed because response code indicated an error: {e}"
@@ -229,8 +229,6 @@ class BaseFetcher:
                 f"Request to WordPress API for slug {slug} failed because of an unknown error. Traceback:"
             )
             return page_without_article
-        else:
-            data = await response.json()
 
         # Check that response is actually what we want.
         # If so, build Article object and return it inside the Page object.
@@ -247,9 +245,9 @@ class BaseFetcher:
                     site_published_at=datetime.fromisoformat(datum["date_gmt"]),
                     site_updated_at=datetime.fromisoformat(datum["modified_gmt"]),
                     language=language,
-                    is_in_house_content=self.tag_id_in_house_content in datum["tags"],
+                    is_in_house_content=self.tag_id_republished_content not in datum["tags"],
                 )
-                return Page(url=url.convert_to_string(), article=[article])
+                return Page(url=str(url), article=[article])
             case _:
                 logger.warning(
                     f"Request to WordPress API for slug {slug} successfully returned, but response is not what we want",
@@ -288,10 +286,14 @@ class BaseFetcher:
         """
         num_articles = len(self.urls_to_update)
         num_slugs = len([slug for slug in self.slugs.values() if slug is not None])
-        average_article_latency = self.time_taken_to_fetch_pages / self.num_articles_fetched
+        average_article_latency = (
+            self.time_taken_to_fetch_pages / self.num_articles_fetched if self.num_articles_fetched > 0 else None
+        )
 
         logger.info(f"{num_articles} URLs passed preprocessing, corresponding to {num_articles} pages")
         logger.info(f"{num_slugs} slugs were successfully extracted from URLs")
         logger.info(f"{self.num_articles_fetched} articles out of {num_articles} were successfully fetched")
         logger.info(f"Fetching took {self.time_taken_to_fetch_pages:.3f} seconds")
-        logger.info(f"Fetching an article took on average {average_article_latency:.3f} seconds")
+
+        if average_article_latency is not None:
+            logger.info(f"Fetching an article took on average {average_article_latency:.3f} seconds")
