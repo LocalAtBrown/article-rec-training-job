@@ -81,7 +81,7 @@ class BaseFetcher:
     language_from_path_regex: dict[Language, str] = field(default_factory=dict)
 
     urls_to_update: set[HttpUrl] = field(init=False, repr=False)
-    slugs: dict[HttpUrl, str] = field(init=False, repr=False)
+    slugs: dict[HttpUrl, str | None] = field(init=False, repr=False)
     time_taken_to_fetch_pages: float = field(init=False, repr=False)
     num_articles_fetched: int = field(init=False, repr=False)
 
@@ -172,7 +172,7 @@ class BaseFetcher:
             logger.info(
                 f"Could not extract slug from path {path}. It will be considered a non-article page.",
             )
-            return
+            return None
 
         return slug_match.group("slug")
 
@@ -196,7 +196,7 @@ class BaseFetcher:
         or if it doesn't have a slug.
         """
         slug = self.slugs[url]
-        page_without_article = Page(url=str(url))
+        page_without_article = Page(url=str(url))  # type: ignore
 
         # Don't go any further if slug is None, i.e., page is not an article
         if slug is None:
@@ -290,9 +290,8 @@ class BaseFetcher:
             self.time_taken_to_fetch_pages / self.num_articles_fetched if self.num_articles_fetched > 0 else None
         )
 
-        logger.info(f"{num_articles} URLs passed preprocessing, corresponding to {num_articles} pages")
+        logger.info(f"{num_articles} URLs passed preprocessing")
         logger.info(f"{num_slugs} slugs were successfully extracted from URLs")
-        logger.info(f"{self.num_articles_fetched} articles out of {num_articles} were successfully fetched")
         logger.info(f"Fetching took {self.time_taken_to_fetch_pages:.3f} seconds")
 
         if average_article_latency is not None:

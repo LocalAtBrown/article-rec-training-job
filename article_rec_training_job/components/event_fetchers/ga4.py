@@ -186,7 +186,7 @@ class BaseFetcher:
         # Convert event_timestamp int to pandas datetime
         df[OutputSchema.event_timestamp] = pd.to_datetime(df[OutputSchema.event_timestamp], unit="ns", utc=True)
 
-        return df
+        return df.pipe(OutputDataFrame)  # pipe to appease mypy, task will do the actual schema validation
 
     @final
     def fetch(self) -> OutputDataFrame:

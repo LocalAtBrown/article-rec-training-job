@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 from urllib.parse import urlunparse
 
 import nh3
@@ -17,7 +18,7 @@ class HTMLAllowedEntities(Enum):
     }
 
 
-def build_url(scheme: str, host: str, path: str = "/", query: str = "", fragment: str = "") -> HttpUrl:
+def build_url(scheme: str, host: str, path: str, query: str = "", fragment: str = "") -> HttpUrl:
     """
     Builds a URL from its components.
     """
@@ -41,7 +42,7 @@ def clean_html(html: str) -> str:
     return nh3.clean(html, tags=HTMLAllowedEntities.TAGS.value, attributes=HTMLAllowedEntities.ATTRIBUTES.value)
 
 
-async def request_from_api(url: HttpUrl, maximum_attempts: int, maximum_backoff: int) -> dict:
+async def request_from_api(url: HttpUrl, maximum_attempts: int, maximum_backoff: int) -> dict[str, Any]:
     """
     Performs an HTTP GET request to the given URL with random-exponential
     sleep before retrying.
@@ -55,4 +56,6 @@ async def request_from_api(url: HttpUrl, maximum_attempts: int, maximum_backoff:
         ):
             with attempt:
                 async with session.get(str(url), raise_for_status=True) as response:
-                    return await response.json()
+                    data = await response.json()
+
+    return data

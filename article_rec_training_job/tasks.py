@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Protocol, Type
+from typing import Protocol, runtime_checkable
 
 import pandera as pa
 from article_rec_db.models import Page
 from loguru import logger
-from pydantic import HttpUrl, validate_call
-from sqlmodel import Session
+from pydantic import ConfigDict, HttpUrl, validate_call
 
 from article_rec_training_job.shared.types.event_fetchers import (
     OutputDataFrame as FetchedEventsDataFrame,
@@ -29,6 +28,7 @@ class EventFetcher(Protocol):
         ...
 
 
+@runtime_checkable
 class PageFetcher(Protocol):
     def fetch(self, urls: set[HttpUrl]) -> list[Page]:
         ...
@@ -55,7 +55,7 @@ class FetchesEvents:
 
 class FetchesPages:
     @staticmethod
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
     def fetch_pages(fetcher: PageFetcher, urls: set[HttpUrl]) -> list[Page]:
         pages = fetcher.fetch(urls)
         fetcher.post_fetch()
@@ -68,7 +68,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
     execution_timestamp: datetime
     event_fetcher: EventFetcher
     page_fetcher: PageFetcher
-    sa_session_factory: Type[Session]
+    # sa_session_factory: Type[Session]
 
     def execute(self) -> None:
         # First, fetch events
@@ -84,13 +84,12 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
         # as well as including an Article object in a Page object that corresponds to the page's article.
         page_urls = set(df[FetchEventsSchema.page_url])
         logger.info(f"Found {len(page_urls)} URLs from events")
-        pages = self.fetch_pages(self.page_fetcher, page_urls)
+        pages = self.fetch_pages(self.page_fetcher, {HttpUrl(url) for url in page_urls})
+        articles = [page.article[0] for page in pages if page.article is not None]
+        logger.info(f"Fetched {len(pages)} pages and {len(articles)} articles")
 
-        # Finally, update pages
-        with self.sa_session_factory() as session:
-            # If a page has an article, that article is updated/created as well
-            session.add_all(pages)
-            session.commit()
+        # Finally, upsert pages and articles in DB
+        # TODO
 
 
 @dataclass
