@@ -6,7 +6,12 @@ import nh3
 from aiohttp import ClientSession
 from loguru import logger
 from pydantic import HttpUrl
-from tenacity import AsyncRetrying, stop_after_attempt, wait_random_exponential
+from tenacity import (
+    AsyncRetrying,
+    RetryCallState,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 
 class HTMLAllowedEntities(Enum):
@@ -42,17 +47,24 @@ def clean_html(html: str) -> str:
     return nh3.clean(html, tags=HTMLAllowedEntities.TAGS.value, attributes=HTMLAllowedEntities.ATTRIBUTES.value)
 
 
-async def request_from_api(url: HttpUrl, maximum_attempts: int, maximum_backoff: int) -> dict[str, Any]:
+async def request_from_api(
+    url: HttpUrl, maximum_attempts: int, maximum_backoff: int, log_attempts: bool = False
+) -> dict[str, Any]:
     """
     Performs an HTTP GET request to the given URL with random-exponential
     sleep before retrying.
     """
+
+    def log_attempt(state: RetryCallState) -> None:
+        if log_attempts:
+            logger.info(f"Attempt {state.attempt_number} of {maximum_attempts} at requesting {url}")
+
     async with ClientSession() as session:
         async for attempt in AsyncRetrying(
             reraise=True,
             wait=wait_random_exponential(max=maximum_backoff),
             stop=stop_after_attempt(maximum_attempts),
-            before=lambda state: logger.info(f"Attempt {state.attempt_number} of {maximum_attempts} at requesting {url}"),
+            before=log_attempt,
         ):
             with attempt:
                 async with session.get(str(url), raise_for_status=True) as response:

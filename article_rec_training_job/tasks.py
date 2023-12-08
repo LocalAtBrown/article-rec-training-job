@@ -85,7 +85,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
         page_urls = set(df[FetchEventsSchema.page_url])
         logger.info(f"Found {len(page_urls)} URLs from events")
         pages = self.fetch_pages(self.page_fetcher, {HttpUrl(url) for url in page_urls})
-        articles = [page.article[0] for page in pages if page.article is not None]
+        articles = [page.article for page in pages if page.article is not None]
         logger.info(f"Fetched {len(pages)} pages and {len(articles)} articles")
 
         # Finally, upsert pages and articles in DB

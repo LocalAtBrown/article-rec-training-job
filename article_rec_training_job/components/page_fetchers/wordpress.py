@@ -196,7 +196,7 @@ class BaseFetcher:
         or if it doesn't have a slug.
         """
         slug = self.slugs[url]
-        page_without_article = Page(url=str(url))  # type: ignore
+        page_without_article = Page(url=url)
 
         # Don't go any further if slug is None, i.e., page is not an article
         if slug is None:
@@ -247,7 +247,7 @@ class BaseFetcher:
                     language=language,
                     is_in_house_content=self.tag_id_republished_content not in datum["tags"],
                 )
-                return Page(url=str(url), article=[article])
+                return Page(url=str(url), article=article)
             case _:
                 logger.warning(
                     f"Request to WordPress API for slug {slug} successfully returned, but response is not what we want",
@@ -276,7 +276,7 @@ class BaseFetcher:
         self.time_taken_to_fetch_pages, pages = fetch_pages(self.urls_to_update)
 
         # Count articles
-        self.num_articles_fetched = sum([len(page.article) == 1 for page in pages])
+        self.num_articles_fetched = sum([page.article is not None for page in pages])
 
         return pages
 
