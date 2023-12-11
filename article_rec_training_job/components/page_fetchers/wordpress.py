@@ -247,7 +247,7 @@ class BaseFetcher:
                     language=language,
                     is_in_house_content=self.tag_id_republished_content not in datum["tags"],
                 )
-                return Page(url=str(url), article=article)
+                return Page(url=url, article=article)
             case _:
                 logger.warning(
                     f"Request to WordPress API for slug {slug} successfully returned, but response is not what we want",
