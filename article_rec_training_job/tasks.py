@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from article_rec_training_job.shared.helpers.time import get_elapsed_time
 from article_rec_training_job.shared.types.event_fetchers import (
     OutputDataFrame as FetchedEventsDataFrame,
 )
@@ -75,7 +76,9 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
 
     pages: list[Page] = field(init=False, repr=False)
     pages_article: list[Page] = field(init=False, repr=False)
+    # To-do consolidate all post-execution metrics here
 
+    @get_elapsed_time
     def write_pages(self) -> None:
         with self.sa_session_factory() as session:
             # First, write pages while ignoring duplicates
@@ -99,7 +102,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
             result_fetch_page_ids = session.execute(statement_fetch_page_ids).all()
             dict_page_url_to_id = {HttpUrl(row[1]): row[0] for row in result_fetch_page_ids}
 
-            # Finally, write articles. If there's a duplicate, update it
+            # Finally, write articles. If there's a duplicate, and that duplicate has updated information, update it
             logger.info("Writing articles to DB")
             statement_write_articles = insert(Article).values(
                 [{**page.article.model_dump(), "page_id": dict_page_url_to_id[page.url]} for page in self.pages_article]
@@ -143,7 +146,8 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
         logger.info(f"Fetched {len(self.pages)} pages, of which fetched {len(self.pages_article)} articles")
 
         # Finally, upsert pages and articles in DB
-        self.write_pages()
+        time_taken_to_write_pages = self.write_pages()
+        logger.info(f"Wrote pages and articles to DB in {time_taken_to_write_pages} seconds")
 
 
 @dataclass
