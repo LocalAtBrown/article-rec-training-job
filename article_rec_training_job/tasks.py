@@ -116,11 +116,12 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
                     "db_updated_at": datetime.utcnow(),
                 },
                 where=(Article.site_updated_at != statement_write_articles.excluded.site_updated_at),
-            )
-            result_write_articles = session.execute(statement_write_articles)
+            ).returning(Article.page_id)
+            result_write_articles = session.scalars(statement_write_articles).unique().all()
             session.commit()
             logger.info(
-                f"Wrote {result_write_articles.rowcount} new articles to DB and updated {len(self.pages_article) - result_write_articles.rowcount} existing articles"
+                f"Wrote or updated {len(result_write_articles)} articles to DB, "
+                + f"and ignored {len(self.pages_article) - len(result_write_articles)} duplicates with no changes"
             )
 
     def execute(self) -> None:
