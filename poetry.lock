@@ -1827,6 +1827,17 @@ doc = ["Sphinx (>=7)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)"]
 test = ["coverage[toml] (>=7)", "mypy (>=1.2.0)", "pytest (>=7)"]
 
 [[package]]
+name = "types-psycopg2"
+version = "2.9.21.20"
+description = "Typing stubs for psycopg2"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "types-psycopg2-2.9.21.20.tar.gz", hash = "sha256:73baea689575bf5bb1b915b783fb0524044c6242928aeef1ae5a9e32f0780d3d"},
+    {file = "types_psycopg2-2.9.21.20-py3-none-any.whl", hash = "sha256:5b1e2e1d9478f8a298ea7038f8ea988e0ccc1f0af39f84636d57ef0da6f29e95"},
+]
+
+[[package]]
 name = "types-pytz"
 version = "2023.3.1.1"
 description = "Typing stubs for pytz"
@@ -2120,4 +2131,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "bf20d9ddc0cc9da35e2d9b4fa74b9b88b0835b6cff921f542b5987da7d05cb2c"
+content-hash = "1830e71d879d20d3146bb1f45afc54f785f6a2e15b98c07198d6f35de98562fa"

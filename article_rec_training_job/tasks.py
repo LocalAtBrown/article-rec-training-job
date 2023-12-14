@@ -1,13 +1,17 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Protocol, runtime_checkable
 
 import pandera as pa
-from article_rec_db.models import Page
+from article_rec_db.models import Article, Page
 from loguru import logger
 from pydantic import ConfigDict, HttpUrl, validate_call
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session, sessionmaker
 
+from article_rec_training_job.shared.helpers.time import get_elapsed_time
 from article_rec_training_job.shared.types.event_fetchers import (
     OutputDataFrame as FetchedEventsDataFrame,
 )
@@ -68,7 +72,62 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
     execution_timestamp: datetime
     event_fetcher: EventFetcher
     page_fetcher: PageFetcher
-    # sa_session_factory: Type[Session]
+    sa_session_factory: sessionmaker[Session]
+
+    pages: list[Page] = field(init=False, repr=False)
+    pages_article: list[Page] = field(init=False, repr=False)
+    # To-do consolidate all post-execution metrics here
+
+    @get_elapsed_time
+    def write_pages(self) -> None:
+        with self.sa_session_factory() as session:
+            # First, write pages while ignoring duplicates
+            logger.info("Writing pages to DB")
+            statement_write_pages = (
+                insert(Page)
+                .values([page.model_dump() for page in self.pages])
+                .on_conflict_do_nothing(index_elements=[Page.url])  # type: ignore
+            )
+            result_write_pages = session.execute(statement_write_pages)
+            session.commit()
+            logger.info(
+                f"Wrote {result_write_pages.rowcount} new pages to DB and ignored {len(self.pages) - result_write_pages.rowcount} duplicates"
+            )
+
+            # Then, fetch all page IDs of all articles to be written and return a dict of page URL -> page ID
+            logger.info("Fetching page IDs of articles to be written")
+            statement_fetch_page_ids = select(
+                Page.id, Page.url  # type: ignore # (see: https://github.com/tiangolo/sqlmodel/issues/271)
+            ).where(
+                Page.url.in_([page.url for page in self.pages_article])  # type: ignore
+            )
+            result_fetch_page_ids = session.execute(statement_fetch_page_ids).all()
+            dict_page_url_to_id = {HttpUrl(row[1]): row[0] for row in result_fetch_page_ids}
+
+            # Finally, write articles. If there's a duplicate, and that duplicate has updated information, update it
+            logger.info("Writing articles to DB")
+            statement_write_articles = insert(Article).values(
+                [{**page.article.model_dump(), "page_id": dict_page_url_to_id[page.url]} for page in self.pages_article]  # type: ignore
+            )
+            statement_write_articles = statement_write_articles.on_conflict_do_update(
+                index_elements=[Article.site, Article.id_in_site],
+                set_={
+                    "title": statement_write_articles.excluded.title,
+                    "description": statement_write_articles.excluded.description,
+                    "content": statement_write_articles.excluded.content,
+                    "site_updated_at": statement_write_articles.excluded.site_updated_at,
+                    "language": statement_write_articles.excluded.language,
+                    "is_in_house_content": statement_write_articles.excluded.is_in_house_content,
+                    "db_updated_at": datetime.utcnow(),
+                },
+                where=(Article.site_updated_at != statement_write_articles.excluded.site_updated_at),  # type: ignore
+            ).returning(Article.page_id)
+            result_write_articles = session.scalars(statement_write_articles).unique().all()
+            session.commit()
+            logger.info(
+                f"Wrote or updated {len(result_write_articles)} articles to DB, "
+                + f"and ignored {len(self.pages_article) - len(result_write_articles)} duplicates with no changes"
+            )
 
     def execute(self) -> None:
         # First, fetch events
@@ -84,12 +143,13 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
         # as well as including an Article object in a Page object that corresponds to the page's article.
         page_urls = set(df[FetchEventsSchema.page_url])
         logger.info(f"Found {len(page_urls)} URLs from events")
-        pages = self.fetch_pages(self.page_fetcher, {HttpUrl(url) for url in page_urls})
-        articles = [page.article for page in pages if page.article is not None]
-        logger.info(f"Fetched {len(pages)} pages and {len(articles)} articles")
+        self.pages = self.fetch_pages(self.page_fetcher, {HttpUrl(url) for url in page_urls})
+        self.pages_article = [page for page in self.pages if page.article is not None]
+        logger.info(f"Fetched {len(self.pages)} pages, of which fetched {len(self.pages_article)} articles")
 
         # Finally, upsert pages and articles in DB
-        # TODO
+        time_taken_to_write_pages = self.write_pages()
+        logger.info(f"Wrote pages and articles to DB in {time_taken_to_write_pages} seconds")
 
 
 @dataclass

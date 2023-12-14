@@ -19,7 +19,7 @@ from article_rec_training_job.components.page_fetchers.helpers import (
     build_url,
     clean_html,
     clean_url,
-    request_from_api,
+    request,
 )
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
 
@@ -206,7 +206,19 @@ class BaseFetcher:
         language = self.infer_language(url)
 
         # Construct API endpoint
-        fields = ["id", "date_gmt", "modified_gmt", "slug", "status", "type", "title", "content", "excerpt", "tags"]
+        fields = [
+            "id",
+            "date_gmt",
+            "modified_gmt",
+            "slug",
+            "status",
+            "type",
+            "link",
+            "title",
+            "content",
+            "excerpt",
+            "tags",
+        ]
         query = APIQueryParams(slug=slug, lang=language, _fields=fields)
         endpoint = build_url(
             scheme=self.endpoint_posts.scheme,
@@ -216,9 +228,9 @@ class BaseFetcher:
         )
 
         # Fetch article
-        logger.info(f"Requesting WordPress API for {slug}")
+        logger.info(f"Requesting WordPress API for slug {slug}")
         try:
-            data = await request_from_api(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
+            response = await request(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
         except ClientResponseError as e:
             logger.warning(
                 f"Request to WordPress API for slug {slug} failed because response code indicated an error: {e}"
@@ -232,9 +244,15 @@ class BaseFetcher:
 
         # Check that response is actually what we want.
         # If so, build Article object and return it inside the Page object.
-        match data:
-            # If response is a list of one dict with these fields
-            case [{"slug": slug, "type": "post"}]:
+        match (data := await response.json()):
+            # If response is a list of one dict with
+            # - key "slug" that matches the slug we want
+            # - key "type" that is "post"
+            # - key "link" that matches the URL we want (need this because sometimes the slug is not enough)
+            # - key "status" indicating that the post is published, not draft or pending
+            case [{"slug": _slug, "type": "post", "link": _link, "status": "publish"}] if (
+                _slug == slug and _link == str(url)  # type: ignore
+            ):
                 datum = data[0]
                 article = Article(
                     site=self.site_name,
@@ -247,7 +265,7 @@ class BaseFetcher:
                     language=language,
                     is_in_house_content=self.tag_id_republished_content not in datum["tags"],
                 )
-                return Page(url=str(url), article=article)
+                return Page(url=url, article=article)
             case _:
                 logger.warning(
                     f"Request to WordPress API for slug {slug} successfully returned, but response is not what we want",

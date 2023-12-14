@@ -2,6 +2,10 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 
 from loguru import logger
+from psycopg2.extensions import AsIs, register_adapter
+from pydantic import AnyUrl
+from sqlalchemy.engine import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from article_rec_training_job.components import GA4BaseEventFetcher, WPBasePageFetcher
 from article_rec_training_job.config import (
@@ -31,7 +35,17 @@ def load_config(stage: Stage) -> Config:
     return create_config_object(config_dict)
 
 
-def create_update_pages_task(config: Config) -> UpdatePages:
+def create_sa_session_factory(stage: Stage) -> sessionmaker[Session]:
+    if stage == Stage.LOCAL:
+        engine = create_engine("postgresql://postgres:postgres@localhost:5432/postgres")
+        sa_session_factory = sessionmaker(bind=engine)
+    else:
+        raise NotImplementedError(f"Stage {stage} not implemented")
+
+    return sa_session_factory
+
+
+def create_update_pages_task(config: Config, sa_session_factory: sessionmaker[Session]) -> UpdatePages:
     task_config = config.tasks.update_pages
 
     if task_config is None:
@@ -66,11 +80,16 @@ def create_update_pages_task(config: Config) -> UpdatePages:
         execution_timestamp=execution_timestamp,
         event_fetcher=event_fetcher,
         page_fetcher=page_fetcher,
+        sa_session_factory=sa_session_factory,
     )
 
 
 def execute_job(stage: Stage) -> None:
     config = load_config(stage=stage)
+
+    # DB configs
+    register_adapter(AnyUrl, lambda url: AsIs(f"'{url}'"))
+    sa_session_factory = create_sa_session_factory(stage=stage)
 
     logger.info(f"Executing job for site: {config.site}...")
 
@@ -78,7 +97,7 @@ def execute_job(stage: Stage) -> None:
 
     # ----- 1. UPDATE PAGES -----
     if config.tasks.update_pages is not None:
-        tasks.append(create_update_pages_task(config))
+        tasks.append(create_update_pages_task(config, sa_session_factory))
 
     # ----- 2. CREATE RECOMMENDATIONS -----
     # TODO: Create recommendations task

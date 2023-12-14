@@ -1,9 +1,8 @@
 from enum import Enum
-from typing import Any
 from urllib.parse import urlunparse
 
 import nh3
-from aiohttp import ClientSession
+from aiohttp import ClientResponse, ClientSession
 from loguru import logger
 from pydantic import HttpUrl
 from tenacity import (
@@ -47,9 +46,9 @@ def clean_html(html: str) -> str:
     return nh3.clean(html, tags=HTMLAllowedEntities.TAGS.value, attributes=HTMLAllowedEntities.ATTRIBUTES.value)
 
 
-async def request_from_api(
+async def request(
     url: HttpUrl, maximum_attempts: int, maximum_backoff: int, log_attempts: bool = False
-) -> dict[str, Any]:
+) -> ClientResponse:
     """
     Performs an HTTP GET request to the given URL with random-exponential
     sleep before retrying.
@@ -68,6 +67,7 @@ async def request_from_api(
         ):
             with attempt:
                 async with session.get(str(url), raise_for_status=True) as response:
-                    data = await response.json()
+                    # Need this to avoid the "ConnectionClosed" error
+                    await response.read()
 
-    return data
+    return response
