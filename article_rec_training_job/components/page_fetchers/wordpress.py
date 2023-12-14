@@ -251,7 +251,7 @@ class BaseFetcher:
             # - key "link" that matches the URL we want (need this because sometimes the slug is not enough)
             # - key "status" indicating that the post is published, not draft or pending
             case [{"slug": _slug, "type": "post", "link": _link, "status": "publish"}] if (
-                _slug == slug and _link == str(url)
+                _slug == slug and _link == str(url)  # type: ignore
             ):
                 datum = data[0]
                 article = Article(

@@ -28,6 +28,7 @@ types-pyyaml = "^6.0.12.12"
 pandas-stubs = "^2.1.1.230928"
 pandera = {extras = ["mypy"], version = "^0.17.2"}
 pydantic = {extras = ["mypy"], version = "^2.5.2"}
+types-psycopg2 = "^2.9.21.20"
 
 [tool.mypy]
 # documentation reference: https://mypy.readthedocs.io/en/stable/config_file.html

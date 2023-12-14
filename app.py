@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from enum import StrEnum
-from typing import Type
 
 from loguru import logger
 from psycopg2.extensions import AsIs, register_adapter
@@ -36,7 +35,7 @@ def load_config(stage: Stage) -> Config:
     return create_config_object(config_dict)
 
 
-def create_sa_session_factory(stage: Stage) -> Type[Session]:
+def create_sa_session_factory(stage: Stage) -> sessionmaker[Session]:
     if stage == Stage.LOCAL:
         engine = create_engine("postgresql://postgres:postgres@localhost:5432/postgres")
         sa_session_factory = sessionmaker(bind=engine)
@@ -46,7 +45,7 @@ def create_sa_session_factory(stage: Stage) -> Type[Session]:
     return sa_session_factory
 
 
-def create_update_pages_task(config: Config, sa_session_factory: Type[Session]) -> UpdatePages:
+def create_update_pages_task(config: Config, sa_session_factory: sessionmaker[Session]) -> UpdatePages:
     task_config = config.tasks.update_pages
 
     if task_config is None:

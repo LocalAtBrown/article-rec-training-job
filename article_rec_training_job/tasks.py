@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Protocol, Type, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import pandera as pa
 from article_rec_db.models import Article, Page
@@ -9,7 +9,7 @@ from loguru import logger
 from pydantic import ConfigDict, HttpUrl, validate_call
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
 from article_rec_training_job.shared.types.event_fetchers import (
@@ -72,7 +72,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
     execution_timestamp: datetime
     event_fetcher: EventFetcher
     page_fetcher: PageFetcher
-    sa_session_factory: Type[Session]
+    sa_session_factory: sessionmaker[Session]
 
     pages: list[Page] = field(init=False, repr=False)
     pages_article: list[Page] = field(init=False, repr=False)
@@ -86,7 +86,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
             statement_write_pages = (
                 insert(Page)
                 .values([page.model_dump() for page in self.pages])
-                .on_conflict_do_nothing(index_elements=[Page.url])
+                .on_conflict_do_nothing(index_elements=[Page.url])  # type: ignore
             )
             result_write_pages = session.execute(statement_write_pages)
             session.commit()
@@ -96,8 +96,10 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
 
             # Then, fetch all page IDs of all articles to be written and return a dict of page URL -> page ID
             logger.info("Fetching page IDs of articles to be written")
-            statement_fetch_page_ids = select(Page.id, Page.url).where(
-                Page.url.in_([page.url for page in self.pages_article])
+            statement_fetch_page_ids = select(
+                Page.id, Page.url  # type: ignore # (see: https://github.com/tiangolo/sqlmodel/issues/271)
+            ).where(
+                Page.url.in_([page.url for page in self.pages_article])  # type: ignore
             )
             result_fetch_page_ids = session.execute(statement_fetch_page_ids).all()
             dict_page_url_to_id = {HttpUrl(row[1]): row[0] for row in result_fetch_page_ids}
@@ -105,7 +107,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
             # Finally, write articles. If there's a duplicate, and that duplicate has updated information, update it
             logger.info("Writing articles to DB")
             statement_write_articles = insert(Article).values(
-                [{**page.article.model_dump(), "page_id": dict_page_url_to_id[page.url]} for page in self.pages_article]
+                [{**page.article.model_dump(), "page_id": dict_page_url_to_id[page.url]} for page in self.pages_article]  # type: ignore
             )
             statement_write_articles = statement_write_articles.on_conflict_do_update(
                 index_elements=[Article.site, Article.id_in_site],
@@ -118,7 +120,7 @@ class UpdatePages(Task, FetchesEvents, FetchesPages):
                     "is_in_house_content": statement_write_articles.excluded.is_in_house_content,
                     "db_updated_at": datetime.utcnow(),
                 },
-                where=(Article.site_updated_at != statement_write_articles.excluded.site_updated_at),
+                where=(Article.site_updated_at != statement_write_articles.excluded.site_updated_at),  # type: ignore
             ).returning(Article.page_id)
             result_write_articles = session.scalars(statement_write_articles).unique().all()
             session.commit()
