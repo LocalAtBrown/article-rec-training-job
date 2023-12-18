@@ -13,7 +13,7 @@ TODO: This diagram still holds for the most part, but should update it.
 ├── scripts/                        # TODO: contains scripts to be run independently of the job (e.g., for backfills)
 ├── article_rec_training_job
     ├── components/                 # contains reusable components to be used by tasks
-    ├── tasks.py                    # contains all tasks to be run by the job
+    ├── tasks/                      # contains all tasks to be run by the job
     ├── config.py                   # contains all job configuration variables
     ├── shared/                     # contains shared code between tasks and components
 ```
