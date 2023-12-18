@@ -22,6 +22,7 @@ from article_rec_training_job.components.page_fetchers.helpers import (
     request,
 )
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
+from article_rec_training_job.shared.types.page_fetchers import Metrics
 
 
 @dataclass(frozen=True)
@@ -272,7 +273,7 @@ class BaseFetcher:
                 )
                 return page_without_article
 
-    def fetch(self, urls: set[HttpUrl]) -> list[Page]:
+    def fetch(self, urls: set[HttpUrl]) -> tuple[list[Page], Metrics]:
         """
         Fetches pages from a given list of URLs.
         """
@@ -296,21 +297,12 @@ class BaseFetcher:
         # Count articles
         self.num_articles_fetched = sum([page.article is not None for page in pages])
 
-        return pages
-
-    def post_fetch(self) -> None:
-        """
-        Post-fetch actions.
-        """
-        num_articles = len(self.urls_to_update)
-        num_slugs = len([slug for slug in self.slugs.values() if slug is not None])
-        average_article_latency = (
-            self.time_taken_to_fetch_pages / self.num_articles_fetched if self.num_articles_fetched > 0 else None
+        # Construct metrics
+        metrics = Metrics(
+            num_urls_received=len(urls),
+            num_pages_fetched=len(pages),
+            num_articles_fetched=self.num_articles_fetched,
+            time_taken_to_fetch_pages=self.time_taken_to_fetch_pages,
         )
 
-        logger.info(f"{num_articles} URLs passed preprocessing")
-        logger.info(f"{num_slugs} slugs were successfully extracted from URLs")
-        logger.info(f"Fetching took {self.time_taken_to_fetch_pages:.3f} seconds")
-
-        if average_article_latency is not None:
-            logger.info(f"Fetching an article took on average {average_article_latency:.3f} seconds")
+        return pages, metrics
