@@ -20,7 +20,7 @@ class OutputSchema(pa.DataFrameModel):
     page_url: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class Metrics:
     """
     Reporting metrics an event fetcher must provide.
