@@ -75,7 +75,7 @@ class BaseFetcher:
     # Maximum number of retries for a request
     request_maximum_attempts: int
     # Maximum backoff before retrying a request, in seconds
-    request_maximum_backoff: int
+    request_maximum_backoff: float
     # Required page URL prefix that includes protocol and domain name, like https://dallasfreepress.com
     url_prefix_str: str = PydanticField(pattern=r"^https?://[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
     # Regex patterns to identify content language from a path.
