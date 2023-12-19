@@ -4,14 +4,22 @@ import pandera as pa
 from article_rec_db.models import Page
 from pydantic import ConfigDict, HttpUrl, validate_call
 
+from article_rec_training_job.shared.types.event_fetchers import (
+    Metrics as FetchEventsMetrics,
+)
+from article_rec_training_job.shared.types.event_fetchers import (
+    OutputDataFrame as FetchEventsDataFrame,
+)
+from article_rec_training_job.shared.types.page_fetchers import (
+    Metrics as FetchPagesMetrics,
+)
+from article_rec_training_job.shared.types.page_writers import (
+    Metrics as WritePagesMetrics,
+)
 from article_rec_training_job.tasks.component_protocols import (
     EventFetcher,
-    FetchEventsDataFrame,
-    FetchEventsMetrics,
-    FetchPagesMetrics,
     PageFetcher,
     PageWriter,
-    WritePagesMetrics,
 )
 
 

@@ -15,6 +15,10 @@ class PageFetcherType(StrEnum):
     WP_BASE = "wp_base"
 
 
+class PageWriterType(StrEnum):
+    POSTGRES_BASE = "postgres_base"
+
+
 @dataclass
 class EventFetcher:
     type: EventFetcherType
@@ -28,10 +32,16 @@ class PageFetcher:
 
 
 @dataclass
+class PageWriter:
+    type: PageWriterType
+
+
+@dataclass
 class TaskUpdatePages:
     execution_timestamp_utc: datetime | None
     event_fetcher: EventFetcher
     page_fetcher: PageFetcher
+    page_writer: PageWriter
 
 
 @dataclass

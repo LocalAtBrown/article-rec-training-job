@@ -7,14 +7,20 @@ from pydantic import AnyUrl
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from article_rec_training_job.components import GA4BaseEventFetcher, WPBasePageFetcher
+from article_rec_training_job.components import (
+    GA4BaseEventFetcher,
+    PostgresBasePageWriter,
+    WPBasePageFetcher,
+)
 from article_rec_training_job.config import (
     Config,
     EventFetcherType,
     PageFetcherType,
+    PageWriterType,
     create_config_object,
 )
-from article_rec_training_job.tasks import Task, UpdatePages
+from article_rec_training_job.tasks import UpdatePages
+from article_rec_training_job.tasks.base import Task
 
 
 class Stage(StrEnum):
@@ -76,11 +82,15 @@ def create_update_pages_task(config: Config, sa_session_factory: sessionmaker[Se
                 request_maximum_backoff=task_config.page_fetcher.params.get("request_maximum_backoff", 60),
             )
 
+    match task_config.page_writer.type:
+        case PageWriterType.POSTGRES_BASE:
+            page_writer = PostgresBasePageWriter(sa_session_factory=sa_session_factory)
+
     return UpdatePages(
         execution_timestamp=execution_timestamp,
         event_fetcher=event_fetcher,
         page_fetcher=page_fetcher,
-        sa_session_factory=sa_session_factory,
+        page_writer=page_writer,
     )
 
 
