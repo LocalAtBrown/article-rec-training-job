@@ -47,7 +47,7 @@ def clean_html(html: str) -> str:
 
 
 async def request(
-    url: HttpUrl, maximum_attempts: int, maximum_backoff: int, log_attempts: bool = False
+    url: HttpUrl, maximum_attempts: int, maximum_backoff: float, log_attempts: bool = False
 ) -> ClientResponse:
     """
     Performs an HTTP GET request to the given URL with random-exponential

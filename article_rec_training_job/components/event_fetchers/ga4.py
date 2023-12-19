@@ -9,9 +9,9 @@ from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from loguru import logger
 
-from article_rec_training_job.shared.helpers.math import convert_bytes_to_human_readable
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
 from article_rec_training_job.shared.types.event_fetchers import (
+    Metrics,
     OutputDataFrame,
     OutputSchema,
 )
@@ -189,7 +189,7 @@ class BaseFetcher:
         return df.pipe(OutputDataFrame)  # pipe to appease mypy, task will do the actual schema validation
 
     @final
-    def fetch(self) -> OutputDataFrame:
+    def fetch(self) -> tuple[OutputDataFrame, Metrics]:
         """
         Fetches data from BigQuery.
         """
@@ -224,38 +224,16 @@ class BaseFetcher:
         # Convert DataFrame to required schema
         df = self.transform_df_to_required_schema(df)
 
-        return df
+        # Construct metrics object
+        metrics = Metrics(
+            num_tables_exist=sum([table.exists for table in tables]),
+            num_queries_executed=sum([query.executed for query in self.queries]),
+            num_queries_use_cache=sum([query.execution_uses_cache for query in self.queries]),
+            time_taken_to_find_tables=self.time_taken_to_construct_table_objects,
+            time_taken_to_fetch_events=self.time_taken_to_fetch_events,
+            total_bytes_fetched=sum([query.total_bytes_processed for query in self.queries]),
+            total_bytes_billed=sum([query.total_bytes_billed for query in self.queries]),
+            total_rows_fetched=len(df),
+        )
 
-    def post_fetch(self) -> None:
-        """
-        Post-fetch actions. Base fetcher only logs metrics to stdout.
-        """
-        num_tables_exist = sum([table.exists for table in self.tables])
-        num_queries_executed = sum([query.executed for query in self.queries])
-        num_queries_use_cache = sum([query.execution_uses_cache for query in self.queries])
-        total_bytes_processed = sum([query.total_bytes_processed for query in self.queries])
-        total_bytes_billed = sum([query.total_bytes_billed for query in self.queries])
-
-        logger.info(f"Table object construction took {self.time_taken_to_construct_table_objects:.3f} seconds")
-        logger.info(f"Event fetch took {self.time_taken_to_fetch_events:.3f} seconds")
-        logger.info(f"{num_tables_exist} tables out of {len(self.tables)} exist")
-        logger.info(f"{num_queries_executed} queries out of {len(self.queries)} were executed")
-        logger.info(f"{num_queries_use_cache} queries out of {len(self.queries)} used cache")
-        logger.info(f"Total bytes processed: {convert_bytes_to_human_readable(total_bytes_processed)}")
-        logger.info(f"Total bytes billed: {convert_bytes_to_human_readable(total_bytes_billed)}")
-
-
-class FetcherWithCloudWatchReporting(BaseFetcher):
-    """
-    Base fetcher with CloudWatch reporting.
-    """
-
-    def post_fetch(self) -> None:
-        super().post_fetch()
-        self.log_metrics()
-
-    def log_metrics(self) -> None:
-        """
-        Logs metrics to CloudWatch.
-        """
-        raise NotImplementedError
+        return df, metrics
