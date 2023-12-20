@@ -73,13 +73,18 @@ class BaseWriter:
                     "is_in_house_content": statement_write_articles.excluded.is_in_house_content,
                     "db_updated_at": datetime.utcnow(),
                 },
+                # Obviously, we don't want to update an article if there's nothing new to update,
+                # so we're relying on the site_updated_at field to determine whether or not to update:
+                # - If the site_updated_at field is changing from None to a timestamp, we update.
+                # - If the site_updated_at field is changing from a timestamp to a newer timestamp, we also update.
                 where=(
                     (
                         (Article.site_updated_at == None)  # noqa: E711
                         & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
                     )
                     | (
-                        (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
+                        (Article.site_updated_at != None)  # noqa: E711
+                        & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
                         & (Article.site_updated_at < statement_write_articles.excluded.site_updated_at)  # type: ignore
                     )
                 ),
