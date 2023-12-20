@@ -70,12 +70,12 @@ profile = "black"
 
 [tool.poe.tasks.test-setup]
 help = "Set up the test environment"
-shell = "docker-compose -f tests/compose.yaml up -d"
+shell = "docker-compose -f tests/integration/compose.yaml up -d"
 
 [tool.poe.tasks.test-teardown]
 help = "Tear down the test environment"
-shell = "docker-compose -f tests/compose.yaml down"
+shell = "docker-compose -f tests/integration/compose.yaml down"
 
 [tool.poe.tasks.test]
-help = "Run the tests, with setup and teardown"
+help = "Run all tests, with setup and teardown"
 shell = "poe test-setup && pytest tests; poe test-teardown"
