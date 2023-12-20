@@ -2,8 +2,8 @@
 
 Job to update databases and train models for the Local News Lab's article recommendation system.
 
-TODO: This diagram still holds for the most part, but should update it.
-![architecture diagram](docs/images/arch-diagram.png)
+TODO: This diagram still holds for the most part, but should update it and create a level-1 diagram.
+![architecture diagram](arch-diagram.png)
 
 ## Directory Layout
 
