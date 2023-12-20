@@ -85,7 +85,7 @@ poe test
 
 to run all tests, including integration tests. (Poe is a task runner that works well with Poetry. Run `poe -h` and refer to `pyproject.toml` for information on all available commands.)
 
-Integration tests for components rely on there being a fast way to spin up a local version or emulator of the external system(s) that component communicates with, such as an emulated BigQuery container for the GA4-based event fetcher, or a local Postgres instance for the Postgres page writer. In the interested of speed, components whose referenced external systems don't have a fast way to spin up a local version or emulator (e.g., WordPress API) don't have integration tests for now. Unit tests will try to cover as much of their business logic as possible.
+Integration tests for components rely on there being a fast way to spin up a local instance or emulator of the external system(s) that component communicates with, such as an emulated BigQuery container for the GA4-based event fetcher, or a local Postgres instance for the Postgres page writer. In the interested of speed, components whose referenced external systems don't have a fast way to spin up a local instance or emulator (e.g., WordPress API) don't have integration tests for now. Unit tests will try to cover as much of their business logic as possible.
 
 ## Running Backfills
 
