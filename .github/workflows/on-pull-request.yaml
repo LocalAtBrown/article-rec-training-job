@@ -28,9 +28,9 @@ jobs:
       - name: Run unit tests
         run: pytest tests/unit
       - name: Set up integration testing environment
-        run: docker-compose -f tests/docker-compose.yml up -d
+        run: docker-compose -f tests/integration/compose.yaml up -d
       - name: Run integration tests
         run: pytest tests/integration
       - name: Tear down integration testing environment
         if: always()
-        run: docker-compose -f tests/docker-compose.yml down
+        run: docker-compose -f tests/integration/compose.yaml down
