@@ -28,7 +28,7 @@ class Metrics:
 
     num_tables_exist: int
     num_queries_executed: int
-    num_queries_use_cache: int
+    num_queries_used_cache: int
     time_taken_to_find_tables: float
     time_taken_to_fetch_events: float
     total_bytes_fetched: int

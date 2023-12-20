@@ -1,0 +1,14 @@
+services:
+  # Google BigQuery emulator
+  bigquery:
+    image: ghcr.io/goccy/bigquery-emulator:0.4.4
+    volumes:
+      - ./data:/data
+    ports:
+      - 9050:9050
+    command:
+      [
+        "./bigquery-emulator",
+        "--project=test",
+        "--data-from-yaml=/data/bigquery.yaml",
+      ]

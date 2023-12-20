@@ -77,7 +77,13 @@ python app.py
 
 ## Running Tests
 
-TODO
+Make sure you have Docker Compose installed. Then, run:
+
+```
+poe test
+```
+
+to run all tests, including integration tests. (Poe is a task runner that works well with Poetry. Run `poe -h` and refer to `pyproject.toml` for information on all available commands.)
 
 ## Running Backfills
 
