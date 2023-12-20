@@ -26,10 +26,11 @@ jobs:
       - name: Run mypy
         run: mypy
       - name: Run unit tests
-        run: pytests tests/unit
+        run: pytest tests/unit
       - name: Set up integration testing environment
         run: docker-compose -f tests/docker-compose.yml up -d
       - name: Run integration tests
-        run: pytests tests/integration
+        run: pytest tests/integration
       - name: Tear down integration testing environment
+        if: always()
         run: docker-compose -f tests/docker-compose.yml down
