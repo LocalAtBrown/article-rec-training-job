@@ -25,5 +25,11 @@ jobs:
         run: poetry config virtualenvs.create false && poetry install --no-interaction
       - name: Run mypy
         run: mypy
-      # - name: Run model tests on SQLModel-created mock DB
-        # run: pytest tests
+      - name: Run unit tests
+        run: pytests tests/unit
+      - name: Set up integration testing environment
+        run: docker-compose -f tests/docker-compose.yml up -d
+      - name: Run integration tests
+        run: pytests tests/integration
+      - name: Tear down integration testing environment
+        run: docker-compose -f tests/docker-compose.yml down
