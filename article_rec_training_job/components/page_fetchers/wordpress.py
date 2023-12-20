@@ -19,6 +19,9 @@ from article_rec_training_job.components.page_fetchers.helpers import (
     build_url,
     clean_html,
     clean_url,
+    extract_slug_from_url,
+    infer_language_from_url,
+    remove_urls_with_invalid_prefix,
     request,
 )
 from article_rec_training_job.shared.helpers.time import get_elapsed_time
@@ -151,38 +154,12 @@ class BaseFetcher:
         """
         return {language: re.compile(rf"{pattern}") for language, pattern in self.language_from_path_regex.items()}
 
-    def infer_language(self, url: HttpUrl) -> Language:
-        """
-        Infer content language from a given URL.
-        Returns English as a fallback.
-        """
-        path = url.path
-        for language, pattern in self.patterns_language.items():
-            if pattern.fullmatch(path) is not None:  # type: ignore
-                return language
-        return Language.ENGLISH
-
-    def extract_slug(self, url: HttpUrl) -> str | None:
-        """
-        Grabs the slug from a given URL.
-        """
-        path = url.path
-
-        slug_match = self.pattern_slug.fullmatch(path)  # type: ignore
-        if slug_match is None:
-            logger.info(
-                f"Could not extract slug from path {path}. It will be considered a non-article page.",
-            )
-            return None
-
-        return slug_match.group("slug")
-
     def preprocess_urls(self, urls: set[HttpUrl]) -> set[HttpUrl]:
         """
         Preprocesses a given set of URLs.
         """
         # Remove URLs with invalid prefix
-        urls = {url for url in urls if url.scheme == self.url_prefix.scheme and url.host == self.url_prefix.host}
+        urls = remove_urls_with_invalid_prefix(self.url_prefix, urls)
 
         # Remove params, query, and fragment from each URL; remove duplicates afterward
         url_objects = {clean_url(url) for url in urls}
@@ -204,7 +181,7 @@ class BaseFetcher:
             return page_without_article
 
         # Infer language
-        language = self.infer_language(url)
+        language = infer_language_from_url(self.patterns_language, url)
 
         # Construct API endpoint
         fields = [
@@ -289,7 +266,7 @@ class BaseFetcher:
         self.urls_to_update = self.preprocess_urls(urls)
 
         # Extract slugs from URLs
-        self.slugs = {url: self.extract_slug(url) for url in self.urls_to_update}
+        self.slugs = {url: extract_slug_from_url(self.pattern_slug, url) for url in self.urls_to_update}
 
         # Fetch articles
         self.time_taken_to_fetch_pages, pages = fetch_pages(self.urls_to_update)
