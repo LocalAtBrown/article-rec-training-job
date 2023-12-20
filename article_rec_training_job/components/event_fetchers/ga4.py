@@ -28,7 +28,7 @@ class GA4EventQuery:
     table: GA4EventTable
     statement: str
     executed: bool = False
-    execution_uses_cache: bool = field(init=False)
+    execution_used_cache: bool = field(init=False)
     total_bytes_processed: int = field(init=False)
     total_bytes_billed: int = field(init=False)
 
@@ -172,7 +172,7 @@ class BaseFetcher:
 
         # Update query object with job metadata in-place
         query.executed = True
-        query.execution_uses_cache = job.cache_hit
+        query.execution_used_cache = job.cache_hit or False
         query.total_bytes_processed = job.total_bytes_processed
         query.total_bytes_billed = job.total_bytes_billed
 
@@ -228,7 +228,7 @@ class BaseFetcher:
         metrics = Metrics(
             num_tables_exist=sum([table.exists for table in tables]),
             num_queries_executed=sum([query.executed for query in self.queries]),
-            num_queries_use_cache=sum([query.execution_uses_cache for query in self.queries]),
+            num_queries_used_cache=sum([query.execution_used_cache for query in self.queries]),
             time_taken_to_find_tables=self.time_taken_to_construct_table_objects,
             time_taken_to_fetch_events=self.time_taken_to_fetch_events,
             total_bytes_fetched=sum([query.total_bytes_processed for query in self.queries]),

@@ -1,20 +1,18 @@
-import docker
 import pytest
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
 
 
 @pytest.fixture(scope="session")
-def docker_client() -> docker.DockerClient:
-    return docker.from_env()
+def port_bigquery() -> int:
+    return 9050
 
 
 @pytest.fixture(scope="session")
-def start_then_stop_bigquery(docker_client) -> None:
-    container = docker_client.containers.run(
-        "ghcr.io/goccy/bigquery-emulator:0.4.4",
-        name="bigquery",
-        detach=True,
-        remove=True,
-        environment={"project": "test", "dataset": "analytics_123456789", "data-from-yaml": "./tests/data/bigquery.yaml"},
+def client_bigquery(port_bigquery) -> bigquery.Client:
+    return bigquery.Client(
+        "test",
+        credentials=AnonymousCredentials(),
+        client_options=ClientOptions(api_endpoint=f"http://0.0.0.0:{port_bigquery}"),
     )
-    yield
-    container.stop()

@@ -29,7 +29,7 @@ pandas-stubs = "^2.1.1.230928"
 pandera = {extras = ["mypy"], version = "^0.17.2"}
 pydantic = {extras = ["mypy"], version = "^2.5.2"}
 types-psycopg2 = "^2.9.21.20"
-docker = "^7.0.0"
+poethepoet = "^0.24.4"
 
 [tool.mypy]
 # documentation reference: https://mypy.readthedocs.io/en/stable/config_file.html
@@ -67,3 +67,11 @@ exclude = '''
 
 [tool.isort]
 profile = "black"
+
+[tool.poe.tasks.test-setup]
+help = "Setup the test environment"
+shell = "docker-compose -f tests/compose.yaml up -d"
+
+[tool.poe.tasks.test-teardown]
+help = "Teardown the test environment"
+shell = "docker-compose -f tests/compose.yaml down"
