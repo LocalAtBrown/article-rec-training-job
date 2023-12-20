@@ -64,3 +64,12 @@ def test_base_fetcher(base_fetcher):
     assert df.iloc[4][OutputSchema.user_id] == "123456789.1234567890"
     assert df.iloc[5][OutputSchema.user_id] == "123456789.1234567890"
     assert df.iloc[6][OutputSchema.user_id] == "123456789.1234567890"
+
+    assert metrics.num_tables_exist == 3
+    assert metrics.num_queries_executed == 3
+    assert metrics.num_queries_used_cache <= 3
+    assert metrics.time_taken_to_find_tables > 0
+    assert metrics.time_taken_to_fetch_events > 0
+    assert metrics.total_bytes_fetched > 0
+    assert metrics.total_bytes_billed >= 0
+    assert metrics.total_rows_fetched == 7

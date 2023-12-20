@@ -69,9 +69,13 @@ exclude = '''
 profile = "black"
 
 [tool.poe.tasks.test-setup]
-help = "Setup the test environment"
+help = "Set up the test environment"
 shell = "docker-compose -f tests/compose.yaml up -d"
 
 [tool.poe.tasks.test-teardown]
-help = "Teardown the test environment"
+help = "Tear down the test environment"
 shell = "docker-compose -f tests/compose.yaml down"
+
+[tool.poe.tasks.test]
+help = "Run the tests, with setup and teardown"
+shell = "poe test-setup && pytest tests; poe test-teardown"
