@@ -12,3 +12,12 @@ services:
         "--project=test",
         "--data-from-yaml=/data/bigquery.yaml",
       ]
+  # Postgres instance with pgvector extension
+  postgres:
+    image: ankane/pgvector:v0.4.1
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+

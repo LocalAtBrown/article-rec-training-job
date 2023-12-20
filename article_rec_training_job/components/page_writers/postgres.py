@@ -73,7 +73,16 @@ class BaseWriter:
                     "is_in_house_content": statement_write_articles.excluded.is_in_house_content,
                     "db_updated_at": datetime.utcnow(),
                 },
-                where=(Article.site_updated_at != statement_write_articles.excluded.site_updated_at),  # type: ignore
+                where=(
+                    (
+                        (Article.site_updated_at == None)  # noqa: E711
+                        & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
+                    )
+                    | (
+                        (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
+                        & (Article.site_updated_at < statement_write_articles.excluded.site_updated_at)  # type: ignore
+                    )
+                ),
             ).returning(Article.page_id)
             result_write_articles = session.scalars(statement_write_articles).unique().all()
             session.commit()

@@ -18,6 +18,8 @@ pydantic = "^2.5.2"
 aiohttp = "^3.9.1"
 nh3 = "^0.2.14"
 tenacity = "^8.2.3"
+sqlalchemy = "^2.0.23"
+psycopg2 = "^2.9.9"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.1"
