@@ -1,4 +1,5 @@
 services:
+  # Google BigQuery emulator
   bigquery:
     image: ghcr.io/goccy/bigquery-emulator:0.4.4
     volumes:
