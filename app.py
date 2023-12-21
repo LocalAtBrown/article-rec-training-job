@@ -87,7 +87,6 @@ def create_update_pages_task(config: Config, sa_session_factory: sessionmaker[Se
             page_writer = PostgresBasePageWriter(sa_session_factory=sa_session_factory)
 
     return UpdatePages(
-        execution_timestamp=execution_timestamp,
         event_fetcher=event_fetcher,
         page_fetcher=page_fetcher,
         page_writer=page_writer,

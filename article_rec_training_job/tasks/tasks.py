@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import datetime
 
 from pydantic import HttpUrl
 
@@ -22,7 +21,6 @@ from article_rec_training_job.tasks.component_protocols import (
 # ----- TASKS -----
 @dataclass
 class UpdatePages(Task, FetchesEvents, FetchesPages, WritesPages):
-    execution_timestamp: datetime
     event_fetcher: EventFetcher
     page_fetcher: PageFetcher
     page_writer: PageWriter
@@ -42,12 +40,3 @@ class UpdatePages(Task, FetchesEvents, FetchesPages, WritesPages):
         # Finally, upsert pages and articles in DB
         metrics_write_pages = self.write_pages(self.page_writer, pages=pages)  # noqa: F841
         # TODO: Log or emit metrics
-
-
-@dataclass
-class CreateRecommendations(Task, FetchesEvents):
-    execution_timestamp: datetime
-    event_fetcher: EventFetcher
-
-    def execute(self) -> None:
-        raise NotImplementedError
