@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -19,6 +18,10 @@ class PageWriterType(StrEnum):
     POSTGRES_BASE = "postgres_base"
 
 
+class TaskType(StrEnum):
+    UPDATE_PAGES = "update_pages"
+
+
 @dataclass
 class EventFetcher:
     type: EventFetcherType
@@ -34,32 +37,39 @@ class PageFetcher:
 @dataclass
 class PageWriter:
     type: PageWriterType
+    params: dict[str, Any]
 
 
 @dataclass
-class TaskUpdatePages:
-    execution_timestamp_utc: datetime | None
-    event_fetcher: EventFetcher
-    page_fetcher: PageFetcher
-    page_writer: PageWriter
+class Components:
+    event_fetchers: list[EventFetcher]
+    page_fetchers: list[PageFetcher]
+    page_writers: list[PageWriter]
+
+    # Keep a dict of components for easy access
+    _dict_components: dict[str, EventFetcher | PageFetcher | PageWriter] = field(init=False, repr=False)
+
+    def __post_init__(self):
+        self._dict_components = {
+            component.type: component for component in self.event_fetchers + self.page_fetchers + self.page_writers
+        }
+
+    def __getitem__(self, key: str) -> EventFetcher | PageFetcher | PageWriter:
+        return self._dict_components[key]
 
 
 @dataclass
-class TaskCreateRecommendations:
-    execution_timestamp_utc: datetime | None
-    event_fetcher: EventFetcher
-
-
-@dataclass
-class Tasks:
-    update_pages: TaskUpdatePages | None
-    create_recommendations: TaskCreateRecommendations | None
+class Task:
+    type: TaskType
+    components: dict[str, str]
+    params: dict[str, Any]
 
 
 @dataclass
 class Config:
     site: str
-    tasks: Tasks
+    components: Components
+    tasks: list[Task]
 
 
 def create_config_object(config_dict: dict[str, Any]) -> Config:
