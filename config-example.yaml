@@ -1,0 +1,26 @@
+site: site-name # kebab-case
+tasks:
+  update_pages:
+    date_start: 2023-12-01 # YYYY-MM-DD, inclusive
+    date_end: 2023-12-07 # YYYY-MM-DD, inclusive
+    days_per_batch: 1
+    components:
+      event_fetcher:
+        type: ga4_base # Refer to training job config for possible enum values
+        params:
+          gcp_project_id: gcp-project-id
+          site_ga4_property_id: "123456789"
+      page_fetcher:
+        type: wp_base # Refer to training job config for possible enum values
+        params:
+          url_prefix: https://example.com
+          slug_from_path_regex: ^/20\d{2}/(0[1-9]|1[012])/(?P<slug>[a-zA-Z\d\-%]+)/$ # Slug regex must start with ^, end with $, and contain a named group called "slug"
+          language_from_path_regex: # Optional
+            es: ^/es/.*/$ # Language regex must start with ^ and end with $
+          tag_id_republished_content: 42 # Optional
+          request_maximum_attempts: 10 # Optional
+          request_maximum_backoff: 60 # Optional
+      page_writer:
+        type: postgres_base
+        params:
+          env_db_url: POSTGRES_DB_URL # Environment variable name containing the database URL
