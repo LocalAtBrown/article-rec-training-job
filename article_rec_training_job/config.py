@@ -41,21 +41,16 @@ class PageWriter:
 
 
 @dataclass
+class Globals:
+    site: str
+    env_postgres_db_url: str
+
+
+@dataclass
 class Components:
     event_fetchers: list[EventFetcher]
     page_fetchers: list[PageFetcher]
     page_writers: list[PageWriter]
-
-    # Keep a dict of components for easy access
-    _dict_components: dict[str, EventFetcher | PageFetcher | PageWriter] = field(init=False, repr=False)
-
-    def __post_init__(self):
-        self._dict_components = {
-            component.type: component for component in self.event_fetchers + self.page_fetchers + self.page_writers
-        }
-
-    def __getitem__(self, key: str) -> EventFetcher | PageFetcher | PageWriter:
-        return self._dict_components[key]
 
 
 @dataclass
@@ -67,9 +62,29 @@ class Task:
 
 @dataclass
 class Config:
-    site: str
+    job_globals: Globals
     components: Components
     tasks: list[Task]
+
+    # Keep a dict of components for easy access
+    _dict_components: dict[str, EventFetcher | PageFetcher | PageWriter] = field(init=False, repr=False)
+    # Keep a dict of tasks for easy access
+    _dict_tasks: dict[TaskType, Task] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self._dict_components = {
+            component.type: component
+            for component in self.components.event_fetchers + self.components.page_fetchers + self.components.page_writers
+        }
+        self._dict_tasks = {task.type: task for task in self.tasks}
+
+    def get_component(
+        self, component_type: EventFetcherType | PageFetcherType | PageWriterType
+    ) -> EventFetcher | PageFetcher | PageWriter | None:
+        return self._dict_components.get(component_type)
+
+    def get_task(self, task_type: TaskType) -> Task | None:
+        return self._dict_tasks.get(task_type)
 
 
 def create_config_object(config_dict: dict[str, Any]) -> Config:

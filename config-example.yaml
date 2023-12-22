@@ -1,4 +1,6 @@
-site: site-name # kebab-case
+job_globals:
+  site: site-name # kebab-case
+  env_postgres_db_url: POSTGRES_DB_URL # Environment variable name containing the database URL
 
 components:
   event_fetchers:
@@ -19,7 +21,6 @@ components:
   page_writers:
     - type: postgres_base
       params:
-        env_db_url: POSTGRES_DB_URL # Environment variable name containing the database URL
 
 tasks:
   - type: update_pages

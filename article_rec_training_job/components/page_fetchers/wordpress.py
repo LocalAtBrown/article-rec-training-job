@@ -79,10 +79,10 @@ class BaseFetcher:
     request_maximum_attempts: int
     # Maximum backoff before retrying a request, in seconds
     request_maximum_backoff: float
+    # Regex patterns to identify content language from a path.
+    language_from_path_regex: dict[Language, str]
     # Required page URL prefix that includes protocol and domain name, like https://dallasfreepress.com
     url_prefix_str: str = PydanticField(pattern=r"^https?://[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
-    # Regex patterns to identify content language from a path.
-    language_from_path_regex: dict[Language, str] = field(default_factory=dict)
 
     urls_to_update: set[HttpUrl] = field(init=False, repr=False)
     slugs: dict[HttpUrl, str | None] = field(init=False, repr=False)
