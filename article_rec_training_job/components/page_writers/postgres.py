@@ -79,13 +79,13 @@ class BaseWriter:
                 # - If the site_updated_at field is changing from a timestamp to a newer timestamp, we also update.
                 where=(
                     (
-                        (Article.site_updated_at == None)  # noqa: E711
+                        (Article.site_updated_at == None)  # type: ignore  # noqa: E711
                         & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
                     )
                     | (
-                        (Article.site_updated_at != None)  # noqa: E711
+                        (Article.site_updated_at != None)  # type: ignore  # noqa: E711
                         & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
-                        & (Article.site_updated_at < statement_write_articles.excluded.site_updated_at)  # type: ignore
+                        & (Article.site_updated_at < statement_write_articles.excluded.site_updated_at)
                     )
                 ),
             ).returning(Article.page_id)

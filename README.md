@@ -91,17 +91,9 @@ Integration tests for components rely on there being a fast way to spin up a loc
 
 TODO
 
-## Deploying
-
-For dev deployment, run:
-
-```
-kar deploy
-```
-
-Each pull request to main will trigger a new prod deployment when merged.
-
 ## For LNL
+
+### Deploying
 
 ### Monitoring
 

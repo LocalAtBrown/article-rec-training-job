@@ -13,19 +13,19 @@ from sqlalchemy.orm import Session, sessionmaker
 
 
 # ----- BIGQUERY FIXTURES -----
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def port_bigquery() -> int:
     # This needs to match the port specified in compose.yaml
     return 9050
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def project_id_bigquery() -> str:
     # This needs to match the project ID specified in compose.yaml
     return "test"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def client_bigquery(port_bigquery, project_id_bigquery) -> bigquery.Client:
     return bigquery.Client(
         project_id_bigquery,
@@ -35,28 +35,28 @@ def client_bigquery(port_bigquery, project_id_bigquery) -> bigquery.Client:
 
 
 # ----- POSTGRES FIXTURES -----
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def port_postgres() -> int:
     # This needs to match the port specified in compose.yaml
     return 5432
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def engine_postgres(port_postgres) -> Engine:
     return create_engine(f"postgresql://postgres:postgres@localhost:{port_postgres}/postgres")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def sa_session_factory_postgres(engine_postgres) -> sessionmaker[Session]:
     return sessionmaker(engine_postgres)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def psycopg2_adapt_unknown_types() -> None:
     register_adapter(AnyUrl, lambda url: AsIs(f"'{url}'"))
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def initialize_postgres_db(sa_session_factory_postgres, engine_postgres) -> Generator[None, None, None]:
     with sa_session_factory_postgres() as session:
         session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
