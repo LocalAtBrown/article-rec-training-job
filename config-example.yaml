@@ -1,6 +1,5 @@
 job_globals:
   site: site-name # kebab-case
-  env_postgres_db_url: POSTGRES_DB_URL # Environment variable name containing the database URL
 
 components:
   event_fetchers:
@@ -20,7 +19,8 @@ components:
         request_maximum_backoff: 60 # Optional
   page_writers:
     - type: postgres_base
-      # If no params are specified, by default params is an empty dict
+      params:
+        env_db_url: POSTGRES_DB_URL # Environment variable name containing the database URL
 
 tasks:
   - type: update_pages
@@ -31,4 +31,4 @@ tasks:
     params:
       date_end: 2023-12-07 # Optional, else use today. YYYY-MM-DD, inclusive
       days_to_fetch: 7 # How many days to fetch in total. Count from date_end backwards
-      days_to_fetch_per_batch: 1
+      days_to_fetch_per_batch: 2

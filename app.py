@@ -11,7 +11,7 @@ from loguru import logger
 from psycopg2.extensions import AsIs, register_adapter
 from pydantic import AnyUrl
 from sqlalchemy.engine import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from article_rec_training_job.components import (
     GA4BaseEventFetcher,
@@ -70,13 +70,6 @@ def load_config_from_file(path: Path) -> Config:
     return create_config_object(config_dict=config_dict)
 
 
-def create_sa_session_factory(config: Config) -> sessionmaker[Session]:
-    engine = create_engine(os.environ[config.job_globals.env_postgres_db_url])
-    sa_session_factory = sessionmaker(bind=engine)
-
-    return sa_session_factory
-
-
 def create_event_fetcher_factory_dict(config: Config) -> dict[EventFetcherType, Callable[[date, date], EventFetcher]]:
     def factory_ga4(date_start: date, date_end: date) -> GA4BaseEventFetcher:
         config_component = config.get_component(EventFetcherType.GA4_BASE)
@@ -114,13 +107,21 @@ def create_page_fetcher_factory_dict(config: Config) -> dict[PageFetcherType, Ca
     }
 
 
-def create_page_writer_factory_dict(
-    config: Config, sa_session_factory: sessionmaker[Session]
-) -> dict[PageWriterType, Callable[[], PageWriter]]:
+def create_page_writer_factory_dict(config: Config) -> dict[PageWriterType, Callable[[], PageWriter]]:
     def factory_postgres() -> PostgresBasePageWriter:
         config_component = config.get_component(PageWriterType.POSTGRES_BASE)
         if config_component is None:
             raise ValueError("Config for PostgreSQL-based page writer not found. Make sure you specified it your config")
+        db_url = os.environ[config_component.params["env_db_url"]]
+
+        # Register adapter for Pydantic AnyUrl type so that psycopg2 recognizes it
+        # before we create the session factory
+        register_adapter(AnyUrl, lambda url: AsIs(f"'{url}'"))
+
+        # Create session factory
+        engine = create_engine(db_url)
+        sa_session_factory = sessionmaker(bind=engine)
+
         return PostgresBasePageWriter(sa_session_factory=sa_session_factory)
 
     return {
@@ -173,14 +174,10 @@ def execute_job(config_file_path: Path | None) -> None:
     # Load job config
     config = load_config_from_file(path=config_file_path) if config_file_path is not None else load_config_from_env()
 
-    # DB configs
-    register_adapter(AnyUrl, lambda url: AsIs(f"'{url}'"))
-    sa_session_factory = create_sa_session_factory(config)
-
     # Component factories
     event_fetcher_factory_dict = create_event_fetcher_factory_dict(config)
     page_fetcher_factory_dict = create_page_fetcher_factory_dict(config)
-    page_writer_factory_dict = create_page_writer_factory_dict(config, sa_session_factory)
+    page_writer_factory_dict = create_page_writer_factory_dict(config)
 
     logger.info(f"Executing job for site: {config.job_globals.site}...")
 

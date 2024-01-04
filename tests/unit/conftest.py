@@ -3,8 +3,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-from sqlalchemy.engine import Engine, create_engine
-from sqlalchemy.orm import Session, sessionmaker
 
 from app import load_config_from_file
 from article_rec_training_job.config import Config
@@ -46,13 +44,3 @@ def set_config_env(config_env_value, fake_postgres_db_url) -> None:
 @pytest.fixture(scope="package")
 def config(config_file_path) -> Config:
     return load_config_from_file(config_file_path)
-
-
-@pytest.fixture(scope="package")
-def fake_engine(fake_postgres_db_url) -> Engine:
-    return create_engine(fake_postgres_db_url)
-
-
-@pytest.fixture(scope="package")
-def fake_sessionmaker(fake_engine) -> sessionmaker[Session]:
-    return sessionmaker(bind=fake_engine)

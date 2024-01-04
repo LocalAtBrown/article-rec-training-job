@@ -43,7 +43,6 @@ class PageWriter:
 @dataclass
 class Globals:
     site: str
-    env_postgres_db_url: str
 
 
 @dataclass
