@@ -25,19 +25,19 @@ class TaskType(StrEnum):
 @dataclass
 class EventFetcher:
     type: EventFetcherType
-    params: dict[str, Any]
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class PageFetcher:
     type: PageFetcherType
-    params: dict[str, Any]
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class PageWriter:
     type: PageWriterType
-    params: dict[str, Any]
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

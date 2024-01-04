@@ -1,10 +1,11 @@
-import json
 import os
 from collections.abc import Callable, Iterable
 from datetime import date, datetime, timedelta
 from itertools import islice
+from pathlib import Path
 from typing import TypeVar
 
+import click
 import yaml
 from loguru import logger
 from psycopg2.extensions import AsIs, register_adapter
@@ -49,18 +50,22 @@ def batched(iterable: Iterable[T], n: int) -> Iterable[tuple[T, ...]]:
         yield batch
 
 
-def load_config() -> Config:
+def load_config_from_env() -> Config:
     """
-    Try loading config via the `JOB_CONFIG` env var,
-    if not look for a `config.yaml` file in the root directory
+    Loads config via the `JOB_CONFIG` env var, which stores a YAML string.
     """
-    config_str = os.getenv("JOB_CONFIG")
+    config_str = os.environ["JOB_CONFIG"]
+    config_dict = yaml.safe_load(config_str)
 
-    if config_str is not None:
-        config_dict = json.loads(config_str)
-    else:
-        with open("config.yaml", "r") as f:
-            config_dict = yaml.safe_load(f)
+    return create_config_object(config_dict=config_dict)
+
+
+def load_config_from_file(path: Path) -> Config:
+    """
+    Loads config from a specified YAML file.
+    """
+    with path.open("r") as f:
+        config_dict = yaml.safe_load(f)
 
     return create_config_object(config_dict=config_dict)
 
@@ -162,8 +167,11 @@ def create_update_pages_task(
     return UpdatePages(batch_components=batch_components)
 
 
-def execute_job() -> None:
-    config = load_config()
+@click.command()
+@click.option("--config-file", type=click.Path(exists=True, path_type=Path), required=False)
+def execute_job(config_file_path: Path | None) -> None:
+    # Load job config
+    config = load_config_from_file(path=config_file_path) if config_file_path is not None else load_config_from_env()
 
     # DB configs
     register_adapter(AnyUrl, lambda url: AsIs(f"'{url}'"))
