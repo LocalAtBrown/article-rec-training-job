@@ -71,6 +71,34 @@ exclude = '''
 [tool.isort]
 profile = "black"
 
+[tool.poe.tasks.start-local-postgres]
+help = "Start a local Postgres instance"
+shell = """
+  docker run -d --rm --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_HOST_AUTH_METHOD=trust -p 127.0.0.1:5432:5432/tcp ankane/pgvector:v0.4.1
+  until timeout 3 psql -h 127.0.0.1 -U postgres -c "select 1" -d postgres 2>&0>/dev/null
+    do
+      printf "Waiting 2 seconds for PostgreSQL to come up: %s@%s/%s...\n" postgres 127.0.0.1 postgres
+      sleep 2;
+    done
+  python -c "\
+    from sqlalchemy.engine import create_engine; \
+    from sqlalchemy import text; \
+    from article_rec_db.models import SQLModel; \
+    engine = create_engine('postgresql://postgres:postgres@localhost:5432/postgres'); \
+    context = engine.connect(); \
+    conn = context.__enter__(); \
+    conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector')); \
+    conn.commit(); \
+    context.__exit__(None, None, None); \
+    SQLModel.metadata.create_all(engine); \
+    print('✅ Postgres is up!')
+  "
+"""
+
+[tool.poe.tasks.stop-local-postgres]
+help = "Stop the local Postgres instance"
+shell = "docker stop postgres"
+
 [tool.poe.tasks.test-setup]
 help = "Set up the test environment"
 shell = "docker-compose -f tests/integration/compose.yaml up -d"

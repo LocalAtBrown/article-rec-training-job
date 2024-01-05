@@ -11,4 +11,6 @@ tmp/*
 # Scratch dir
 scratch/
 .env
-config.yaml
+# Everything in configs/ except for the example config
+configs/*.yaml
+!configs/example_config.yaml

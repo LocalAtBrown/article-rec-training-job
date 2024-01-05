@@ -169,7 +169,14 @@ def create_update_pages_task(
 
 
 @click.command()
-@click.option("--config-file", type=click.Path(exists=True, path_type=Path), required=False)
+@click.option(
+    "-c",
+    "--config-file",
+    "config_file_path",
+    type=click.Path(exists=True, path_type=Path),
+    required=False,
+    help="Path to config file. If not specified, config will be loaded from environment in YAML text format.",
+)
 def execute_job(config_file_path: Path | None) -> None:
     # Load job config
     config = load_config_from_file(path=config_file_path) if config_file_path is not None else load_config_from_env()
