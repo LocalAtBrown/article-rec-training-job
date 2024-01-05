@@ -44,10 +44,11 @@ and the CI runs it on PRs.
 
 ### Setup
 
-1. [Install Poetry](https://python-poetry.org/docs/#installation).
-2. Run `poetry install --no-root`
-3. Make sure the virtual environment is active, then
-4. Run `pre-commit install`
+1. [Install Docker](https://docs.docker.com/get-docker/).
+2. [Install Poetry](https://python-poetry.org/docs/#installation).
+3. Run `poetry install --no-root`
+4. Make sure the virtual environment is active, then
+5. Run `pre-commit install`
 
 You're all set up! Your local environment should include all dependencies, including dev dependencies like `black`.
 This is done with Poetry via the `poetry.lock` file. As for the containerized code, that still pulls dependencies from
@@ -69,17 +70,28 @@ To update dependencies in your local environment, make changes to the `pyproject
 To update `requirements.txt` for the container, run `poetry export -o requirements.txt --without-hashes`. The pre-commit
 hook also automatically re-creates the `requirements.txt` file if it detects changes in `pyproject.toml`.
 
-## Local Usage
+## Running Job Locally
 
+1. Start up the local database instance where you'll be writing articles, pages, recommendations, etc. to. For LNL folks, we use Postgres, so run:
+```bash
+poe start-local-postgres
 ```
-python app.py
+
+(Refer to `pyproject.toml` for what `poe start-local-postgres` does.)
+
+2. Create a new YAML config file that instructs which task(s) the job should perform. Refer to `configs/example.yaml` for available options.
+
+3. Run the job, specifying the path said YAML config file and any environment variables you want to set. For example, to run the `update_pages` task, which expects a `POSTGRES_DB_URL` environment variable to be set, with a `configs/run-site.yaml` config file, run:
+   
+```bash
+POSTGRES_DB_URL=postgresql://postgres:postgres@localhost:5432/postgres python app.py -c configs/run-site.yaml
 ```
 
 ## Running Tests
 
 Make sure you have Docker Compose installed. Then, run:
 
-```
+```bash
 poe test
 ```
 
@@ -89,7 +101,14 @@ Integration tests for components rely on there being a fast way to spin up a loc
 
 ## Running Backfills
 
-TODO
+### Backfilling Pages
+
+1. Create a new YAML config file that includes the `update_pages` task and specify its components and parameters. Refer to `configs/example.yaml` for more detail.
+
+2. Run the job
+```
+POSTGRES_DB_URL=<Your remote DB connection string> python app.py -c <Path to your YAML config>
+``` 
 
 ## For LNL
 
