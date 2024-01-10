@@ -122,7 +122,10 @@ def create_page_writer_factory_dict(config: Config) -> dict[PageWriterType, Call
         engine = create_engine(db_url)
         sa_session_factory = sessionmaker(bind=engine)
 
-        return PostgresBasePageWriter(sa_session_factory=sa_session_factory)
+        return PostgresBasePageWriter(
+            sa_session_factory=sa_session_factory,
+            force_update_despite_latest=config_component.params.get("force_update_despite_latest", False),
+        )
 
     return {
         PageWriterType.POSTGRES_BASE: factory_postgres,

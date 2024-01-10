@@ -19,7 +19,14 @@ class BaseWriter:
     whose tables are defined by the article-rec-db package.
     """
 
+    # SQLA sessionmaker
     sa_session_factory: sessionmaker[Session]
+
+    # Whether or not to force-update articles even if the site_updated_at
+    # field is not changing. This is useful when we make changes to the database
+    # schema (e.g., adding new columns to the article table) and want to force
+    # an update during backfilling to populate data in all existing articles.
+    force_update_despite_latest: bool
 
     num_new_pages_written: int = field(init=False, repr=False)
     num_pages_ignored: int = field(init=False, repr=False)
@@ -62,6 +69,18 @@ class BaseWriter:
             statement_write_articles = insert(Article).values(
                 [{**page.article.model_dump(), "page_id": dict_page_url_to_id[page.url]} for page in pages_article]  # type: ignore
             )
+            # Obviously, we don't want to update an article if there's nothing new to update,
+            # so we're relying on the site_updated_at field to determine whether or not to update
+            condition_upsert_articles = (
+                # If the site_updated_at field is changing from None to a timestamp, we update.
+                (Article.site_updated_at == None)  # type: ignore  # noqa: E711
+                & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
+            ) | (
+                # If the site_updated_at field is changing from a timestamp to a newer timestamp, we also update.
+                (Article.site_updated_at != None)  # type: ignore  # noqa: E711
+                & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
+                & (Article.site_updated_at < statement_write_articles.excluded.site_updated_at)
+            )
             statement_write_articles = statement_write_articles.on_conflict_do_update(
                 index_elements=[Article.site, Article.id_in_site],
                 set_={
@@ -73,21 +92,8 @@ class BaseWriter:
                     "is_in_house_content": statement_write_articles.excluded.is_in_house_content,
                     "db_updated_at": datetime.utcnow(),
                 },
-                # Obviously, we don't want to update an article if there's nothing new to update,
-                # so we're relying on the site_updated_at field to determine whether or not to update:
-                # - If the site_updated_at field is changing from None to a timestamp, we update.
-                # - If the site_updated_at field is changing from a timestamp to a newer timestamp, we also update.
-                where=(
-                    (
-                        (Article.site_updated_at == None)  # type: ignore  # noqa: E711
-                        & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
-                    )
-                    | (
-                        (Article.site_updated_at != None)  # type: ignore  # noqa: E711
-                        & (statement_write_articles.excluded.site_updated_at != None)  # noqa: E711
-                        & (Article.site_updated_at < statement_write_articles.excluded.site_updated_at)
-                    )
-                ),
+                # Bypass the condition if we're forcing an update
+                where=None if self.force_update_despite_latest else condition_upsert_articles,
             ).returning(Article.page_id)
             result_write_articles = session.scalars(statement_write_articles).unique().all()
             session.commit()
