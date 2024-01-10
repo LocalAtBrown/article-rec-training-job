@@ -136,16 +136,48 @@ def test_base_writer_update_article_no_changes(
         assert article.description == "Description of article 1"
         assert article.content == "<p>Content of article 1</p>"
         assert article.site_updated_at is None
+        assert article.db_updated_at is None
 
 
-def test_base_writer_update_article_no_db_updated_timestamp(
+def test_base_writer_update_article_no_changes_force_update(
+    refresh_tables, sa_session_factory_postgres, psycopg2_adapt_unknown_types, pages
+):
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
+    writer.write(pages)
+
+    # Now, update article 1 with no changes
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=True)
+    metrics = writer.write([pages[1]])
+
+    assert metrics.num_new_pages_written == 0
+    assert metrics.num_pages_ignored == 1
+    assert metrics.num_articles_upserted == 1
+    assert metrics.num_articles_ignored == 0
+    assert metrics.time_taken_to_write_pages > 0
+
+    with sa_session_factory_postgres() as session:
+        # Find article 1
+        article = (
+            session.execute(select(Article).where(Article.id_in_site == pages[1].article.id_in_site))
+            .unique()
+            .scalar_one_or_none()
+        )
+
+        assert article.title == "Article 1"
+        assert article.description == "Description of article 1"
+        assert article.content == "<p>Content of article 1</p>"
+        assert article.site_updated_at is None
+        assert isinstance(article.db_updated_at, datetime)
+
+
+def test_base_writer_update_article_no_site_updated_timestamp(
     refresh_tables, sa_session_factory_postgres, psycopg2_adapt_unknown_types, pages
 ):
     writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     writer.write(pages)
 
     # Now, update article 1
-    site_updated_at = datetime(2021, 1, 3, 0, 0, 0)  # This used to be None, thus the upsert should be triggered
+    site_updated_at = datetime(2021, 1, 3, 0, 0, 0)  # This used to be None, thus the update should be triggered
     page_to_update = Page(
         url=pages[1].url,
         article=Article(
@@ -181,16 +213,17 @@ def test_base_writer_update_article_no_db_updated_timestamp(
         assert article.description == "Article 1 Updated description"
         assert article.content == "<p>Article 1 Updated content</p>"
         assert article.site_updated_at == site_updated_at
+        assert isinstance(article.db_updated_at, datetime)
 
 
-def test_base_writer_update_article_smaller_db_updated_timestamp(
+def test_base_writer_update_article_smaller_site_updated_timestamp(
     refresh_tables, sa_session_factory_postgres, psycopg2_adapt_unknown_types, pages
 ):
     writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     writer.write(pages)
 
     # Now, update article 2
-    site_updated_at = datetime(2021, 1, 4, 0, 0, 0)  # This used to be 2021-01-03, thus the upsert should be triggered
+    site_updated_at = datetime(2021, 1, 4, 0, 0, 0)  # This used to be 2021-01-03, thus the update should be triggered
     page_to_update = Page(
         url=pages[2].url,
         article=Article(
@@ -226,6 +259,7 @@ def test_base_writer_update_article_smaller_db_updated_timestamp(
         assert article.description == "Article 2 Updated description"
         assert article.content == "<p>Article 2 Updated content</p>"
         assert article.site_updated_at == site_updated_at
+        assert isinstance(article.db_updated_at, datetime)
 
 
 def test_base_writer_update_page_add_article(
@@ -267,6 +301,8 @@ def test_base_writer_update_page_add_article(
         # Find page 3
         page = session.execute(select(Page).where(Page.url == page_to_update.url)).scalar_one_or_none()
 
+        assert isinstance(page.article.db_created_at, datetime)
+        assert page.article.db_updated_at is None
         assert page.article.page_id == page.id
         assert page.article.site == "test"
         assert page.article.id_in_site == "1236"
