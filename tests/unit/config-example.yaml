@@ -21,6 +21,7 @@ components:
     - type: postgres_base
       params:
         env_db_url: POSTGRES_DB_URL # Environment variable name containing the database URL
+        force_update_despite_latest: false # Optional, default false. If true, update pages even if they are already up to date (useful for backfilling post-DB changes)
 
 tasks:
   - type: update_pages

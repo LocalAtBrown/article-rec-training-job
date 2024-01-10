@@ -108,6 +108,7 @@ def test_create_page_writer_factory_dict(set_config_env, config, fake_postgres_d
     component = factory_postgres()
     assert isinstance(component, PostgresBasePageWriter)
     assert component.sa_session_factory.kw["bind"].url.render_as_string() == fake_postgres_db_url
+    assert component.force_update_despite_latest is False
 
 
 def test_create_update_pages_task(set_config_env, config):

@@ -49,7 +49,7 @@ def pages() -> list[Page]:
 
 
 def test_base_writer_write(refresh_tables, sa_session_factory_postgres, psycopg2_adapt_unknown_types, pages):
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     metrics = writer.write(pages)
 
     assert metrics.num_new_pages_written == 4
@@ -111,11 +111,11 @@ def test_base_writer_write(refresh_tables, sa_session_factory_postgres, psycopg2
 def test_base_writer_update_article_no_changes(
     refresh_tables, sa_session_factory_postgres, psycopg2_adapt_unknown_types, pages
 ):
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     writer.write(pages)
 
     # Now, update article 1 with no changes
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     metrics = writer.write([pages[1]])
 
     assert metrics.num_new_pages_written == 0
@@ -141,7 +141,7 @@ def test_base_writer_update_article_no_changes(
 def test_base_writer_update_article_no_db_updated_timestamp(
     refresh_tables, sa_session_factory_postgres, psycopg2_adapt_unknown_types, pages
 ):
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     writer.write(pages)
 
     # Now, update article 1
@@ -160,7 +160,7 @@ def test_base_writer_update_article_no_db_updated_timestamp(
             is_in_house_content=pages[1].article.is_in_house_content,
         ),
     )
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     metrics = writer.write([page_to_update])
 
     assert metrics.num_new_pages_written == 0
@@ -186,7 +186,7 @@ def test_base_writer_update_article_no_db_updated_timestamp(
 def test_base_writer_update_article_smaller_db_updated_timestamp(
     refresh_tables, sa_session_factory_postgres, psycopg2_adapt_unknown_types, pages
 ):
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     writer.write(pages)
 
     # Now, update article 2
@@ -205,7 +205,7 @@ def test_base_writer_update_article_smaller_db_updated_timestamp(
             is_in_house_content=pages[2].article.is_in_house_content,
         ),
     )
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     metrics = writer.write([page_to_update])
 
     assert metrics.num_new_pages_written == 0
@@ -236,7 +236,7 @@ def test_base_writer_update_page_add_article(
     and later on we find out that the page actually has an article and need
     to update it with the article metadata.
     """
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     writer.write(pages)
 
     # Now, update page 3 by adding an article to it
@@ -254,7 +254,7 @@ def test_base_writer_update_page_add_article(
             is_in_house_content=False,
         ),
     )
-    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres)
+    writer = BaseWriter(sa_session_factory=sa_session_factory_postgres, force_update_despite_latest=False)
     metrics = writer.write([page_to_update])
 
     assert metrics.num_new_pages_written == 0

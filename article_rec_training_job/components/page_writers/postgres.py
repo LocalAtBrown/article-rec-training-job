@@ -93,7 +93,7 @@ class BaseWriter:
                     "db_updated_at": datetime.utcnow(),
                 },
                 # Bypass the condition if we're forcing an update
-                where=condition_upsert_articles if self.force_update_despite_latest else None,
+                where=None if self.force_update_despite_latest else condition_upsert_articles,
             ).returning(Article.page_id)
             result_write_articles = session.scalars(statement_write_articles).unique().all()
             session.commit()
