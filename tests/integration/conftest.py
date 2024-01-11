@@ -74,7 +74,7 @@ def refresh_tables(sa_session_factory_postgres, initialize_postgres_db) -> Gener
     with sa_session_factory_postgres() as session:
         session.execute(text("TRUNCATE TABLE page CASCADE"))
         session.execute(text("TRUNCATE TABLE article CASCADE"))
-        session.execute(text("TRUNCATE TABLE execution CASCADE"))
         session.execute(text("TRUNCATE TABLE embedding CASCADE"))
         session.execute(text("TRUNCATE TABLE recommendation CASCADE"))
+        session.execute(text("TRUNCATE TABLE recommender CASCADE"))
         session.commit()
