@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import final
 
 from article_rec_db.models import Article, Page
 from loguru import logger
@@ -101,6 +102,7 @@ class BaseWriter:
             self.num_articles_upserted = len(result_write_articles)
             self.num_articles_ignored = len(pages_article) - self.num_articles_upserted
 
+    @final
     def write(self, pages: list[Page]) -> Metrics:
         self.time_taken_to_write_pages, _ = self._write(pages)
         return Metrics(
