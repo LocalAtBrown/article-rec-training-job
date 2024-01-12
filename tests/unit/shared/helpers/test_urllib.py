@@ -3,7 +3,7 @@ import re
 from article_rec_db.models.article import Language
 from pydantic import HttpUrl
 
-from article_rec_training_job.components.page_fetchers.helpers import (
+from article_rec_training_job.shared.helpers.urllib import (
     build_url,
     clean_url,
     extract_slug_from_url,

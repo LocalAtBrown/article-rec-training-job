@@ -1,27 +1,9 @@
 import re
-from enum import Enum
 from urllib.parse import urlunparse
 
-import nh3
-from aiohttp import ClientResponse, ClientSession
 from article_rec_db.models.article import Language
 from loguru import logger
 from pydantic import HttpUrl
-from tenacity import (
-    AsyncRetrying,
-    RetryCallState,
-    stop_after_attempt,
-    wait_random_exponential,
-)
-
-
-class HTMLAllowedEntities(Enum):
-    TAGS = {"a", "img", "video", "h1", "h2", "h3", "strong", "em", "p", "ul", "ol", "li", "br", "sub", "sup", "hr"}
-    ATTRIBUTES = {
-        "a": {"href", "name", "target", "title", "id"},
-        "img": {"src", "alt", "title"},
-        "video": {"src", "alt", "title"},
-    }
 
 
 def build_url(scheme: str, host: str, path: str, query: str = "", fragment: str = "") -> HttpUrl:
@@ -74,37 +56,3 @@ def remove_urls_with_invalid_prefix(correct_url_prefix: HttpUrl, urls: set[HttpU
     Removes URLs with invalid prefix.
     """
     return {url for url in urls if url.scheme == correct_url_prefix.scheme and url.host == correct_url_prefix.host}
-
-
-def clean_html(html: str) -> str:
-    """
-    Cleans HTML by removing all tags and attributes that are not explicitly allowed.
-    """
-    return nh3.clean(html, tags=HTMLAllowedEntities.TAGS.value, attributes=HTMLAllowedEntities.ATTRIBUTES.value)
-
-
-async def request(
-    url: HttpUrl, maximum_attempts: int, maximum_backoff: float, log_attempts: bool = False
-) -> ClientResponse:
-    """
-    Performs an HTTP GET request to the given URL with random-exponential
-    sleep before retrying.
-    """
-
-    def log_attempt(state: RetryCallState) -> None:
-        if log_attempts:
-            logger.info(f"Attempt {state.attempt_number} of {maximum_attempts} at requesting {url}")
-
-    async with ClientSession() as session:
-        async for attempt in AsyncRetrying(
-            reraise=True,
-            wait=wait_random_exponential(max=maximum_backoff),
-            stop=stop_after_attempt(maximum_attempts),
-            before=log_attempt,
-        ):
-            with attempt:
-                async with session.get(str(url), raise_for_status=True) as response:
-                    # Need this to avoid the "ConnectionClosed" error
-                    await response.read()
-
-    return response
