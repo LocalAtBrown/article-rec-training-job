@@ -15,6 +15,7 @@ from article_rec_training_job.shared.types.page_writers import (
     Metrics as WritePagesMetrics,
 )
 from article_rec_training_job.tasks.base import (
+    CreatesTrafficBasedRecommendations,
     FetchesEvents,
     FetchesPages,
     Task,
@@ -24,6 +25,7 @@ from article_rec_training_job.tasks.component_protocols import (
     EventFetcher,
     PageFetcher,
     PageWriter,
+    TrafficBasedArticleRecommender,
 )
 
 
@@ -58,5 +60,19 @@ class UpdatePages(Task, FetchesEvents, FetchesPages, WritesPages):
         for batch in self.batch_components:
             metrics_one_batch = self.execute_one_batch(batch)
             self.batch_metrics.append(metrics_one_batch)
+
+        # TODO: log metrics
+
+
+@dataclass
+class CreateTrafficBasedRecommendations(Task, FetchesEvents, CreatesTrafficBasedRecommendations):
+    event_fetcher: EventFetcher
+    recommender: TrafficBasedArticleRecommender
+
+    def execute(self) -> None:
+        df, _ = self.fetch_events(self.event_fetcher)
+        recommender, metrics_recommend_articles = self.recommend_articles(self.recommender, df)
+
+        # TODO: save recommendations
 
         # TODO: log metrics

@@ -1,9 +1,12 @@
 from datetime import date
 from typing import Protocol, runtime_checkable
 
-from article_rec_db.models import Page
+from article_rec_db.models import Page, Recommender
 from pydantic import HttpUrl
 
+from article_rec_training_job.shared.types.article_recommenders import (
+    Metrics as RecommendArticlesMetrics,
+)
 from article_rec_training_job.shared.types.event_fetchers import (
     Metrics as FetchEventsMetrics,
 )
@@ -37,4 +40,9 @@ class PageFetcher(Protocol):
 
 class PageWriter(Protocol):
     def write(self, pages: list[Page]) -> WritePagesMetrics:
+        ...
+
+
+class TrafficBasedArticleRecommender(Protocol):
+    def recommend(self, df_events: FetchEventsDataFrame) -> tuple[Recommender, RecommendArticlesMetrics]:
         ...
