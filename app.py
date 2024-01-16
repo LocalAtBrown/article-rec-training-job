@@ -228,21 +228,26 @@ def execute_job(config_file_path: Path | None) -> None:
     event_fetcher_factory_dict = create_event_fetcher_factory_dict(config)
     page_fetcher_factory_dict = create_page_fetcher_factory_dict(config)
     page_writer_factory_dict = create_page_writer_factory_dict(config)
+    traffic_based_article_recommender_factory_dict = create_traffic_based_article_recommender_factory_dict(config)
 
     logger.info(f"Executing job for site: {config.job_globals.site}...")
 
     tasks: list[Task] = []
 
     for config_task in config.tasks:
-        # ----- 1. UPDATE PAGES -----
-        if config_task.type == TaskType.UPDATE_PAGES:
-            task = create_task_update_pages(
-                config_task, event_fetcher_factory_dict, page_fetcher_factory_dict, page_writer_factory_dict
-            )
-            tasks.append(task)
-
-        # ----- 2. CREATE TRAFFIC-BASED RECOMMENDATIONS -----
-        # TODO: Create recommendations task
+        match config_task.type:
+            # ----- 1. UPDATE PAGES -----
+            case TaskType.UPDATE_PAGES:
+                task = create_task_update_pages(
+                    config_task, event_fetcher_factory_dict, page_fetcher_factory_dict, page_writer_factory_dict
+                )
+                tasks.append(task)
+            # ----- 2. CREATE TRAFFIC-BASED RECOMMENDATIONS -----
+            case TaskType.CREATE_TRAFFIC_BASED_RECOMMENDATIONS:
+                task = create_task_create_traffic_based_recommendations(
+                    config_task, event_fetcher_factory_dict, traffic_based_article_recommender_factory_dict
+                )
+                tasks.append(task)
 
     for task in tasks:
         # Wrap task execution in try/except block to ensure all tasks are executed
