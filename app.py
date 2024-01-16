@@ -1,9 +1,7 @@
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
-from itertools import islice
 from pathlib import Path
-from typing import TypeVar
 
 import click
 import yaml
@@ -13,41 +11,46 @@ from pydantic import AnyUrl
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# Components
 from article_rec_training_job.components import (
     GA4BaseEventFetcher,
+    PopularityBaseArticleRecommender,
     PostgresBasePageWriter,
     WPBasePageFetcher,
 )
+
+# Config
 from article_rec_training_job.config import (
     Config,
     EventFetcherType,
     PageFetcherType,
     PageWriterType,
-    TaskType,
+)
+from article_rec_training_job.config import Task as TaskConfig
+from article_rec_training_job.config import TaskType
+from article_rec_training_job.config import (
+    TrafficBasedArticleRecommender as TrafficBasedArticleRecommenderConfig,
+)
+from article_rec_training_job.config import (
+    TrafficBasedArticleRecommenderType,
     create_config_object,
 )
-from article_rec_training_job.tasks import UpdatePages
+
+# Helpers
+from article_rec_training_job.shared.helpers.itertools import batched
+
+# Tasks
+from article_rec_training_job.tasks import (
+    CreateTrafficBasedRecommendations,
+    UpdatePages,
+)
 from article_rec_training_job.tasks.base import Task
 from article_rec_training_job.tasks.component_protocols import (
     EventFetcher,
     PageFetcher,
     PageWriter,
+    TrafficBasedArticleRecommender,
 )
-
-T = TypeVar("T")
-
-
-def batched(iterable: Iterable[T], n: int) -> Iterable[tuple[T, ...]]:
-    """
-    Divide an iterable into batches of size n, e.g. batched('ABCDEFG', 3) --> ABC DEF G
-    Replace this function with itertools.batched once we upgrade to Python 3.12
-    (see: https://docs.python.org/3.12/library/itertools.html#itertools.batched).
-    """
-    if n < 1:
-        raise ValueError("n must be at least one")
-    it = iter(iterable)
-    while batch := tuple(islice(it, n)):
-        yield batch
 
 
 def load_config_from_env() -> Config:
@@ -73,8 +76,6 @@ def load_config_from_file(path: Path) -> Config:
 def create_event_fetcher_factory_dict(config: Config) -> dict[EventFetcherType, Callable[[date, date], EventFetcher]]:
     def factory_ga4(date_start: date, date_end: date) -> GA4BaseEventFetcher:
         config_component = config.get_component(EventFetcherType.GA4_BASE)
-        if config_component is None:
-            raise ValueError("Config for GA4-based event fetcher not found. Make sure you specified it your config")
         return GA4BaseEventFetcher(
             gcp_project_id=config_component.params["gcp_project_id"],
             site_ga4_property_id=config_component.params["site_ga4_property_id"],
@@ -90,8 +91,6 @@ def create_event_fetcher_factory_dict(config: Config) -> dict[EventFetcherType, 
 def create_page_fetcher_factory_dict(config: Config) -> dict[PageFetcherType, Callable[[], PageFetcher]]:
     def factory_wp() -> WPBasePageFetcher:
         config_component = config.get_component(PageFetcherType.WP_BASE)
-        if config_component is None:
-            raise ValueError("Config for WordPress-based page fetcher not found. Make sure you specified it your config")
         return WPBasePageFetcher(
             site_name=config.job_globals.site,
             slug_from_path_regex=config_component.params["slug_from_path_regex"],
@@ -110,8 +109,6 @@ def create_page_fetcher_factory_dict(config: Config) -> dict[PageFetcherType, Ca
 def create_page_writer_factory_dict(config: Config) -> dict[PageWriterType, Callable[[], PageWriter]]:
     def factory_postgres() -> PostgresBasePageWriter:
         config_component = config.get_component(PageWriterType.POSTGRES_BASE)
-        if config_component is None:
-            raise ValueError("Config for PostgreSQL-based page writer not found. Make sure you specified it your config")
         db_url = os.environ[config_component.params["env_db_url"]]
 
         # Register adapter for Pydantic AnyUrl type so that psycopg2 recognizes it
@@ -132,22 +129,37 @@ def create_page_writer_factory_dict(config: Config) -> dict[PageWriterType, Call
     }
 
 
-def create_update_pages_task(
-    config: Config,
+def create_traffic_based_article_recommender_factory_dict(
+    config_component: TrafficBasedArticleRecommenderConfig,
+) -> dict[TrafficBasedArticleRecommenderType, Callable[[], TrafficBasedArticleRecommender]]:
+    def factory_popularity() -> PopularityBaseArticleRecommender:
+        db_url = os.environ[config_component.params["env_db_url"]]
+
+        # Create session factory
+        engine = create_engine(db_url)
+        sa_session_factory = sessionmaker(bind=engine)
+
+        return PopularityBaseArticleRecommender(
+            sa_session_factory=sa_session_factory, max_recommendations=config_component.params["max_recommendations"]
+        )
+
+    return {
+        TrafficBasedArticleRecommenderType.POPULARITY: factory_popularity,
+    }
+
+
+def create_task_update_pages(
+    config_task: TaskConfig,
     event_fetcher_factory_dict: dict[EventFetcherType, Callable[[date, date], EventFetcher]],
     page_fetcher_factory_dict: dict[PageFetcherType, Callable[[], PageFetcher]],
     page_writer_factory_dict: dict[PageWriterType, Callable[[], PageWriter]],
 ) -> UpdatePages:
-    config_task = config.get_task(TaskType.UPDATE_PAGES)
-    if config_task is None:
-        raise ValueError("Config for update_pages task not found. Make sure you specified it your config")
-
     # Grab params from config
     # Fallback date_end to today if not specified in config
     date_end: date = config_task.params.get("date_end", datetime.utcnow().date())
     # These two are not optional
-    days_to_fetch: int = config_task.params["days_to_fetch"]
-    days_to_fetch_per_batch: int = config_task.params["days_to_fetch_per_batch"]
+    days_to_fetch_events: int = config_task.params["days_to_fetch_events"]
+    days_to_fetch_events_per_batch: int = config_task.params["days_to_fetch_events_per_batch"]
 
     # Create component factories according to config
     event_fetcher_factory = event_fetcher_factory_dict[EventFetcherType(config_task.components["event_fetcher"])]
@@ -155,10 +167,10 @@ def create_update_pages_task(
     page_writer_factory = page_writer_factory_dict[PageWriterType(config_task.components["page_writer"])]
 
     # Divide dates to fetch into batches and create batch components
-    # If date_end is 2021-10-07, days_to_fetch is 7,
+    # If date_end is 2021-10-07, days_to_fetch_events is 7,
     # then dates_to_fetch will be [2021-10-01, 2021-10-02, ..., 2021-10-07] (in ascending order)
-    dates_to_fetch = [date_end - timedelta(days=days_to_fetch - 1 - i) for i in range(days_to_fetch)]
-    batched_dates_to_fetch = batched(dates_to_fetch, days_to_fetch_per_batch)
+    dates_to_fetch = [date_end - timedelta(days=days_to_fetch_events - 1 - i) for i in range(days_to_fetch_events)]
+    batched_dates_to_fetch = batched(dates_to_fetch, days_to_fetch_events_per_batch)
     batch_components = [
         (
             event_fetcher_factory(batch_dates[0], batch_dates[-1]),
@@ -169,6 +181,30 @@ def create_update_pages_task(
     ]
 
     return UpdatePages(batch_components=batch_components)
+
+
+def create_task_create_traffic_based_recommendations(
+    config_task: TaskConfig,
+    event_fetcher_factory_dict: dict[EventFetcherType, Callable[[date, date], EventFetcher]],
+    traffic_based_article_recommender_factory_dict: dict[
+        TrafficBasedArticleRecommenderType, Callable[[], TrafficBasedArticleRecommender]
+    ],
+) -> CreateTrafficBasedRecommendations:
+    # Grab params from config
+    # Fallback date_end to today if not specified in config
+    date_end: date = config_task.params.get("date_end", datetime.utcnow().date())
+    days_to_fetch_events: int = config_task.params["days_to_fetch_events"]
+
+    # Create component factories according to config
+    event_fetcher_factory = event_fetcher_factory_dict[EventFetcherType(config_task.components["event_fetcher"])]
+    traffic_based_article_recommender_factory = traffic_based_article_recommender_factory_dict[
+        TrafficBasedArticleRecommenderType(config_task.components["traffic_based_article_recommender"])
+    ]
+
+    return CreateTrafficBasedRecommendations(
+        event_fetcher=event_fetcher_factory(date_end - timedelta(days=days_to_fetch_events - 1), date_end),
+        recommender=traffic_based_article_recommender_factory(),
+    )
 
 
 @click.command()
@@ -184,6 +220,10 @@ def execute_job(config_file_path: Path | None) -> None:
     # Load job config
     config = load_config_from_file(path=config_file_path) if config_file_path is not None else load_config_from_env()
 
+    # Register adapter for Pydantic AnyUrl type so that psycopg2 recognizes it
+    # before we create the session factory
+    register_adapter(AnyUrl, lambda url: AsIs(f"'{url}'"))
+
     # Component factories
     event_fetcher_factory_dict = create_event_fetcher_factory_dict(config)
     page_fetcher_factory_dict = create_page_fetcher_factory_dict(config)
@@ -193,16 +233,16 @@ def execute_job(config_file_path: Path | None) -> None:
 
     tasks: list[Task] = []
 
-    # ----- 1. UPDATE PAGES -----
-    if config.get_task(TaskType.UPDATE_PAGES) is not None:
-        tasks.append(
-            create_update_pages_task(
-                config, event_fetcher_factory_dict, page_fetcher_factory_dict, page_writer_factory_dict
+    for config_task in config.tasks:
+        # ----- 1. UPDATE PAGES -----
+        if config_task.type == TaskType.UPDATE_PAGES:
+            task = create_task_update_pages(
+                config_task, event_fetcher_factory_dict, page_fetcher_factory_dict, page_writer_factory_dict
             )
-        )
+            tasks.append(task)
 
-    # ----- 2. CREATE RECOMMENDATIONS -----
-    # TODO: Create recommendations task
+        # ----- 2. CREATE TRAFFIC-BASED RECOMMENDATIONS -----
+        # TODO: Create recommendations task
 
     for task in tasks:
         # Wrap task execution in try/except block to ensure all tasks are executed

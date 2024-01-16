@@ -31,5 +31,5 @@ tasks:
       page_writer: postgres_base
     params:
       date_end: 2023-12-07 # Optional, else use today. YYYY-MM-DD, inclusive
-      days_to_fetch: 7 # How many days to fetch in total. Count from date_end backwards
-      days_to_fetch_per_batch: 2
+      days_to_fetch_events: 7 # How many days to fetch in total. Count from date_end backwards
+      days_to_fetch_events_per_batch: 2
