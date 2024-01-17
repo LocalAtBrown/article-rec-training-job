@@ -7,4 +7,5 @@ class Metrics:
     Reporting metrics an article recommender must provide.
     """
 
-    raise NotImplementedError
+    # raise NotImplementedError
+    pass

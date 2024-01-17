@@ -34,9 +34,17 @@ class BaseRecommender:
         Given a list of page URLs, returns a subset of those URLs
         """
         with self.sa_session_factory() as session:
-            statement = select(Page).where(Page.url.in_(urls))
-            pages = session.execute(statement).all()
-            return {page.url: page.article for page in pages if page.article is not None}
+            statement = select(Article, Page).where(
+                # JOIN condition
+                (Article.page_id == Page.id)
+                # WHERE condition: page URL is in the list of URLs
+                & (Page.url.in_(urls))
+                # WHERE condition: article is in-house content
+                & (Article.is_in_house_content == True)  # noqa: E712
+            )
+            results = session.execute(statement).unique()
+
+            return {HttpUrl(article.page.url): article for article, _ in results}
 
     @final
     def recommend(self, df_events: EventsDataFrame) -> tuple[Recommender, Metrics]:
@@ -57,7 +65,3 @@ class BaseRecommender:
 
         # Sort by engagement time and take top N entries
         series_engagement_time = series_engagement_time.sort_values(ascending=False).head(self.max_recommendations)
-
-        import pdb
-
-        pdb.set_trace()
