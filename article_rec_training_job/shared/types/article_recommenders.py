@@ -17,5 +17,5 @@ class Metrics:
     Reporting metrics an article recommender must provide.
     """
 
-    # raise NotImplementedError
-    pass
+    time_taken_to_create_recommendations: float
+    num_recommendations_created: int

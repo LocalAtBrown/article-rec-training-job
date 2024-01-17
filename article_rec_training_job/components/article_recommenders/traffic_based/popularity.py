@@ -87,4 +87,9 @@ class BaseRecommender:
         Main function to create recommendations. The returned Recommender
         includes recommendations as well as (if any) embeddings.
         """
-        pass
+        time_taken_to_create_recommendations, recommender = self._recommend(df_events)
+        metrics = Metrics(
+            time_taken_to_create_recommendations=time_taken_to_create_recommendations,
+            num_recommendations_created=len(recommender.recommendations),
+        )
+        return recommender, metrics
