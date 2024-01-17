@@ -19,10 +19,14 @@ from article_rec_training_job.shared.types.page_fetchers import (
 from article_rec_training_job.shared.types.page_writers import (
     Metrics as WritePagesMetrics,
 )
+from article_rec_training_job.shared.types.recommendation_writers import (
+    Metrics as WriteRecommendationsMetrics,
+)
 from article_rec_training_job.tasks.component_protocols import (
     EventFetcher,
     PageFetcher,
     PageWriter,
+    RecommendationWriter,
     TrafficBasedArticleRecommender,
 )
 
@@ -64,3 +68,9 @@ class CreatesTrafficBasedRecommendations:
         component: TrafficBasedArticleRecommender, df_events: FetchEventsDataFrame
     ) -> tuple[Recommender, RecommendArticlesMetrics]:
         return component.recommend(df_events)
+
+
+class WritesRecommendations:
+    @staticmethod
+    def write_recommendations(component: RecommendationWriter, recommender: Recommender) -> WriteRecommendationsMetrics:
+        return component.write(recommender)

@@ -20,11 +20,13 @@ from article_rec_training_job.tasks.base import (
     FetchesPages,
     Task,
     WritesPages,
+    WritesRecommendations,
 )
 from article_rec_training_job.tasks.component_protocols import (
     EventFetcher,
     PageFetcher,
     PageWriter,
+    RecommendationWriter,
     TrafficBasedArticleRecommender,
 )
 
@@ -65,14 +67,19 @@ class UpdatePages(Task, FetchesEvents, FetchesPages, WritesPages):
 
 
 @dataclass
-class CreateTrafficBasedRecommendations(Task, FetchesEvents, CreatesTrafficBasedRecommendations):
+class CreateTrafficBasedRecommendations(Task, FetchesEvents, CreatesTrafficBasedRecommendations, WritesRecommendations):
     event_fetcher: EventFetcher
     recommender: TrafficBasedArticleRecommender
+    recommendation_writer: RecommendationWriter
 
     def execute(self) -> None:
+        # First, fetch events
         df, _ = self.fetch_events(self.event_fetcher)
+
+        # Then, create recommendations
         recommender, metrics_recommend_articles = self.recommend_articles(self.recommender, df)
 
-        # TODO: save recommendations
+        # Write recommendations (along with embeddings, if any) to DB
+        metrics_write_recommendations = self.write_recommendations(recommender)  # noqa: F841
 
         # TODO: log metrics

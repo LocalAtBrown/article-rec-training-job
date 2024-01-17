@@ -19,6 +19,9 @@ from article_rec_training_job.shared.types.page_fetchers import (
 from article_rec_training_job.shared.types.page_writers import (
     Metrics as WritePagesMetrics,
 )
+from article_rec_training_job.shared.types.recommendation_writers import (
+    Metrics as WriteRecommendationsMetrics,
+)
 
 
 class EventFetcher(Protocol):
@@ -45,4 +48,9 @@ class PageWriter(Protocol):
 
 class TrafficBasedArticleRecommender(Protocol):
     def recommend(self, df_events: FetchEventsDataFrame) -> tuple[Recommender, RecommendArticlesMetrics]:
+        ...
+
+
+class RecommendationWriter(Protocol):
+    def write(self, recommender: Recommender) -> WriteRecommendationsMetrics:
         ...

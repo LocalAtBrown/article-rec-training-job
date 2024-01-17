@@ -1,4 +1,10 @@
-__all__ = ["GA4BaseEventFetcher", "WPBasePageFetcher", "PostgresBasePageWriter", "PopularityBaseArticleRecommender"]
+__all__ = [
+    "GA4BaseEventFetcher",
+    "WPBasePageFetcher",
+    "PostgresBasePageWriter",
+    "PopularityBaseArticleRecommender",
+    "PostgresBaseRecommendationWriter",
+]
 
 from article_rec_training_job.components.article_recommenders.traffic_based.popularity import (
     BaseRecommender as PopularityBaseArticleRecommender,
@@ -11,4 +17,7 @@ from article_rec_training_job.components.page_fetchers.wordpress import (
 )
 from article_rec_training_job.components.page_writers.postgres import (
     BaseWriter as PostgresBasePageWriter,
+)
+from article_rec_training_job.components.recommendation_writers.postgres import (
+    BaseWriter as PostgresBaseRecommendationWriter,
 )
