@@ -206,7 +206,7 @@ class BaseFetcher:
         )
 
         # Fetch article
-        logger.info(f"Requesting WordPress API for slug {slug}")
+        logger.info(f"Requesting WordPress API for slug {slug}...")
         try:
             response = await request(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
         except ClientResponseError as e:

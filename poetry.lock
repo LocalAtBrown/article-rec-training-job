@@ -122,13 +122,13 @@ files = [
 
 [[package]]
 name = "article-rec-db"
-version = "0.0.10"
+version = "0.0.11"
 description = "Database models and migrations for the Local News Lab's article recommendation system"
 optional = false
 python-versions = ">=3.9,<3.12"
 files = [
-    {file = "article_rec_db-0.0.10-py3-none-any.whl", hash = "sha256:3df8a2e671c7baadc9af917b1ede89055ff74accd73682c5cbf0feb76fd64033"},
-    {file = "article_rec_db-0.0.10.tar.gz", hash = "sha256:132c182a824954e219a632e893ee538b9655b1d7bf139c55ab6fed7e89d526b1"},
+    {file = "article_rec_db-0.0.11-py3-none-any.whl", hash = "sha256:d706ec6cec3a5f7a90449a4abfe27b436d09423195abccd12cee42605d11d8fd"},
+    {file = "article_rec_db-0.0.11.tar.gz", hash = "sha256:16249f5e39ee39b335ebcd8bf5f15139bd9d5fbf4cc7199e9e48426a00dd61bb"},
 ]
 
 [package.dependencies]
@@ -505,13 +505,13 @@ requests = ["requests (>=2.20.0,<3.0.0.dev0)"]
 
 [[package]]
 name = "google-cloud-bigquery"
-version = "3.15.0"
+version = "3.16.0"
 description = "Google BigQuery API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-bigquery-3.15.0.tar.gz", hash = "sha256:79a62bd12588696a393055347770522a0218b1a364d57621cfd62ba296e1d005"},
-    {file = "google_cloud_bigquery-3.15.0-py2.py3-none-any.whl", hash = "sha256:57d083685b7f19af0af4d51af4950b50f2fe2983227a122e2f239eb5dc4e0447"},
+    {file = "google-cloud-bigquery-3.16.0.tar.gz", hash = "sha256:1d6abf4b1d740df17cb43a078789872af8059a0b1dd999f32ea69ebc6f7ba7ef"},
+    {file = "google_cloud_bigquery-3.16.0-py2.py3-none-any.whl", hash = "sha256:8bac7754f92bf87ee81f38deabb7554d82bb9591fbe06a5c82f33e46e5a482f9"},
 ]
 
 [package.dependencies]
@@ -2099,4 +2099,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "2c88961a913d93120abfc18e5d556bd8c1f6cbe598978764311dbbbe7d93fbcb"
+content-hash = "255eb395886c7ab62749cfa620a399fd33b44755b586b512bcae2c29936cbb1e"

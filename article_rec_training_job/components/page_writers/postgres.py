@@ -42,7 +42,7 @@ class BaseWriter:
         """
         with self.sa_session_factory() as session:
             # First, write pages while ignoring duplicates
-            logger.info("Writing pages to DB")
+            logger.info("Writing pages to DB...")
             statement_write_pages = (
                 insert(Page)
                 .values([page.model_dump() for page in pages])
@@ -55,7 +55,7 @@ class BaseWriter:
             self.num_pages_ignored = len(pages) - self.num_new_pages_written
 
             # Then, fetch all page IDs of all articles to be written and return a dict of page URL -> page ID
-            logger.info("Fetching page IDs of articles to be written")
+            logger.info("Fetching page IDs of articles to be written...")
             pages_article = [page for page in pages if page.article is not None]
             statement_fetch_page_ids = select(
                 Page.id, Page.url  # type: ignore # (see: https://github.com/tiangolo/sqlmodel/issues/271)
@@ -66,7 +66,7 @@ class BaseWriter:
             dict_page_url_to_id = {HttpUrl(row[1]): row[0] for row in result_fetch_page_ids}
 
             # Finally, write articles. If there's a duplicate, and that duplicate has updated information, update it
-            logger.info("Writing articles to DB")
+            logger.info("Writing articles to DB...")
             statement_write_articles = insert(Article).values(
                 [{**page.article.model_dump(), "page_id": dict_page_url_to_id[page.url]} for page in pages_article]  # type: ignore
             )

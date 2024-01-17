@@ -77,9 +77,11 @@ class CreateTrafficBasedRecommendations(Task, FetchesEvents, CreatesTrafficBased
         df, _ = self.fetch_events(self.event_fetcher)
 
         # Then, create recommendations
+        # recommender is a Recommender object that maps to the recommender table in the DB
+        # self.recommender is a component that creates recommendations wrapped inside such a Recommender object
         recommender, metrics_recommend_articles = self.recommend_articles(self.recommender, df)
 
         # Write recommendations (along with embeddings, if any) to DB
-        metrics_write_recommendations = self.write_recommendations(recommender)  # noqa: F841
+        metrics_write_recommendations = self.write_recommendations(self.recommendation_writer, recommender)  # noqa: F841
 
         # TODO: log metrics

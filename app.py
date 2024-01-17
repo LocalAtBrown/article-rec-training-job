@@ -16,6 +16,7 @@ from article_rec_training_job.components import (
     GA4BaseEventFetcher,
     PopularityBaseArticleRecommender,
     PostgresBasePageWriter,
+    PostgresBaseRecommendationWriter,
     WPBasePageFetcher,
 )
 
@@ -25,6 +26,7 @@ from article_rec_training_job.config import (
     EventFetcherType,
     PageFetcherType,
     PageWriterType,
+    RecommendationWriterType,
 )
 from article_rec_training_job.config import Task as TaskConfig
 from article_rec_training_job.config import (
@@ -46,6 +48,7 @@ from article_rec_training_job.tasks.component_protocols import (
     EventFetcher,
     PageFetcher,
     PageWriter,
+    RecommendationWriter,
     TrafficBasedArticleRecommender,
 )
 
@@ -146,6 +149,24 @@ def create_traffic_based_article_recommender_factory_dict(
     }
 
 
+def create_recommendation_writer_factory_dict(
+    config: Config,
+) -> dict[RecommendationWriterType, Callable[[], RecommendationWriter]]:
+    def factory_postgres() -> PostgresBaseRecommendationWriter:
+        config_component = config.get_component(RecommendationWriterType.POSTGRES_BASE)
+        db_url = os.environ[config_component.params["env_db_url"]]
+
+        # Create session factory
+        engine = create_engine(db_url)
+        sa_session_factory = sessionmaker(bind=engine)
+
+        return PostgresBaseRecommendationWriter(sa_session_factory=sa_session_factory)
+
+    return {
+        RecommendationWriterType.POSTGRES_BASE: factory_postgres,
+    }
+
+
 def create_task_update_pages(
     config_task: TaskConfig,
     event_fetcher_factory_dict: dict[EventFetcherType, Callable[[date, date], EventFetcher]],
@@ -187,6 +208,7 @@ def create_task_create_traffic_based_recommendations(
     traffic_based_article_recommender_factory_dict: dict[
         TrafficBasedArticleRecommenderType, Callable[[], TrafficBasedArticleRecommender]
     ],
+    recommendation_writer_factory_dict: dict[RecommendationWriterType, Callable[[], RecommendationWriter]],
 ) -> CreateTrafficBasedRecommendations:
     # Grab params from config
     # Fallback date_end to today if not specified in config
@@ -198,10 +220,14 @@ def create_task_create_traffic_based_recommendations(
     traffic_based_article_recommender_factory = traffic_based_article_recommender_factory_dict[
         TrafficBasedArticleRecommenderType(config_task.components["recommender"])
     ]
+    recommendation_writer_factory = recommendation_writer_factory_dict[
+        RecommendationWriterType(config_task.components["recommendation_writer"])
+    ]
 
     return CreateTrafficBasedRecommendations(
         event_fetcher=event_fetcher_factory(date_end - timedelta(days=days_to_fetch_events - 1), date_end),
         recommender=traffic_based_article_recommender_factory(),
+        recommendation_writer=recommendation_writer_factory(),
     )
 
 
@@ -227,6 +253,7 @@ def execute_job(config_file_path: Path | None) -> None:
     page_fetcher_factory_dict = create_page_fetcher_factory_dict(config)
     page_writer_factory_dict = create_page_writer_factory_dict(config)
     traffic_based_article_recommender_factory_dict = create_traffic_based_article_recommender_factory_dict(config)
+    recommendation_writer_factory_dict = create_recommendation_writer_factory_dict(config)
 
     logger.info(f"Executing job for site: {config.job_globals.site}...")
 
@@ -243,7 +270,10 @@ def execute_job(config_file_path: Path | None) -> None:
             # ----- 2. CREATE TRAFFIC-BASED RECOMMENDATIONS -----
             case TaskType.CREATE_TRAFFIC_BASED_RECOMMENDATIONS:
                 task = create_task_create_traffic_based_recommendations(
-                    config_task, event_fetcher_factory_dict, traffic_based_article_recommender_factory_dict
+                    config_task,
+                    event_fetcher_factory_dict,
+                    traffic_based_article_recommender_factory_dict,
+                    recommendation_writer_factory_dict,
                 )
                 tasks.append(task)
 
