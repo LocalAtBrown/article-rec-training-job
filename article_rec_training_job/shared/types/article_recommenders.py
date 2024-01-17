@@ -19,3 +19,4 @@ class Metrics:
 
     time_taken_to_create_recommendations: float
     num_recommendations_created: int
+    num_embeddings_created: int

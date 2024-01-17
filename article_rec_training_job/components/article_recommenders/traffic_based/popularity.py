@@ -91,5 +91,6 @@ class BaseRecommender:
         metrics = Metrics(
             time_taken_to_create_recommendations=time_taken_to_create_recommendations,
             num_recommendations_created=len(recommender.recommendations),
+            num_embeddings_created=0,
         )
         return recommender, metrics
