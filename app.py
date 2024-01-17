@@ -27,11 +27,8 @@ from article_rec_training_job.config import (
     PageWriterType,
 )
 from article_rec_training_job.config import Task as TaskConfig
-from article_rec_training_job.config import TaskType
 from article_rec_training_job.config import (
-    TrafficBasedArticleRecommender as TrafficBasedArticleRecommenderConfig,
-)
-from article_rec_training_job.config import (
+    TaskType,
     TrafficBasedArticleRecommenderType,
     create_config_object,
 )
@@ -130,9 +127,10 @@ def create_page_writer_factory_dict(config: Config) -> dict[PageWriterType, Call
 
 
 def create_traffic_based_article_recommender_factory_dict(
-    config_component: TrafficBasedArticleRecommenderConfig,
+    config: Config,
 ) -> dict[TrafficBasedArticleRecommenderType, Callable[[], TrafficBasedArticleRecommender]]:
     def factory_popularity() -> PopularityBaseArticleRecommender:
+        config_component = config.get_component(TrafficBasedArticleRecommenderType.POPULARITY)
         db_url = os.environ[config_component.params["env_db_url"]]
 
         # Create session factory
@@ -198,7 +196,7 @@ def create_task_create_traffic_based_recommendations(
     # Create component factories according to config
     event_fetcher_factory = event_fetcher_factory_dict[EventFetcherType(config_task.components["event_fetcher"])]
     traffic_based_article_recommender_factory = traffic_based_article_recommender_factory_dict[
-        TrafficBasedArticleRecommenderType(config_task.components["traffic_based_article_recommender"])
+        TrafficBasedArticleRecommenderType(config_task.components["recommender"])
     ]
 
     return CreateTrafficBasedRecommendations(
