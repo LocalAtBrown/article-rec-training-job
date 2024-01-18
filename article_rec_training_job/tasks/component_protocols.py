@@ -2,6 +2,7 @@ from datetime import date
 from typing import Protocol, runtime_checkable
 
 from article_rec_db.models import Page, Recommender
+from article_rec_db.models.article import Language
 from pydantic import HttpUrl
 
 from article_rec_training_job.shared.types.article_recommenders import (
@@ -47,6 +48,9 @@ class PageWriter(Protocol):
 
 
 class TrafficBasedArticleRecommender(Protocol):
+    max_recommendations: int
+    allowed_languages: set[Language]
+
     def recommend(self, df_events: FetchEventsDataFrame) -> tuple[Recommender, RecommendArticlesMetrics]:
         ...
 

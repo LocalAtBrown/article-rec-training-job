@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 import yaml
+from article_rec_db.models.article import Language
 from loguru import logger
 from psycopg2.extensions import AsIs, register_adapter
 from pydantic import AnyUrl
@@ -141,7 +142,9 @@ def create_traffic_based_article_recommender_factory_dict(
         sa_session_factory = sessionmaker(bind=engine)
 
         return PopularityBaseArticleRecommender(
-            sa_session_factory=sa_session_factory, max_recommendations=config_component.params["max_recommendations"]
+            sa_session_factory=sa_session_factory,
+            max_recommendations=config_component.params["max_recommendations"],
+            allowed_languages=set(config_component.params.get("allowed_languages", {Language.ENGLISH})),
         )
 
     return {

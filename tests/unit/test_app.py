@@ -54,6 +54,10 @@ def _test_loaded_config(config: Config) -> None:
     assert config.components.traffic_based_article_recommenders[0].type == "popularity"
     assert config.components.traffic_based_article_recommenders[0].params["env_db_url"] == "POSTGRES_DB_URL"
     assert config.components.traffic_based_article_recommenders[0].params["max_recommendations"] == 20
+    assert config.components.traffic_based_article_recommenders[0].params["allowed_languages"] == [
+        Language.ENGLISH,
+        Language.SPANISH,
+    ]
 
     assert config.components.recommendation_writers[0].type == "postgres_base"
     assert config.components.recommendation_writers[0].params["env_db_url"] == "POSTGRES_DB_URL"
@@ -136,6 +140,7 @@ def test_create_traffic_based_article_recommender_factory_dict(set_config_env, c
     assert isinstance(component, PopularityBaseArticleRecommender)
     assert component.sa_session_factory.kw["bind"].url.render_as_string() == fake_postgres_db_url
     assert component.max_recommendations == 20
+    assert component.allowed_languages == {Language.ENGLISH, Language.SPANISH}  # set, not list
 
 
 def test_create_recommendation_writer_factory_dict(set_config_env, config, fake_postgres_db_url):
@@ -204,3 +209,4 @@ def test_create_task_create_traffic_based_recommendations(set_config_env, config
     assert task.event_fetcher.date_end == date(2023, 12, 7)
 
     assert task.recommender.max_recommendations == 20
+    assert task.recommender.allowed_languages == {Language.ENGLISH, Language.SPANISH}  # set, not list

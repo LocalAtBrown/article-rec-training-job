@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import final
 
 from article_rec_db.models import Article, Page, Recommendation, Recommender
+from article_rec_db.models.article import Language
 from article_rec_db.models.recommender import RecommendationType
 from pydantic import HttpUrl
 from sqlalchemy import select
@@ -27,6 +28,8 @@ class BaseRecommender:
 
     # Maximum number of recommendations to return
     max_recommendations: int
+    # Allowed languages
+    allowed_languages: set[Language]
 
     # SQLAlchemy session factory
     sa_session_factory: sessionmaker[Session]
@@ -43,6 +46,8 @@ class BaseRecommender:
                 & (Page.url.in_(urls))
                 # WHERE condition: article is in-house content
                 & (Article.is_in_house_content == True)  # noqa: E712
+                # WHERE condition: article is in an allowed language
+                & (Article.language.in_([*self.allowed_languages]))
             )
             results = session.execute(statement).unique()
 

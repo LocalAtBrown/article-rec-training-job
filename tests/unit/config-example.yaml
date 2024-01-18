@@ -27,6 +27,9 @@ components:
       params:
         env_db_url: POSTGRES_DB_URL
         max_recommendations: 20
+        allowed_languages:
+          - en
+          - es
   recommendation_writers:
     - type: postgres_base
       params:

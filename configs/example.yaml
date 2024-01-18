@@ -27,6 +27,9 @@ components:
       params:
         env_db_url: POSTGRES_DB_URL
         max_recommendations: 20
+        allowed_languages:  # Optional, else only includes en (English). List of languges from which to filter recommendations. Articles not in these languages will be excluded from recommendations. Refer to the Language enum in article_rec_db.models for possible language-code values.
+          - en
+          - es
   recommendation_writers:
     - type: postgres_base
       params:
