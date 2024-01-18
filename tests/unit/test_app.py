@@ -3,7 +3,6 @@ from datetime import date
 from article_rec_db.models.article import Language
 
 from app import (
-    batched,
     create_event_fetcher_factory_dict,
     create_page_fetcher_factory_dict,
     create_page_writer_factory_dict,
@@ -29,10 +28,6 @@ from article_rec_training_job.config import (
     RecommendationWriterType,
     TrafficBasedArticleRecommenderType,
 )
-
-
-def test_batched():
-    assert list(batched([1, 2, 3, 4, 5], 2)) == [(1, 2), (3, 4), (5,)]
 
 
 def _test_loaded_config(config: Config) -> None:
