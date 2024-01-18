@@ -7,13 +7,18 @@ from app import (
     create_event_fetcher_factory_dict,
     create_page_fetcher_factory_dict,
     create_page_writer_factory_dict,
-    create_update_pages_task,
+    create_recommendation_writer_factory_dict,
+    create_task_create_traffic_based_recommendations,
+    create_task_update_pages,
+    create_traffic_based_article_recommender_factory_dict,
     load_config_from_env,
     load_config_from_file,
 )
 from article_rec_training_job.components import (
     GA4BaseEventFetcher,
+    PopularityBaseArticleRecommender,
     PostgresBasePageWriter,
+    PostgresBaseRecommendationWriter,
     WPBasePageFetcher,
 )
 from article_rec_training_job.config import (
@@ -21,6 +26,8 @@ from article_rec_training_job.config import (
     EventFetcherType,
     PageFetcherType,
     PageWriterType,
+    RecommendationWriterType,
+    TrafficBasedArticleRecommenderType,
 )
 
 
@@ -49,13 +56,27 @@ def _test_loaded_config(config: Config) -> None:
     assert config.components.page_writers[0].type == "postgres_base"
     assert config.components.page_writers[0].params["env_db_url"] == "POSTGRES_DB_URL"
 
+    assert config.components.traffic_based_article_recommenders[0].type == "popularity"
+    assert config.components.traffic_based_article_recommenders[0].params["env_db_url"] == "POSTGRES_DB_URL"
+    assert config.components.traffic_based_article_recommenders[0].params["max_recommendations"] == 20
+
+    assert config.components.recommendation_writers[0].type == "postgres_base"
+    assert config.components.recommendation_writers[0].params["env_db_url"] == "POSTGRES_DB_URL"
+
     assert config.tasks[0].type == "update_pages"
     assert config.tasks[0].components["event_fetcher"] == "ga4_base"
     assert config.tasks[0].components["page_fetcher"] == "wp_base"
     assert config.tasks[0].components["page_writer"] == "postgres_base"
     assert config.tasks[0].params["date_end"] == date(2023, 12, 7)
-    assert config.tasks[0].params["days_to_fetch"] == 7
-    assert config.tasks[0].params["days_to_fetch_per_batch"] == 2
+    assert config.tasks[0].params["days_to_fetch_events"] == 7
+    assert config.tasks[0].params["days_to_fetch_events_per_batch"] == 2
+
+    assert config.tasks[1].type == "create_traffic_based_recommendations"
+    assert config.tasks[1].components["event_fetcher"] == "ga4_base"
+    assert config.tasks[1].components["recommender"] == "popularity"
+    assert config.tasks[1].components["recommendation_writer"] == "postgres_base"
+    assert config.tasks[1].params["date_end"] == date(2023, 12, 7)
+    assert config.tasks[1].params["days_to_fetch_events"] == 7
 
 
 def test_load_config_from_env(set_config_env):
@@ -111,13 +132,34 @@ def test_create_page_writer_factory_dict(set_config_env, config, fake_postgres_d
     assert component.force_update_despite_latest is False
 
 
-def test_create_update_pages_task(set_config_env, config):
+def test_create_traffic_based_article_recommender_factory_dict(set_config_env, config, fake_postgres_db_url):
+    factory_dict = create_traffic_based_article_recommender_factory_dict(config)
+
+    # popularity
+    factory_popularity = factory_dict[TrafficBasedArticleRecommenderType.POPULARITY]
+    component = factory_popularity()
+    assert isinstance(component, PopularityBaseArticleRecommender)
+    assert component.sa_session_factory.kw["bind"].url.render_as_string() == fake_postgres_db_url
+    assert component.max_recommendations == 20
+
+
+def test_create_recommendation_writer_factory_dict(set_config_env, config, fake_postgres_db_url):
+    factory_dict = create_recommendation_writer_factory_dict(config)
+
+    # postgres_base
+    factory_postgres = factory_dict[RecommendationWriterType.POSTGRES_BASE]
+    component = factory_postgres()
+    assert isinstance(component, PostgresBaseRecommendationWriter)
+    assert component.sa_session_factory.kw["bind"].url.render_as_string() == fake_postgres_db_url
+
+
+def test_create_task_update_pages(set_config_env, config):
     event_fetcher_factory_dict = create_event_fetcher_factory_dict(config)
     page_fetcher_factory_dict = create_page_fetcher_factory_dict(config)
     page_writer_factory_dict = create_page_writer_factory_dict(config)
 
-    task = create_update_pages_task(
-        config=config,
+    task = create_task_update_pages(
+        config_task=config.tasks[0],
         event_fetcher_factory_dict=event_fetcher_factory_dict,
         page_fetcher_factory_dict=page_fetcher_factory_dict,
         page_writer_factory_dict=page_writer_factory_dict,
@@ -145,3 +187,25 @@ def test_create_update_pages_task(set_config_env, config):
     # Last batch has only one day
     assert task.batch_components[3][INDEX_EVENT_FETCHER].date_start == date(2023, 12, 7)
     assert task.batch_components[3][INDEX_EVENT_FETCHER].date_end == date(2023, 12, 7)
+
+
+def test_create_task_create_traffic_based_recommendations(set_config_env, config):
+    event_fetcher_factory_dict = create_event_fetcher_factory_dict(config)
+    traffic_based_article_recommender_factory_dict = create_traffic_based_article_recommender_factory_dict(config)
+    recommendation_writer_factory_dict = create_recommendation_writer_factory_dict(config)
+
+    task = create_task_create_traffic_based_recommendations(
+        config_task=config.tasks[1],
+        event_fetcher_factory_dict=event_fetcher_factory_dict,
+        traffic_based_article_recommender_factory_dict=traffic_based_article_recommender_factory_dict,
+        recommendation_writer_factory_dict=recommendation_writer_factory_dict,
+    )
+
+    assert isinstance(task.event_fetcher, GA4BaseEventFetcher)
+    assert isinstance(task.recommender, PopularityBaseArticleRecommender)
+    assert isinstance(task.recommendation_writer, PostgresBaseRecommendationWriter)
+
+    assert task.event_fetcher.date_start == date(2023, 12, 1)
+    assert task.event_fetcher.date_end == date(2023, 12, 7)
+
+    assert task.recommender.max_recommendations == 20

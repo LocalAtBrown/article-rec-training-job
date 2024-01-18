@@ -22,6 +22,15 @@ components:
       params:
         env_db_url: POSTGRES_DB_URL # Environment variable name containing the database URL
         force_update_despite_latest: false # If true, update pages even if they are already up to date (useful for backfilling post-DB changes)
+  traffic_based_article_recommenders:
+    - type: popularity
+      params:
+        env_db_url: POSTGRES_DB_URL
+        max_recommendations: 20
+  recommendation_writers:
+    - type: postgres_base
+      params:
+        env_db_url: POSTGRES_DB_URL
 
 tasks:
   - type: update_pages
@@ -33,3 +42,11 @@ tasks:
       date_end: 2023-12-07 # Optional, else use today. YYYY-MM-DD, inclusive
       days_to_fetch_events: 7 # How many days to fetch in total. Count from date_end backwards
       days_to_fetch_events_per_batch: 2
+  - type: create_traffic_based_recommendations
+    components:
+      event_fetcher: ga4_base
+      recommender: popularity
+      recommendation_writer: postgres_base
+    params:
+      date_end: 2023-12-07 # Optional, else use today. YYYY-MM-DD, inclusive
+      days_to_fetch_events: 7 # How many days to fetch events (as input to create recommendations) in total. Count from date_end backwards
