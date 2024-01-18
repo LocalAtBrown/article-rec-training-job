@@ -19,9 +19,23 @@ DELTA = datetime.timedelta(days=1)
 
 
 def backfill(site: Site, dt: datetime.datetime, days: int) -> None:
+    site = Site(
+        name=site.name,
+        fields=site.fields,
+        hours_of_data=24,
+        training_params=site.training_params,
+        scrape_config=site.scrape_config,
+        transform_raw_data=site.transform_raw_data,
+        extract_external_id=site.extract_external_id,
+        scrape_article_metadata=site.scrape_article_metadata,
+        fetch_article=site.fetch_article,
+        bulk_fetch=site.bulk_fetch,
+        popularity_window=site.popularity_window,
+        max_article_age=site.max_article_age,
+    )
 
     for _ in range(0, days):
-        fetch_and_upload_data(site, dt, hours=24)
+        fetch_and_upload_data(site, dt)
         dt -= DELTA
 
 
