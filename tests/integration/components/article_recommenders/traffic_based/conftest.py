@@ -1,8 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
+import pandas as pd
+import pandera as pa
 import pytest
 from article_rec_db.models import Article, Page
 from article_rec_db.models.article import Language
+from pandas import Int64Dtype
 from pydantic import HttpUrl
 
 from article_rec_training_job.shared.types.event_fetchers import (
@@ -33,25 +36,23 @@ def url_4() -> HttpUrl:
     return HttpUrl("https://test.com/article-4/")
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="function")
 def article_english_in_house(url_1) -> Article:
-    return (
-        Article(
-            page=Page(url=url_1),
-            site="test",
-            id_in_site="1234",
-            title="Article 1",
-            description="Description of article 1",
-            content="<p>Content of article 1</p>",
-            site_published_at=datetime(2021, 1, 2, 0, 0, 0),
-            site_updated_at=None,
-            language=Language.ENGLISH,
-            is_in_house_content=True,
-        ),
+    return Article(
+        page=Page(url=url_1),
+        site="test",
+        id_in_site="1234",
+        title="Article 1",
+        description="Description of article 1",
+        content="<p>Content of article 1</p>",
+        site_published_at=datetime(2021, 1, 2, 0, 0, 0),
+        site_updated_at=None,
+        language=Language.ENGLISH,
+        is_in_house_content=True,
     )
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="function")
 def article_english_not_in_house(url_2) -> Article:
     return Article(
         page=Page(url=url_2),
@@ -67,7 +68,7 @@ def article_english_not_in_house(url_2) -> Article:
     )
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="function")
 def article_not_english_in_house(url_3) -> Article:
     return Article(
         page=Page(url=url_3),
@@ -83,7 +84,7 @@ def article_not_english_in_house(url_3) -> Article:
     )
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="function")
 def article_not_english_not_in_house(url_4) -> Article:
     return Article(
         page=Page(url=url_4),
@@ -110,26 +111,27 @@ def user_id_2() -> str:
 
 
 @pytest.fixture(scope="package")
+@pa.check_types()
 def events(url_1, url_2, url_3, url_4, user_id_1, user_id_2) -> EventsDataFrame:
-    return EventsDataFrame(
+    df = pd.DataFrame(
         [
             # English, in-house article
             {
-                EventsSchema.event_timestamp: datetime.utcnow(),
+                EventsSchema.event_timestamp: datetime.now(timezone.utc),
                 EventsSchema.event_name: "page_view",
                 EventsSchema.page_url: url_1,
-                EventsSchema.engagement_time_msec: None,
+                EventsSchema.engagement_time_msec: pd.NA,
                 EventsSchema.user_id: user_id_1,
             },
             {
-                EventsSchema.event_timestamp: datetime.utcnow(),
+                EventsSchema.event_timestamp: datetime.now(timezone.utc),
                 EventsSchema.event_name: "scroll_custom",
                 EventsSchema.page_url: url_1,
                 EventsSchema.engagement_time_msec: 200,
                 EventsSchema.user_id: user_id_1,
             },
             {
-                EventsSchema.event_timestamp: datetime.utcnow(),
+                EventsSchema.event_timestamp: datetime.now(timezone.utc),
                 EventsSchema.event_name: "user_engagement",
                 EventsSchema.page_url: url_1,
                 EventsSchema.engagement_time_msec: 5000,
@@ -137,7 +139,7 @@ def events(url_1, url_2, url_3, url_4, user_id_1, user_id_2) -> EventsDataFrame:
             },
             # English, 3rd-party article
             {
-                EventsSchema.event_timestamp: datetime.utcnow(),
+                EventsSchema.event_timestamp: datetime.now(timezone.utc),
                 EventsSchema.event_name: "user_engagement",
                 EventsSchema.page_url: url_2,
                 EventsSchema.engagement_time_msec: 1000,
@@ -145,7 +147,7 @@ def events(url_1, url_2, url_3, url_4, user_id_1, user_id_2) -> EventsDataFrame:
             },
             # Non-English, in-house article
             {
-                EventsSchema.event_timestamp: datetime.utcnow(),
+                EventsSchema.event_timestamp: datetime.now(timezone.utc),
                 EventsSchema.event_name: "user_engagement",
                 EventsSchema.page_url: url_3,
                 EventsSchema.engagement_time_msec: 6000,
@@ -153,11 +155,37 @@ def events(url_1, url_2, url_3, url_4, user_id_1, user_id_2) -> EventsDataFrame:
             },
             # Non-English, 3rd-party article
             {
-                EventsSchema.event_timestamp: datetime.utcnow(),
+                EventsSchema.event_timestamp: datetime.now(timezone.utc),
                 EventsSchema.event_name: "user_engagement",
                 EventsSchema.page_url: url_4,
                 EventsSchema.engagement_time_msec: 1000,
                 EventsSchema.user_id: user_id_2,
             },
-        ]
+        ],
     )
+
+    df[EventsSchema.engagement_time_msec] = df[EventsSchema.engagement_time_msec].astype(Int64Dtype())
+    df[EventsSchema.page_url] = df[EventsSchema.page_url].apply(str)
+    return df
+
+
+@pytest.fixture(scope="function")
+def write_articles_to_postgres(
+    refresh_tables,
+    sa_session_factory_postgres,
+    psycopg2_adapt_unknown_types,
+    article_english_in_house,
+    article_english_not_in_house,
+    article_not_english_in_house,
+    article_not_english_not_in_house,
+) -> None:
+    with sa_session_factory_postgres() as session:
+        session.add_all(
+            [
+                article_english_in_house,
+                article_english_not_in_house,
+                article_not_english_in_house,
+                article_not_english_not_in_house,
+            ]
+        )
+        session.commit()
