@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import final
 
 from article_rec_db.models import Article, Page
@@ -91,7 +91,8 @@ class BaseWriter:
                     "site_updated_at": statement_write_articles.excluded.site_updated_at,
                     "language": statement_write_articles.excluded.language,
                     "is_in_house_content": statement_write_articles.excluded.is_in_house_content,
-                    "db_updated_at": datetime.utcnow(),
+                    # Preferred over datetime.utcnow(). See: https://docs.python.org/3.11/library/datetime.html#datetime.datetime.utcnow
+                    "db_updated_at": datetime.now(timezone.utc),
                 },
                 # Bypass the condition if we're forcing an update
                 where=None if self.force_update_despite_latest else condition_upsert_articles,
