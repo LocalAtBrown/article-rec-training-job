@@ -1,3 +1,6 @@
-__all__ = ["UpdatePages"]
+__all__ = ["UpdatePages", "CreateTrafficBasedRecommendations"]
 
-from article_rec_training_job.tasks.tasks import UpdatePages
+from article_rec_training_job.tasks.tasks import (
+    CreateTrafficBasedRecommendations,
+    UpdatePages,
+)

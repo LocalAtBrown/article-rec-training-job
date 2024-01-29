@@ -15,15 +15,19 @@ from article_rec_training_job.shared.types.page_writers import (
     Metrics as WritePagesMetrics,
 )
 from article_rec_training_job.tasks.base import (
+    CreatesTrafficBasedRecommendations,
     FetchesEvents,
     FetchesPages,
     Task,
     WritesPages,
+    WritesRecommendations,
 )
 from article_rec_training_job.tasks.component_protocols import (
     EventFetcher,
     PageFetcher,
     PageWriter,
+    RecommendationWriter,
+    TrafficBasedArticleRecommender,
 )
 
 
@@ -58,5 +62,26 @@ class UpdatePages(Task, FetchesEvents, FetchesPages, WritesPages):
         for batch in self.batch_components:
             metrics_one_batch = self.execute_one_batch(batch)
             self.batch_metrics.append(metrics_one_batch)
+
+        # TODO: log metrics
+
+
+@dataclass
+class CreateTrafficBasedRecommendations(Task, FetchesEvents, CreatesTrafficBasedRecommendations, WritesRecommendations):
+    event_fetcher: EventFetcher
+    recommender: TrafficBasedArticleRecommender
+    recommendation_writer: RecommendationWriter
+
+    def execute(self) -> None:
+        # First, fetch events
+        df, _ = self.fetch_events(self.event_fetcher)
+
+        # Then, create recommendations
+        # recommender is a Recommender object that maps to the recommender table in the DB
+        # self.recommender is a component that creates recommendations wrapped inside such a Recommender object
+        recommender, metrics_recommend_articles = self.recommend_articles(self.recommender, df)
+
+        # Write recommendations (along with embeddings, if any) to DB
+        metrics_write_recommendations = self.write_recommendations(self.recommendation_writer, recommender)  # noqa: F841
 
         # TODO: log metrics

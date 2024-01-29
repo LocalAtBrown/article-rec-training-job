@@ -4,7 +4,7 @@ from dataclasses import asdict as dataclass_asdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
-from typing import Any
+from typing import Any, final
 from urllib.parse import urlencode
 
 from aiohttp import ClientResponseError
@@ -15,16 +15,16 @@ from pydantic import Field as PydanticField
 from pydantic import HttpUrl, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-from article_rec_training_job.components.page_fetchers.helpers import (
+from article_rec_training_job.shared.helpers.html import clean_html
+from article_rec_training_job.shared.helpers.requests import request
+from article_rec_training_job.shared.helpers.time import get_elapsed_time
+from article_rec_training_job.shared.helpers.urllib import (
     build_url,
-    clean_html,
     clean_url,
     extract_slug_from_url,
     infer_language_from_url,
     remove_urls_with_invalid_prefix,
-    request,
 )
-from article_rec_training_job.shared.helpers.time import get_elapsed_time
 from article_rec_training_job.shared.types.page_fetchers import Metrics
 
 
@@ -206,7 +206,7 @@ class BaseFetcher:
         )
 
         # Fetch article
-        logger.info(f"Requesting WordPress API for slug {slug}")
+        logger.info(f"Requesting WordPress API for slug {slug}...")
         try:
             response = await request(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
         except ClientResponseError as e:
@@ -250,6 +250,7 @@ class BaseFetcher:
                 )
                 return page_without_article
 
+    @final
     def fetch(self, urls: set[HttpUrl]) -> tuple[list[Page], Metrics]:
         """
         Fetches pages from a given list of URLs.

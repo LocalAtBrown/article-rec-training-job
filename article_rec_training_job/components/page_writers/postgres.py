@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import final
 
 from article_rec_db.models import Article, Page
 from loguru import logger
@@ -41,7 +42,7 @@ class BaseWriter:
         """
         with self.sa_session_factory() as session:
             # First, write pages while ignoring duplicates
-            logger.info("Writing pages to DB")
+            logger.info("Writing pages to DB...")
             statement_write_pages = (
                 insert(Page)
                 .values([page.model_dump() for page in pages])
@@ -54,7 +55,7 @@ class BaseWriter:
             self.num_pages_ignored = len(pages) - self.num_new_pages_written
 
             # Then, fetch all page IDs of all articles to be written and return a dict of page URL -> page ID
-            logger.info("Fetching page IDs of articles to be written")
+            logger.info("Fetching page IDs of articles to be written...")
             pages_article = [page for page in pages if page.article is not None]
             statement_fetch_page_ids = select(
                 Page.id, Page.url  # type: ignore # (see: https://github.com/tiangolo/sqlmodel/issues/271)
@@ -65,7 +66,7 @@ class BaseWriter:
             dict_page_url_to_id = {HttpUrl(row[1]): row[0] for row in result_fetch_page_ids}
 
             # Finally, write articles. If there's a duplicate, and that duplicate has updated information, update it
-            logger.info("Writing articles to DB")
+            logger.info("Writing articles to DB...")
             statement_write_articles = insert(Article).values(
                 [{**page.article.model_dump(), "page_id": dict_page_url_to_id[page.url]} for page in pages_article]  # type: ignore
             )
@@ -90,17 +91,21 @@ class BaseWriter:
                     "site_updated_at": statement_write_articles.excluded.site_updated_at,
                     "language": statement_write_articles.excluded.language,
                     "is_in_house_content": statement_write_articles.excluded.is_in_house_content,
-                    "db_updated_at": datetime.utcnow(),
+                    # Preferred over datetime.utcnow(). See: https://docs.python.org/3.11/library/datetime.html#datetime.datetime.utcnow
+                    "db_updated_at": datetime.now(timezone.utc),
                 },
                 # Bypass the condition if we're forcing an update
                 where=None if self.force_update_despite_latest else condition_upsert_articles,
-            ).returning(Article.page_id)
+            ).returning(
+                Article.page_id
+            )  # type: ignore
             result_write_articles = session.scalars(statement_write_articles).unique().all()
             session.commit()
             # Save metrics
             self.num_articles_upserted = len(result_write_articles)
             self.num_articles_ignored = len(pages_article) - self.num_articles_upserted
 
+    @final
     def write(self, pages: list[Page]) -> Metrics:
         self.time_taken_to_write_pages, _ = self._write(pages)
         return Metrics(

@@ -48,7 +48,8 @@ def engine_postgres(port_postgres) -> Engine:
 
 @pytest.fixture(scope="package")
 def sa_session_factory_postgres(engine_postgres) -> sessionmaker[Session]:
-    return sessionmaker(engine_postgres)
+    # expire_on_commit=False to make sure objects are not expired after commit and can be inspected for testing outside of the session
+    return sessionmaker(engine_postgres, expire_on_commit=False)
 
 
 @pytest.fixture(scope="package")
@@ -74,7 +75,7 @@ def refresh_tables(sa_session_factory_postgres, initialize_postgres_db) -> Gener
     with sa_session_factory_postgres() as session:
         session.execute(text("TRUNCATE TABLE page CASCADE"))
         session.execute(text("TRUNCATE TABLE article CASCADE"))
-        session.execute(text("TRUNCATE TABLE execution CASCADE"))
         session.execute(text("TRUNCATE TABLE embedding CASCADE"))
         session.execute(text("TRUNCATE TABLE recommendation CASCADE"))
+        session.execute(text("TRUNCATE TABLE recommender CASCADE"))
         session.commit()
