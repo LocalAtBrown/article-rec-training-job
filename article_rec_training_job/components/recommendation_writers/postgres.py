@@ -19,8 +19,8 @@ class BaseWriter:
     # SQLAlchemy session factory
     sa_session_factory: sessionmaker[Session]
 
-    num_recommendations_written: int = field(init=None, repr=None)
-    num_embeddings_written: int = field(init=None, repr=None)
+    num_recommendations_written: int = field(init=False, repr=False)
+    num_embeddings_written: int = field(init=False, repr=False)
 
     @get_elapsed_time
     def _write(self, recommender: Recommender) -> None:

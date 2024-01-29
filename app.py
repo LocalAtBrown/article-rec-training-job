@@ -266,19 +266,21 @@ def execute_job(config_file_path: Path | None) -> None:
         match config_task.type:
             # ----- 1. UPDATE PAGES -----
             case TaskType.UPDATE_PAGES:
-                task = create_task_update_pages(
-                    config_task, event_fetcher_factory_dict, page_fetcher_factory_dict, page_writer_factory_dict
+                tasks.append(
+                    create_task_update_pages(
+                        config_task, event_fetcher_factory_dict, page_fetcher_factory_dict, page_writer_factory_dict
+                    )
                 )
-                tasks.append(task)
             # ----- 2. CREATE TRAFFIC-BASED RECOMMENDATIONS -----
             case TaskType.CREATE_TRAFFIC_BASED_RECOMMENDATIONS:
-                task = create_task_create_traffic_based_recommendations(
-                    config_task,
-                    event_fetcher_factory_dict,
-                    traffic_based_article_recommender_factory_dict,
-                    recommendation_writer_factory_dict,
+                tasks.append(
+                    create_task_create_traffic_based_recommendations(
+                        config_task,
+                        event_fetcher_factory_dict,
+                        traffic_based_article_recommender_factory_dict,
+                        recommendation_writer_factory_dict,
+                    )
                 )
-                tasks.append(task)
 
     for task in tasks:
         # Wrap task execution in try/except block to ensure all tasks are executed

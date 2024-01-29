@@ -43,11 +43,11 @@ class BaseRecommender:
                 # JOIN condition
                 (Article.page_id == Page.id)
                 # WHERE condition: page URL is in the list of URLs
-                & (Page.url.in_(urls))
+                & (Page.url.in_(urls))  # type: ignore
                 # WHERE condition: article is in-house content
                 & (Article.is_in_house_content == True)  # noqa: E712
                 # WHERE condition: article is in an allowed language
-                & (Article.language.in_([*self.allowed_languages]))
+                & (Article.language.in_([*self.allowed_languages]))  # type: ignore
             )
             results = session.execute(statement).unique()
 
@@ -56,10 +56,10 @@ class BaseRecommender:
     @get_elapsed_time
     def _recommend(self, df_events: EventsDataFrame) -> Recommender:
         # Clean URLs (remove query params and fragments)
-        df_events[EventsSchema.page_url] = df_events[EventsSchema.page_url].apply(HttpUrl).apply(clean_url)
+        df_events[EventsSchema.page_url] = df_events[EventsSchema.page_url].apply(HttpUrl).apply(clean_url)  # type: ignore
 
         # Group by page URL and sum engagement time
-        series_engagement_time = df_events.groupby(EventsSchema.page_url)[EventsSchema.engagement_time_msec].sum()
+        series_engagement_time = df_events.groupby(EventsSchema.page_url)[EventsSchema.engagement_time_msec].sum()  # type: ignore
 
         # Filter out entries that are not articles
         page_urls = series_engagement_time.index.tolist()

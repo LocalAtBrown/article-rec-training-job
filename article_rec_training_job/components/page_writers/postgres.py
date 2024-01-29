@@ -96,7 +96,9 @@ class BaseWriter:
                 },
                 # Bypass the condition if we're forcing an update
                 where=None if self.force_update_despite_latest else condition_upsert_articles,
-            ).returning(Article.page_id)
+            ).returning(
+                Article.page_id
+            )  # type: ignore
             result_write_articles = session.scalars(statement_write_articles).unique().all()
             session.commit()
             # Save metrics
