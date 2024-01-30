@@ -75,6 +75,8 @@ class BaseFetcher:
     slug_from_path_regex: str
     # WordPress ID of tag to signify in-house content
     tag_id_republished_content: int | None
+    # Request user agent string
+    request_user_agent: str
     # Maximum number of retries for a request
     request_maximum_attempts: int
     # Maximum backoff before retrying a request, in seconds
@@ -208,7 +210,14 @@ class BaseFetcher:
         # Fetch article
         logger.info(f"Requesting WordPress API for slug {slug}...")
         try:
-            response = await request(endpoint, self.request_maximum_attempts, self.request_maximum_backoff)
+            response = await request(
+                endpoint,
+                headers={
+                    "User-Agent": self.request_user_agent,
+                },
+                maximum_attempts=self.request_maximum_attempts,
+                maximum_backoff=self.request_maximum_backoff,
+            )
         except ClientResponseError as e:
             logger.warning(
                 f"Request to WordPress API for slug {slug} failed because response code indicated an error: {e}"
