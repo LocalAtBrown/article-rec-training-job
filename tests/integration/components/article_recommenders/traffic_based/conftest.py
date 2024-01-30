@@ -164,6 +164,7 @@ def events(url_1, url_2, url_3, url_4, user_id_1, user_id_2) -> EventsDataFrame:
         ],
     )
 
+    df[EventsSchema.event_timestamp] = df[EventsSchema.event_timestamp].astype("datetime64[us, UTC]")
     df[EventsSchema.engagement_time_msec] = df[EventsSchema.engagement_time_msec].astype(Int64Dtype())
     df[EventsSchema.page_url] = df[EventsSchema.page_url].apply(str)
     return df

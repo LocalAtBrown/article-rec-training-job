@@ -53,6 +53,10 @@ from article_rec_training_job.tasks.component_protocols import (
     TrafficBasedArticleRecommender,
 )
 
+# User agent string that must be included in every HTTP request
+# If update the version in pyproject.toml, update the version here as well
+HTTP_REQUEST_USER_AGENT = "LocalNewsLabArticleRecTrainingJob/2.0.0"
+
 
 def load_config_from_env() -> Config:
     """
@@ -96,6 +100,7 @@ def create_page_fetcher_factory_dict(config: Config) -> dict[PageFetcherType, Ca
             site_name=config.job_globals.site,
             slug_from_path_regex=config_component.params["slug_from_path_regex"],
             tag_id_republished_content=config_component.params.get("tag_id_republished_content"),
+            request_user_agent=HTTP_REQUEST_USER_AGENT,
             request_maximum_attempts=config_component.params.get("request_maximum_attempts", 10),
             request_maximum_backoff=config_component.params.get("request_maximum_backoff", 60),
             url_prefix_str=config_component.params["url_prefix"],

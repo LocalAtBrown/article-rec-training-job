@@ -13,7 +13,7 @@ class OutputSchema(pa.DataFrameModel):
     which is useful for pandas DataFrame operations involving columns.
     """
 
-    event_timestamp: Series[Annotated[DatetimeTZDtype, "ns", "utc"]]
+    event_timestamp: Series[Annotated[DatetimeTZDtype, "us", "utc"]]
     event_name: str
     user_id: str
     engagement_time_msec: int = pa.Field(nullable=True)

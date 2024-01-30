@@ -184,7 +184,7 @@ class BaseFetcher:
         Transforms DataFrame of queried events to required schema.
         """
         # Convert event_timestamp int to pandas datetime
-        df[OutputSchema.event_timestamp] = pd.to_datetime(df[OutputSchema.event_timestamp], unit="ns", utc=True)
+        df[OutputSchema.event_timestamp] = pd.to_datetime(df[OutputSchema.event_timestamp], unit="us", utc=True)
 
         return df.pipe(OutputDataFrame)  # pipe to appease mypy, task will do the actual schema validation
 
