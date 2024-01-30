@@ -115,6 +115,7 @@ def test_create_page_fetcher_factory_dict(config):
     assert component.slug_from_path_regex == r"^/20\d{2}/(0[1-9]|1[012])/(?P<slug>[a-zA-Z\d\-%]+)/$"
     assert component.language_from_path_regex[Language.SPANISH] == r"^/es/.*/$"
     assert component.tag_id_republished_content == 42
+    assert component.request_user_agent == "LocalNewsLabArticleRecTrainingJob/2.0.0"
     assert component.request_maximum_attempts == 10
     assert component.request_maximum_backoff == 60
     assert component.url_prefix_str == "https://example.com"

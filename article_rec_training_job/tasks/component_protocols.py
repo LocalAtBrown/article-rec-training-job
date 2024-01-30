@@ -35,6 +35,7 @@ class EventFetcher(Protocol):
 
 @runtime_checkable
 class PageFetcher(Protocol):
+    request_user_agent: str
     request_maximum_attempts: int
     request_maximum_backoff: float
 
